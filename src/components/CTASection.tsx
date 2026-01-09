@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Apple, Play } from "lucide-react";
+import { Ticket, Download } from "lucide-react";
 
 interface CTASectionProps {
   ctaImage: string;
@@ -8,53 +8,48 @@ interface CTASectionProps {
 const CTASection = ({ ctaImage }: CTASectionProps) => {
   return (
     <section className="relative py-20 lg:py-32 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/20 to-background pointer-events-none" />
+      {/* Background pattern */}
+      <div className="absolute inset-0 bg-pattern-overlay pointer-events-none opacity-50" />
 
-      <div className="container mx-auto px-4 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Content */}
-          <div className="z-10">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-tight mb-6 animate-scale-in">
-              <span className="text-transparent bg-clip-text" style={{
-                WebkitTextStroke: '2px hsl(var(--foreground))'
-              }}>
-                Ready to
-              </span>
-              <br />
-              <span className="text-transparent bg-clip-text" style={{
-                WebkitTextStroke: '2px hsl(var(--foreground))'
-              }}>
-                Experience?
-              </span>
-            </h2>
-            <p className="text-xl lg:text-2xl text-muted-foreground mb-8 font-medium animate-fade-up" style={{ animationDelay: '0.1s', opacity: 0, animationFillMode: 'forwards' }}>
-              Let's get your tickets booked
-            </p>
-            <div className="animate-fade-up" style={{ animationDelay: '0.2s', opacity: 0, animationFillMode: 'forwards' }}>
-              <Button
-                size="lg"
-                className="bg-gradient-accent hover:opacity-90 hover:scale-105 transition-all duration-300 rounded-full px-8 h-14 text-lg gap-3 shadow-lg hover:shadow-2xl"
-              >
-                Start Booking
-                <div className="flex items-center gap-2">
-                  <Apple className="w-5 h-5" />
-                  <Play className="w-5 h-5" />
-                </div>
-              </Button>
-            </div>
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-primary/10 to-background pointer-events-none" />
+
+      <div className="container mx-auto px-4 lg:px-8 relative z-10">
+        <div className="max-w-3xl mx-auto text-center space-y-6 lg:space-y-8">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-tight">
+            Ready to start <span className="text-primary">booking</span>?
+          </h2>
+
+          <p className="text-base lg:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Download the TicPin app for seamless bookings. Reserve dining tables, buy event tickets, and book turf slots—all with instant confirmation.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 justify-center items-center">
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 transition-all duration-300 rounded-full px-6 lg:px-8 h-12 lg:h-14 text-sm lg:text-base gap-2 w-full sm:w-auto"
+            >
+              <Download className="w-4 h-4 lg:w-5 lg:h-5" />
+              Download App
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-border hover:bg-secondary transition-all duration-300 rounded-full px-6 lg:px-8 h-12 lg:h-14 text-sm lg:text-base gap-2 w-full sm:w-auto"
+            >
+              <Ticket className="w-4 h-4 lg:w-5 lg:h-5" />
+              Book Now
+            </Button>
           </div>
 
-          {/* Image */}
-          <div className="relative z-10">
-            <div className="relative">
-              <img
-                src={ctaImage}
-                alt="Get ready to book"
-                className="w-full h-auto rounded-2xl object-cover animate-float shadow-2xl"
-              />
-              <div className="absolute -inset-8 bg-primary/10 blur-3xl rounded-full -z-10" />
-            </div>
+          {/* Optional CTA Image - Hidden on mobile for better performance */}
+          <div className="mt-12 relative hidden lg:block">
+            <img
+              src={ctaImage}
+              alt="Dining, events, and sports experiences"
+              className="w-full max-w-2xl mx-auto h-auto rounded-3xl object-cover shadow-2xl"
+            />
+            <div className="absolute -inset-8 bg-primary/10 blur-[80px] -z-10" />
           </div>
         </div>
       </div>
