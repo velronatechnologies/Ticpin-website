@@ -355,7 +355,7 @@ const AccountSetup = () => {
                                                 <label className="text-sm" style={{ color: '#6b7280' }}>Enter your PAN name / your company's name</label>
                                                 <Input
                                                     type="text"
-                                                    placeholder="Eternal Ltd."
+                                                    placeholder="Velrona Technologies Pvt Ltd"
                                                     className="bg-white border-gray-300 placeholder:text-gray-400 focus:border-primary rounded-lg h-12"
                                                     style={{ color: '#000000' }}
                                                     value={panName}
