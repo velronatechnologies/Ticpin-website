@@ -46,7 +46,7 @@ const TermsAndConditions = () => {
                 <h3 className="font-bold text-amber-900 text-base md:text-lg mb-2">Important Notice</h3>
                 <p className="text-amber-800 text-sm md:text-base leading-relaxed">
                   Thank you for using Ticpin. Please read these Terms carefully. By accessing or using the Platform,
-                  you agree to be bound by these Terms and enter into a legally binding agreement with Ticpin Technologies Private Limited.
+                  you agree to be bound by these Terms and enter into a legally binding agreement with Velrona Technologies Private Limited.
                 </p>
               </div>
             </div>
@@ -100,7 +100,7 @@ const TermsAndConditions = () => {
                 </p>
                 <p>
                   Please read these Terms carefully. By accessing or using the Platform, you agree to be bound
-                  by these Terms and enter into a legally binding agreement with Ticpin Technologies Private
+                  by these Terms and enter into a legally binding agreement with Velrona Technologies Private
                   Limited ("Ticpin" / "We" / "Us" / "Our"). If you do not agree to these Terms or are not capable
                   of being legally bound by them, you must not use the Platform or its Services.
                 </p>

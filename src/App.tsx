@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Contact from "./pages/Contact";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import RefundPolicy from "./pages/RefundPolicy";
 import ListEvents from "./pages/ListEvents";
 import GetStarted from "./pages/GetStarted";
 import AccountSetup from "./pages/AccountSetup";
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/refund" element={<RefundPolicy />} />
           <Route path="/list-events" element={<ListEvents />} />
           <Route path="/get-started" element={<GetStarted />} />
           <Route path="/account-setup" element={<AccountSetup />} />
