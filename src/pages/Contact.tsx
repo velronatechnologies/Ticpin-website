@@ -148,8 +148,8 @@ const Contact = () => {
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold mb-1" style={{ color: '#000000' }}>Email</h3>
-                                                <a href="mailto:support@ticpin.in" className="text-gray-700 transition-colors" style={{ textDecoration: 'none' }}>
-                                                    support@ticpin.in
+                                                <a href="mailto:ticpin.inc@gmail.com" className="text-gray-700 transition-colors" style={{ textDecoration: 'none' }}>
+                                                    ticpin.inc@gmail.com
                                                 </a>
                                             </div>
                                         </div>
@@ -161,8 +161,8 @@ const Contact = () => {
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold mb-1" style={{ color: '#000000' }}>Phone</h3>
-                                                <a href="tel:+1234567890" className="text-gray-700 transition-colors" style={{ textDecoration: 'none' }}>
-                                                    +1 (234) 567-890
+                                                <a href="tel:+917550030564" className="text-gray-700 transition-colors" style={{ textDecoration: 'none' }}>
+                                                    +91 75500 30564
                                                 </a>
                                             </div>
                                         </div>
