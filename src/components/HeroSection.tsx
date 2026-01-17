@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Ticket, Search } from "lucide-react";
 import RotatingText from "./RotatingText";
+import { SparklesText } from "@/registry/magicui/sparkles-text";
 
 interface HeroSectionProps {
   heroImage: string;
@@ -8,13 +9,18 @@ interface HeroSectionProps {
 
 const HeroSection = ({ heroImage }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+    <section className="relative flex items-center pt-28 sm:pt-32 md:pt-36 pb-12 sm:pb-16 md:pb-20 overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
           {/* Content */}
-          <div className="space-y-6 lg:space-y-8">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-5xl font-extrabold leading-[1.1] animate-fade-up text-gray-900">
-              Book Your{" "}
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-[1.15] animate-fade-up text-gray-900">
+              <SparklesText 
+                colors={{ first: "#5331ea", second: "#5331ea" }}
+                sparklesCount={8}
+              >
+                Book Your
+              </SparklesText>{" "}
               <RotatingText
                 texts={['dining', 'events', 'turfs']}
                 className="text-primary"
@@ -24,7 +30,7 @@ const HeroSection = ({ heroImage }: HeroSectionProps) => {
               {/* with <span className="text-primary">ease</span> */}
             </h1>
 
-            <p className="text-base lg:text-lg text-gray-700 max-w-lg animate-fade-up"
+            <p className="text-base sm:text-lg lg:text-xl text-gray-700 max-w-lg leading-relaxed animate-fade-up"
               style={{ animationDelay: '0.1s', opacity: 0, animationFillMode: 'forwards' }}>
               Reserve tables at top restaurants, book tickets for exciting events, and secure turf slots for your games—all in one place with instant confirmation.
             </p>

@@ -368,7 +368,7 @@ const AccountSetup = () => {
         <div className="min-h-screen bg-white">
             <Navbar />
 
-            <section className="relative min-h-[85vh] py-6 sm:py-12 md:py-20 px-4 sm:px-6 lg:px-8">
+            <section className="relative min-h-[85vh] pt-24 sm:pt-28 md:pt-32 pb-6 sm:pb-12 md:pb-20 px-4 sm:px-6 lg:px-8">
                 {/* Background Effects */}
                 <div className="absolute inset-0 bg-gradient-mesh opacity-20"></div>
                 <div className="absolute inset-0 bg-dot-pattern opacity-10"></div>
@@ -376,7 +376,7 @@ const AccountSetup = () => {
                 <div className="relative z-10 max-w-7xl mx-auto">
                     {/* Page Title */}
                     <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-6 sm:mb-8 md:mb-16 px-4" style={{ color: '#000000' }}>
-                        Set up your District account
+                        Set up your Ticpin account
                     </h1>
 
                     {/* Mobile Progress Bar */}
