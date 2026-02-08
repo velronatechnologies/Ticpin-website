@@ -139,7 +139,7 @@ export default function PlayDetailPage() {
                                         <button
                                             style={{
                                                 width: '357px',
-                                                height: '48px',
+                                                height: '33px',
                                                 letterSpacing: '0',
                                                 fontFamily: 'var(--font-anek-tamil)',
                                                 fontWeight: 500,

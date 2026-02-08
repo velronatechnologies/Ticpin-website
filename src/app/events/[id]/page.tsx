@@ -191,8 +191,8 @@ export default function EventDetailPage() {
                                     </div>
                                 </div>
 
-                                <div className="pt-0  h-[40px] border-t border-black">
-                                    <div className="flex items-center justify-between mt-2 gap-3">
+                                <div className="pt-0  h-[43px] border-t border-black">
+                                    <div className="flex items-center justify-between mt-1 gap-3">
                                         <div>
                                             <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Starting from</span>
                                             <span className="text-2xl font-black text-zinc-900 block font-semibold">₹2,999</span>
@@ -200,7 +200,8 @@ export default function EventDetailPage() {
                                         <button
                                             style={{
                                                 width: '180px',
-                                                height: '48px',
+                                                height: '33px',
+                                                padding: '8px 16px',
                                                 letterSpacing: '0',
                                                 fontFamily: 'var(--font-anek-tamil)',
                                                 fontWeight: 500,
