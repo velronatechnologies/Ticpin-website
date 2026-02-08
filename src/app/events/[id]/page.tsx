@@ -173,8 +173,8 @@ export default function EventDetailPage() {
                     {/* Sidebar / Booking Pass */}
                     <div className="w-full lg:w-[400px] order-1 lg:order-2">
                         <div className="lg:sticky lg:top-24 space-y-6">
-                            <div className="bg-white border border-[#686868]/30 rounded-[20px] overflow-hidden shadow-sm p-8 space-y-6">
-                                <h3 className="text-2xl font-semibold text-black">Event Name</h3>
+                            <div className="bg-white border border-[#686868]/30 rounded-[20px] overflow-hidden shadow-sm p-6 space-y-4">
+                                <h3 className="text-2xl font-semibold text-black mt-[-10px]">Event Name</h3>
 
                                 <div className="space-y-4">
                                     <div className="space-y-1">
@@ -191,8 +191,8 @@ export default function EventDetailPage() {
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t border-[#686868]/20">
-                                    <div className="flex items-center justify-between gap-3">
+                                <div className="pt-0  h-[40px] border-t border-black">
+                                    <div className="flex items-center justify-between mt-2 gap-3">
                                         <div>
                                             <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Starting from</span>
                                             <span className="text-2xl font-black text-zinc-900 block font-semibold">₹2,999</span>

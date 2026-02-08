@@ -44,39 +44,185 @@ export default function DiningPage() {
                 <section>
                     <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal" style={{ fontSize: '30px', fontWeight: 600 }}>Explore Dining</h2>
                     <div className="flex flex-wrap gap-4 md:gap-6 pb-4">
-                        {diningCategories.map((category, i) => (
-                            <div
-                                key={i}
-                                className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                                style={{
-                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                    width: '170px',
-                                    height: '252px'
-                                }}
-                            >
-                                <div className="px-[20px] pt-[20px] pb-1">
-                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                        {category.name}
-                                    </h3>
-                                </div>
-                                <div className={`flex-1 relative w-full flex items-end ${category.align === 'left' ? 'justify-start' : category.align === 'center' ? 'justify-center' : 'justify-end'}`}>
-                                    <div className="relative" style={{ width: '180px', height: '180px' }}>
-                                        <Image
-                                            src={category.image}
-                                            alt={category.name}
-                                            fill
-                                            className="object-contain"
-                                            style={{
-                                                objectPosition: `bottom ${category.align}`,
-                                                marginLeft: category.align === 'left' ? '-30px' : '0',
-                                                marginRight: category.align === 'right' ? '-15px' : '0',
-                                                marginBottom: '-10px'
-                                            }}
-                                        />
-                                    </div>
+                        {/* Premium Dining */}
+                        <div
+                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            style={{
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                width: '170px',
+                                height: '252px'
+                            }}
+                        >
+                            <div className="px-[20px] pt-[20px] pb-1">
+                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                    Premium{"\n"}dining
+                                </h3>
+                            </div>
+                            <div className="flex-1 relative w-full flex items-end justify-end">
+                                <div style={{ width: '200px', height: '180px', marginRight: '-30px' }}>
+                                    <Image
+                                        src="/dining/diningimg1.png"
+                                        alt="Premium dining"
+                                        fill
+                                        className="object-contain"
+                                        style={{
+                                            objectPosition: "bottom right",
+                                            marginBottom: '-15px'
+                                        }}
+                                    />
                                 </div>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* Club & Chill */}
+                        <div
+                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            style={{
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                width: '170px',
+                                height: '252px'
+                            }}
+                        >
+                            <div className="px-[20px] pt-[20px] pb-1">
+                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                    Club &{"\n"}Chill
+                                </h3>
+                            </div>
+                            <div className="flex-1 relative w-full flex items-end justify-end">
+                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                    <Image
+                                        src="/dining/diningimg2.png"
+                                        alt="Club & Chill"
+                                        fill
+                                        className="object-contain"
+                                        style={{
+                                            objectPosition: "bottom right",
+                                            marginBottom: '-15px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Pure Veg */}
+                        <div
+                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            style={{
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                width: '170px',
+                                height: '252px'
+                            }}
+                        >
+                            <div className="px-[20px] pt-[20px] pb-1">
+                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                    Pure{"\n"}veg
+                                </h3>
+                            </div>
+                            <div className="flex-1 relative w-full flex items-end justify-end">
+                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                    <Image
+                                        src="/dining/diningimg3.png"
+                                        alt="Pure veg"
+                                        fill
+                                        className="object-contain"
+                                        style={{
+                                            objectPosition: "bottom right",
+                                            marginBottom: '-15px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Cafe Vibes */}
+                        <div
+                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            style={{
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                width: '170px',
+                                height: '252px'
+                            }}
+                        >
+                            <div className="px-[20px] pt-[20px] pb-1">
+                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                    Cafe{"\n"}vibes
+                                </h3>
+                            </div>
+                            <div className="flex-1 relative w-full flex items-end justify-end">
+                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                    <Image
+                                        src="/dining/diningimg4.png"
+                                        alt="Cafe vibes"
+                                        fill
+                                        className="object-contain"
+                                        style={{
+                                            objectPosition: "bottom right",
+                                            marginBottom: '-15px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Family Favourites */}
+                        <div
+                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            style={{
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                width: '170px',
+                                height: '252px'
+                            }}
+                        >
+                            <div className="px-[20px] pt-[20px] pb-1">
+                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                    Family{"\n"}favourites
+                                </h3>
+                            </div>
+                            <div className="flex-1 relative w-full flex items-end justify-end">
+                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                    <Image
+                                        src="/dining/diningimg5.png"
+                                        alt="Family favourites"
+                                        fill
+                                        className="object-contain"
+                                        style={{
+                                            objectPosition: "bottom right",
+                                            marginBottom: '-15px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bar & Bites */}
+                        <div
+                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            style={{
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                width: '170px',
+                                height: '252px'
+                            }}
+                        >
+                            <div className="px-[20px] pt-[20px] pb-1">
+                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                    Bar &{"\n"}bites
+                                </h3>
+                            </div>
+                            <div className="flex-1 relative w-full flex items-end justify-end">
+                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                    <Image
+                                        src="/dining/diningimg6.png"
+                                        alt="Bar & bites"
+                                        fill
+                                        className="object-contain"
+                                        style={{
+                                            objectPosition: "bottom right",
+                                            marginBottom: '-15px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

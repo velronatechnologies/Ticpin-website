@@ -7,42 +7,43 @@ export default function ExploreCard() {
     <div className="flex gap-6 overflow-x-auto pb-4">
       {/* Music Card */}
       <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-center pt-5 text-2xl text-black">Music</h1>
+        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Music</h1>
         <div className="mt-4"></div>
-        <img 
-          src="/events/eventsmusic.png" 
-          alt="Music" 
-          className="w-[164px] h-[183px] ml-[40px] " 
+        <img
+          src="/events/eventsmusic.png"
+          alt="Music"
+          className="w-[164px] h-[183px] ml-[40px] "
         />
       </div>
 
-      {/* Comedy Card */}
-      <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-center pt-5 text-2xl text-black">Comedy</h1>
-      
-        <div className="mt-4"></div>
-       
+      <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden relative" style={gradientStyle}>
+        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5 relative z-10">Comedy</h1>
+        <img
+          src="/events/eventcomdey.png"
+          alt="Comedy"
+          className="absolute bottom-[20px] right-[10px] w-[110px] h-auto object-contain"
+        />
       </div>
 
       {/* Performance Card */}
       <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-center pt-5 text-2xl text-black">Performance</h1>
+        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Performance</h1>
         <div className="mt-4"></div>
-        <img 
-          src="/events/eventperfomance.png" 
-          alt="Performance" 
-          className="w-[179px] h-[183px] ml-[16px] mt-[30px]" 
+        <img
+          src="/events/eventperfomance.png"
+          alt="Performance"
+          className="w-[179px] h-[183px] ml-[26px] mt-[30px]"
         />
       </div>
 
       {/* Sports Card */}
       <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-center pt-5 text-2xl text-black">Sports</h1>
+        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Sports</h1>
         <div className="mt-4"></div>
-        <img 
-          src="/events/eventssports.png" 
-          alt="Sports" 
-          className="w-[179px] h-[183px] ml-[30px]  mt-[35px]" 
+        <img
+          src="/events/eventssports.png"
+          alt="Sports"
+          className="w-[179px] h-[183px] ml-[26px]  mt-[35px]"
         />
       </div>
     </div>
