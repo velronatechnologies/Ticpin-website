@@ -7,7 +7,7 @@ interface CouponCardProps {
 
 export default function CouponCard({ discount, code }: CouponCardProps) {
     return (
-        <div className="relative w-[429px] h-[195.98px] flex-shrink-0 cursor-pointer group">
+        <div className="relative w-[340px] h-[155.4px] flex-shrink-0 cursor-pointer group">
             {/* SVG Background */}
             <div className="absolute inset-0">
                 <svg width="100%" height="100%" viewBox="0 0 429 179" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -24,20 +24,20 @@ export default function CouponCard({ discount, code }: CouponCardProps) {
             {/* Content Container */}
             <div className="relative z-10 w-full h-full flex">
                 {/* Left Part */}
-                <div className="w-[34%] flex flex-col items-center justify-center p-4">
-                    <span className="text-[20px] font-black text-white leading-tight text-center uppercase tracking-tighter">
+                <div className="w-[34%] flex flex-col items-center justify-center p-2">
+                    <span className="text-[16px] font-black text-white leading-tight text-center uppercase tracking-tighter">
                         FLAT<br />{discount} OFF
                     </span>
                 </div>
 
                 {/* Divider Line */}
                 <div className="flex items-center justify-center">
-                    <div className="w-[1.5px] h-[100px] bg-white opacity-80"></div>
+                    <div className="w-[1.2px] h-[80px] bg-white opacity-80"></div>
                 </div>
 
                 {/* Right Part */}
-                <div className="w-[66%] flex flex-col justify-center p-6 pl-8">
-                    <span className="text-[32px] font-bold text-white tracking-wide uppercase truncate">{code}</span>
+                <div className="w-[66%] flex flex-col justify-center p-4 pl-6">
+                    <span className="text-[24px] font-bold text-white tracking-wide uppercase truncate">{code}</span>
                 </div>
             </div>
         </div>
