@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Footer from '@/components/layout/Footer';
 import AppBanner from '@/components/layout/AppBanner';
+import BottomBanner from '@/components/layout/BottomBanner';
+import Footer from '@/components/layout/Footer';
 import { ChevronDown, MapPin, Clock, Share2 } from 'lucide-react';
 
 export default function PlayDetailPage() {
@@ -161,6 +162,7 @@ export default function PlayDetailPage() {
                     <AppBanner />
                 </div>
             </main>
+            <BottomBanner />
             <Footer />
         </div>
     );

@@ -7,7 +7,8 @@ import Image from 'next/image';
 import AppBanner from '@/components/layout/AppBanner';
 import { useState } from 'react';
 import FilterButton from '@/components/dining/FilterButton';
-import Footer from "@/components/layout/Footer";
+import BottomBanner from '@/components/layout/BottomBanner';
+import Footer from '@/components/layout/Footer';
 
 const diningCategories = [
     { name: 'Premium\ndining', image: '/dining/diningimg1.png', align: 'center' },
@@ -273,7 +274,7 @@ export default function DiningPage() {
                 </div> */}
 
             </main>
-
+            <BottomBanner />
             <Footer />
         </div>
     );

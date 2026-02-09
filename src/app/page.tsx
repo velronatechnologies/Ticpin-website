@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Music, Trophy, Building2, Ticket, MapPin, Search } from 'lucide-react';
 import { useRef, useState } from 'react';
 import EventCard from '@/components/EventCard';
+import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 
 const featuredEvents = [
@@ -178,7 +179,7 @@ export default function Home() {
           </>
         )}
       </main>
-
+      <BottomBanner />
       <Footer />
     </div>
   );

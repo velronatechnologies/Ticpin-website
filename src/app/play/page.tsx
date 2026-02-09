@@ -1,11 +1,11 @@
 'use client';
 
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import AppBanner from '@/components/layout/AppBanner';
+
 import SportCategoryCard from '@/components/play/SportCategoryCard';
 import VenueCard from '@/components/play/VenueCard';
 import FilterBar from '@/components/play/FilterBar';
+import BottomBanner from '@/components/layout/BottomBanner';
+import Footer from '@/components/layout/Footer';
 
 
 const sportsCategories = [
@@ -67,12 +67,10 @@ export default function PlayPage() {
                     </div>
                 </section>
 
-                {/* <div className="mt-20">
-                    <AppBanner />
-                </div> */}
+
 
             </main>
-
+            <BottomBanner />
             <Footer />
         </div>
     );

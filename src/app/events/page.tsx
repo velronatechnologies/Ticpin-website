@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import AppBanner from '@/components/layout/AppBanner';
 import ExploreCard from '@/components/events/ExploreCard';
@@ -131,7 +132,7 @@ export default function EventsPage() {
                 /> */}
 
             </main>
-
+            <BottomBanner />
             <Footer />
         </div>
     );

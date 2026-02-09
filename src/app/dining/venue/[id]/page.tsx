@@ -1,8 +1,8 @@
 'use client';
 
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 import { useRouter, useParams } from 'next/navigation';
+import BottomBanner from '@/components/layout/BottomBanner';
+import Footer from '@/components/layout/Footer';
 import { ArrowLeft, MapPin, Star, ChevronDown, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import BookingCard from '@/components/dining/venue/BookingCard';
@@ -184,6 +184,7 @@ export default function DiningVenueDetail() {
                     <AppBanner />
                 </div>
             </main>
+            <BottomBanner />
             <Footer />
         </div>
     );

@@ -1,8 +1,8 @@
 'use client';
 
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 import AppBanner from '@/components/layout/AppBanner';
+import BottomBanner from '@/components/layout/BottomBanner';
+import Footer from '@/components/layout/Footer';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Share2, MapPin, Calendar, Clock, Star, HelpCircle, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
@@ -227,7 +227,7 @@ export default function EventDetailPage() {
                     />
                 </div>
             </main>
-
+            <BottomBanner />
             <Footer />
         </div>
     );
