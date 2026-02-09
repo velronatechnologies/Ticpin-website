@@ -14,6 +14,7 @@ export default function Navbar() {
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [currentLocation, setCurrentLocation] = useState('Location Name');
     const [isSearchVisible, setIsSearchVisible] = useState(false);
+    const isPlayPage = pathname.startsWith('/play');
 
     const navItems = [
         { name: 'For you', href: '/' },
@@ -97,20 +98,38 @@ export default function Navbar() {
                                     {currentLocation}
                                 </span>
                             </div>
-                            <img
-                                src="/search.svg"
-                                alt="Search"
+                            <div
                                 onClick={() => setIsSearchVisible(true)}
-                                className="hidden lg:block w-5 h-5 object-contain cursor-pointer"
+                                className="hidden lg:block w-5 h-5 cursor-pointer"
+                                style={{
+                                    backgroundColor: isPlayPage ? '#E7C200' : '#5331EA',
+                                    maskImage: 'url(/search.svg)',
+                                    WebkitMaskImage: 'url(/search.svg)',
+                                    maskRepeat: 'no-repeat',
+                                    WebkitMaskRepeat: 'no-repeat',
+                                    maskPosition: 'center',
+                                    WebkitMaskPosition: 'center',
+                                    maskSize: 'contain',
+                                    WebkitMaskSize: 'contain'
+                                }}
                             />
                         </>
                     ) : (
                         <div className="relative flex-1 max-w-md animate-in slide-in-from-right-4 duration-300">
                             <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                                <img
-                                    src="/search.svg"
-                                    alt="Search"
-                                    className="w-5 h-5 object-contain"
+                                <div
+                                    className="w-5 h-5"
+                                    style={{
+                                        backgroundColor: isPlayPage ? '#E7C200' : '#5331EA',
+                                        maskImage: 'url(/search.svg)',
+                                        WebkitMaskImage: 'url(/search.svg)',
+                                        maskRepeat: 'no-repeat',
+                                        WebkitMaskRepeat: 'no-repeat',
+                                        maskPosition: 'center',
+                                        WebkitMaskPosition: 'center',
+                                        maskSize: 'contain',
+                                        WebkitMaskSize: 'contain'
+                                    }}
                                 />
                             </div>
                             <input

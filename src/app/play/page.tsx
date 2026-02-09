@@ -7,9 +7,10 @@ import SportCategoryCard from '@/components/play/SportCategoryCard';
 import VenueCard from '@/components/play/VenueCard';
 import FilterBar from '@/components/play/FilterBar';
 
+
 const sportsCategories = [
     { name: 'CRICKET', image: '/play/playck.png' },
-    { name: 'FOOTBALL', image: '/play/playck.png' }, // playck as fallback if playfb.png is missing, but usually football is there
+    { name: 'FOOTBALL', image: '/play/playfb.png' },
     { name: 'PICKLEBALL', image: '/play/playpb.png' },
     { name: 'TENNIS', image: '/play/playtens.png' },
     { name: 'BADMINTON', image: '/play/playbm.png' },
@@ -28,13 +29,11 @@ const filters = ['Top Rated', 'Cricket', 'Pickleball', 'Badminton'];
 export default function PlayPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">
-            {/* <Navbar /> */}
-
-            <main className="max-w-[1536px] mx-auto px-4 md:px-14 py-12 space-y-20">
+            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 py-8 md:py-12 space-y-12 md:space-y-20">
 
                 {/* Explore Sports Section */}
-                <section className="space-y-10">
-                    <h2 className="text-4xl font-bold text-black px-2">Explore Sports</h2>
+                <section className="space-y-8 md:space-y-10">
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Sports</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 px-2 max-w-5xl">
                         {sportsCategories.map((sport, i) => (
                             <SportCategoryCard
@@ -47,16 +46,16 @@ export default function PlayPage() {
                 </section>
 
                 {/* All Sports Venues Section */}
-                <section className="space-y-10">
-                    <h2 className="text-4xl font-bold text-black px-2">All Sports Venues</h2>
+                <section className="space-y-8 md:space-y-10">
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All Sports Venues</h2>
 
                     {/* Filters */}
-                    <div className="px-2">
+                    <div>
                         <FilterBar filters={filters} />
                     </div>
 
                     {/* Venues Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 px-2 max-w-7xl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl">
                         {sportsVenues.map((venue, i) => (
                             <VenueCard
                                 key={i}
@@ -68,9 +67,10 @@ export default function PlayPage() {
                     </div>
                 </section>
 
-                <div className="mt-20">
+                {/* <div className="mt-20">
                     <AppBanner />
-                </div>
+                </div> */}
+
             </main>
 
             <Footer />

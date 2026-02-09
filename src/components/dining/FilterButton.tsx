@@ -18,7 +18,7 @@ export default function FilterButton({ label, active = false, onClick }: FilterB
       }}
     >
       {label === 'Filters' && (
-        <span className="text-xs">⚙️</span>
+        <img src="/filter 1.png" alt="Filter" className="w-[18px] h-[18px] object-contain" />
       )}
       {label}
       {label === 'Filters' && (

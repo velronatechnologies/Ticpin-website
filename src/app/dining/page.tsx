@@ -33,16 +33,16 @@ const restaurants = [
     { id: 6, title: 'Spice Garden', location: 'Main Street', image: 'https://images.unsplash.com/photo-1543353071-873f17a7a088?w=800&h=500&fit=crop', rating: 4.4 },
 ];
 
+
+
 export default function DiningPage() {
     const [activeFilter, setActiveFilter] = useState('Filters');
 
     return (
         <div className="min-h-screen bg-[#f8f4ff] font-sans text-sm md:text-base">
-
-
-            <main className="mx-auto max-w-[1440px] px-4 md:px-6 lg:px-12 py-8 md:py-12 space-y-12 md:space-y-20">
+            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 py-8 md:py-12 space-y-12 md:space-y-20">
                 <section>
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal" style={{ fontSize: '30px', fontWeight: 600 }}>Explore Dining</h2>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Dining</h2>
                     <div className="flex flex-wrap gap-4 md:gap-6 pb-4">
                         {/* Premium Dining */}
                         <div
@@ -227,7 +227,7 @@ export default function DiningPage() {
                 </section>
 
                 <section>
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black" style={{ fontSize: '30px', fontWeight: 600 }}>Offers for you</h2>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Offers for you</h2>
                     <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4">
                         {offers.map((offer, i) => (
                             <div key={i} className="flex-shrink-0">
@@ -238,7 +238,7 @@ export default function DiningPage() {
                 </section>
 
                 <section className="space-y-6 md:space-y-8">
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal uppercase text-black" style={{ fontSize: '30px', fontWeight: 600 }}>All Restaurants</h2>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All Restaurants</h2>
 
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                         {['Filters', 'Top rated', 'Pure Veg', 'Serves Alcohol', '50% OFF'].map((filter) => (
@@ -268,9 +268,10 @@ export default function DiningPage() {
                     </div>
                 </section>
 
-                <div className="mt-20">
+                {/* <div className="mt-20">
                     <AppBanner />
-                </div>
+                </div> */}
+
             </main>
 
             <Footer />

@@ -66,7 +66,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number' }: A
 
             <div
                 className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${view === 'profile'
-                    ? 'h-full w-full max-w-[480px] rounded-l-[60px] translate-x-0'
+                    ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
                     : 'rounded-[35px] animate-in zoom-in duration-300'
                     }`}
                 style={view !== 'profile' ? { width: '850px', height: '700px' } : {}}

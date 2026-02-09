@@ -9,6 +9,8 @@ import FilterButton from '@/components/events/FilterButton';
 import EventCard from '@/components/events/EventCard';
 import { artists, events } from '@/data/mockData';
 
+
+
 export default function EventsPage() {
     const [activeFilter, setActiveFilter] = useState('Today');
     const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -20,14 +22,14 @@ export default function EventsPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-100 via-purple-50 to-pink-50">
-            <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                <section className="mb-12 sm:mb-16">
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal" style={{ fontSize: '30px', fontWeight: 600 }}>Explore Events</h2>
+            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 py-8 md:py-12 space-y-12 md:space-y-20">
+                <section>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Events</h2>
                     <ExploreCard />
                 </section>
 
-                <section className="mb-12 relative">
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal" style={{ fontSize: '30px', fontWeight: 600 }}>Artists</h2>
+                <section>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Artists</h2>
                     <div className="relative group">
                         <div
                             id="artists-container"
@@ -96,7 +98,7 @@ export default function EventsPage() {
 
                 <section>
                     <div className="mb-6">
-                        <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal" style={{ fontSize: '30px', fontWeight: 600 }}>All events</h2>
+                        <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All events</h2>
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                             {['Filters', 'Today', 'Tomorrow', 'Music'].map((filter) => (
                                 <FilterButton
@@ -124,9 +126,10 @@ export default function EventsPage() {
                     </div>
                 </section>
 
-                <AppBanner
+                {/* <AppBanner
                     subtitle="Book your favorite events and shows now"
-                />
+                /> */}
+
             </main>
 
             <Footer />

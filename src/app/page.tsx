@@ -51,7 +51,7 @@ function Section({
   if (initialItems.length === 0) return null;
 
   return (
-    <section className="py-2 md:py-4 px-4 md:px-6 lg:px-12 group/section animate-in fade-in duration-500">
+    <section className="py-2 md:py-4 px-4 md:px-10 lg:px-16 group/section animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-2 md:mb-4">
         <div className="flex items-baseline gap-3 md:gap-4">
           <h2 className="text-xl md:text-3xl font-black tracking-tighter text-zinc-900" style={{ fontFamily: 'var(--font-anek-latin)' }}>{title}</h2>
@@ -87,6 +87,8 @@ function Section({
     </section>
   );
 }
+
+
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -160,7 +162,7 @@ export default function Home() {
                     variant="wide"
                     baseRoute="sports"
                   />
-                  <div className="px-4 md:px-6 lg:px-12 py-8">
+                  <div className="px-4 md:px-10 lg:px-16 py-8">
                     <div className="rounded-[2rem] overflow-hidden border border-[#5331EA] shadow-xl">
                       <img
                         src="/ticpin-pass.png"
@@ -172,6 +174,7 @@ export default function Home() {
                 </>
               )}
             </div>
+
           </>
         )}
       </main>

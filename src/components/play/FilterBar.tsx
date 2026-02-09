@@ -1,22 +1,47 @@
 'use client';
+import { useState } from 'react';
 
-import { SlidersHorizontal } from 'lucide-react';
+
 
 interface FilterBarProps {
     filters: string[];
 }
 
 export default function FilterBar({ filters }: FilterBarProps) {
+    const [activeFilter, setActiveFilter] = useState('Filters');
+
     return (
         <div className="flex flex-wrap gap-3 px-2 font-[family-name:var(--font-anek-latin)]">
-            <button className="flex items-center gap-2 px-4 py-2 border border-[#AEAEAE] rounded-[20px] hover:bg-zinc-100 uppercase transition-all group shadow-sm active:scale-95">
-                <SlidersHorizontal size={18} className="text-[#686868] transition-colors" />
-                <span className="text-base font-semibold text-[#686868] transition-colors">Filters</span>
+            {/* Filters Button */}
+            <button
+                onClick={() => setActiveFilter('Filters')}
+                className={`px-6 py-3 text-base font-medium transition-all duration-300 whitespace-nowrap flex items-center gap-2 ${activeFilter === 'Filters'
+                    ? 'bg-[#E7C20026] text-black shadow-inner'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                style={{
+                    border: '1px solid #a4a4a4',
+                    borderRadius: '22px'
+                }}
+            >
+                <img src="/filter 1.png" alt="Filter" className="w-[18px] h-[18px] object-contain" />
+                <span>Filters</span>
+                <span className="text-xs ml-1 text-black">▼</span>
             </button>
+
+            {/* Other Filter Buttons */}
             {filters.map((filter, i) => (
                 <button
                     key={i}
-                    className="px-5 py-2 border border-[#AEAEAE] rounded-[20px] hover:bg-zinc-100 transition-all text-base font-semibold text-[#686868] uppercase shadow-sm active:scale-95"
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-6 py-3 text-base font-medium transition-all duration-300 whitespace-nowrap uppercase ${activeFilter === filter
+                        ? 'bg-[#E7C20026] text-black shadow-inner'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                        }`}
+                    style={{
+                        border: '1px solid #a4a4a4',
+                        borderRadius: '22px'
+                    }}
                 >
                     {filter}
                 </button>
