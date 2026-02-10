@@ -26,7 +26,14 @@ export default function VenueCard({ id = '1', name, location, image }: VenueCard
                                 {location}
                             </div>
                         </div>
-                        <span className="inline-block px-4 py-1.5 bg-[#D9D9D9] rounded-full text-[12px] font-medium text-black ml-[-10px]">
+                        <span
+                            className="flex items-center justify-center bg-[#D9D9D9] text-[15px] font-medium text-black ml-[-10px] mt-[5px]"
+                            style={{
+                                width: '100px',
+                                height: '30px',
+                                borderRadius: '15px'
+                            }}
+                        >
                             Play options
                         </span>
                     </div>

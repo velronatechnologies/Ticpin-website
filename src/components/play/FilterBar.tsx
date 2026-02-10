@@ -16,7 +16,7 @@ export default function FilterBar({ filters }: FilterBarProps) {
             <button
                 onClick={() => setActiveFilter('Filters')}
                 className={`px-6 py-3 text-base font-medium transition-all duration-300 whitespace-nowrap flex items-center gap-2 ${activeFilter === 'Filters'
-                    ? 'bg-[#E7C20026] text-black shadow-inner'
+                    ? 'bg-[#d9d9d9] text-black shadow-inner'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                 style={{
@@ -26,7 +26,7 @@ export default function FilterBar({ filters }: FilterBarProps) {
             >
                 <img src="/filter 1.png" alt="Filter" className="w-[18px] h-[18px] object-contain" />
                 <span>Filters</span>
-                <span className="text-xs ml-1 text-black">▼</span>
+                <img src="/filter arrow.svg" alt="arrow" className="w-[10px] h-[6px] ml-1" />
             </button>
 
             {/* Other Filter Buttons */}
@@ -35,7 +35,7 @@ export default function FilterBar({ filters }: FilterBarProps) {
                     key={i}
                     onClick={() => setActiveFilter(filter)}
                     className={`px-6 py-3 text-base font-medium transition-all duration-300 whitespace-nowrap uppercase ${activeFilter === filter
-                        ? 'bg-[#E7C20026] text-black shadow-inner'
+                        ? 'bg-[#d9d9d9] text-black shadow-inner'
                         : 'bg-white text-gray-600 hover:bg-gray-50'
                         }`}
                     style={{

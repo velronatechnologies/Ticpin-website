@@ -1,12 +1,13 @@
-'use client';
+import Link from 'next/link';
 
 interface SportCategoryCardProps {
     name: string;
     image: string;
+    href?: string;
 }
 
-export default function SportCategoryCard({ name, image }: SportCategoryCardProps) {
-    return (
+export default function SportCategoryCard({ name, image, href }: SportCategoryCardProps) {
+    const content = (
         <div
             className="w-[172px] h-[235px] rounded-[30px] border border-[#686868] p-4 flex flex-col items-center justify-between cursor-pointer shadow-sm group mx-auto"
             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E7C200 159.52%)' }}
@@ -23,4 +24,10 @@ export default function SportCategoryCard({ name, image }: SportCategoryCardProp
             </div>
         </div>
     );
+
+    if (href) {
+        return <Link href={href} className="block">{content}</Link>;
+    }
+
+    return content;
 }

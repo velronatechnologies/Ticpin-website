@@ -35,7 +35,7 @@ export default function EventsPage() {
                         <div
                             id="artists-container"
                             onScroll={handleScroll}
-                            className="flex gap-4 sm:gap-6 md:gap-8 lg:gap-10 xl:gap-12 overflow-x-auto pb-4 scrollbar-hide scroll-smooth snap-x snap-mandatory pr-20 md:pr-32"
+                            className="flex gap-4 sm:gap-6 md:gap-8 lg:gap-10 xl:gap-12 overflow-x-auto py-4 scrollbar-hide scroll-smooth snap-x snap-mandatory"
                         >
                             {artists.map((artist) => (
                                 <ArtistAvatar
@@ -45,13 +45,6 @@ export default function EventsPage() {
                                 />
                             ))}
                         </div>
-
-                        {/* Fade masks to hide partial items at edges */}
-                        <div
-                            className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-purple-100 to-transparent pointer-events-none z-10 transition-opacity duration-300"
-                            style={{ opacity: showLeftArrow ? 1 : 0 }}
-                        />
-                        <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-purple-100 to-transparent pointer-events-none z-10" />
 
                         {showLeftArrow && (
                             <button
@@ -126,11 +119,6 @@ export default function EventsPage() {
                         ))}
                     </div>
                 </section>
-
-                {/* <AppBanner
-                    subtitle="Book your favorite events and shows now"
-                /> */}
-
             </main>
             <BottomBanner />
             <Footer />

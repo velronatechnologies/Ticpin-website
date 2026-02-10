@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-react';
 export default function BookingCard() {
     return (
         <div className="bg-white border border-[#686868]/30 rounded-[20px] overflow-hidden shadow-sm p-8 space-y-6">
-            <h3 className="text-2xl font-semibold text-black">Book a table</h3>
+            <h3 className="text-2xl font-medium text-black">Book a table</h3>
 
             <div className="space-y-4">
                 <div className="space-y-1">

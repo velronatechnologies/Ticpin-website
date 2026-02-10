@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function ExploreCard() {
   const gradientStyle = {
     background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)'
@@ -6,15 +8,17 @@ export default function ExploreCard() {
   return (
     <div className="flex gap-6 overflow-x-auto pb-4">
       {/* Music Card */}
-      <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Music</h1>
-        <div className="mt-4"></div>
-        <img
-          src="/events/eventsmusic.png"
-          alt="Music"
-          className="w-[164px] h-[183px] ml-[40px] "
-        />
-      </div>
+      <Link href="/events/music" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+        <div className="w-[173px] h-[232px] rounded-[30px] overflow-hidden" style={gradientStyle}>
+          <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Music</h1>
+          <div className="mt-4"></div>
+          <img
+            src="/events/eventsmusic.png"
+            alt="Music"
+            className="w-[164px] h-[183px] ml-[40px] "
+          />
+        </div>
+      </Link>
 
       <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden relative" style={gradientStyle}>
         <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5 relative z-10">Comedy</h1>

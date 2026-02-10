@@ -22,7 +22,7 @@ export default function FilterButton({ label, active = false, onClick }: FilterB
       )}
       {label}
       {label === 'Filters' && (
-        <span className="text-xs ml-1">▼</span>
+        <img src="/filter arrow.svg" alt="arrow" className="w-[10px] h-[6px] ml-1" />
       )}
     </button>
   );

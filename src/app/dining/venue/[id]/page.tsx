@@ -49,12 +49,12 @@ export default function DiningVenueDetail() {
                     <div className="flex-1 space-y-10 md:space-y-12">
                         {/* Hero Image */}
                         <div className="relative w-full h-[350px] md:h-[500px] rounded-[30px] overflow-hidden shadow-sm group">
-                            <img src={venue.image} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 font-[family-name:var(--font-anek-latin)]" alt={venue.title} />
+                            <img src={venue.image} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 font-[family-name:var(--font-anek-latin)] font-semibold" alt={venue.title} />
                             <div className="absolute inset-0 bg-black/10 transition-opacity group-hover:opacity-0" />
                         </div>
                         {/* Restaurant Info */}
                         <div className="space-y-2">
-                            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 font-[family-name:var(--font-anek-latin)]">{venue.title}</h1>
+                            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 font-[family-name:var(--font-anek-latin)] font-semibold">{venue.title}</h1>
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 px-1.5 py-0.5 text-white text-[8px] md:text-[10px] font-black rounded uppercase shadow-sm" style={{ background: 'rgba(41, 129, 3, 1)' }}>
                                     {venue.rating} <Star size={10} className="fill-white" />
@@ -178,10 +178,6 @@ export default function DiningVenueDetail() {
                             <BookingCard />
                         </div>
                     </div>
-                </div>
-
-                <div className="mt-20">
-                    <AppBanner />
                 </div>
             </main>
             <BottomBanner />

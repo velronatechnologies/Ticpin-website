@@ -9,7 +9,7 @@ import Footer from '@/components/layout/Footer';
 
 
 const sportsCategories = [
-    { name: 'CRICKET', image: '/play/playck.png' },
+    { name: 'CRICKET', image: '/play/playck.png', href: '/play/cricket' },
     { name: 'FOOTBALL', image: '/play/playfb.png' },
     { name: 'PICKLEBALL', image: '/play/playpb.png' },
     { name: 'TENNIS', image: '/play/playtens.png' },
@@ -40,6 +40,7 @@ export default function PlayPage() {
                                 key={i}
                                 name={sport.name}
                                 image={sport.image}
+                                href={sport.href}
                             />
                         ))}
                     </div>
