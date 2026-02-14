@@ -40,6 +40,7 @@ export default function EventsPage() {
                             {artists.map((artist) => (
                                 <ArtistAvatar
                                     key={artist.id}
+                                    id={artist.id}
                                     name={artist.name}
                                     image={artist.image}
                                 />

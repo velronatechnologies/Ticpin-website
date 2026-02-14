@@ -46,34 +46,36 @@ export default function DiningPage() {
                     <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Dining</h2>
                     <div className="flex flex-wrap gap-4 md:gap-6 pb-4">
                         {/* Premium Dining */}
-                        <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                            style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                width: '170px',
-                                height: '252px'
-                            }}
-                        >
-                            <div className="px-[20px] pt-[20px] pb-1">
-                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                    Premium{"\n"}dining
-                                </h3>
-                            </div>
-                            <div className="flex-1 relative w-full flex items-end justify-end">
-                                <div style={{ width: '200px', height: '180px', marginRight: '-30px' }}>
-                                    <Image
-                                        src="/dining/diningimg1.png"
-                                        alt="Premium dining"
-                                        fill
-                                        className="object-contain"
-                                        style={{
-                                            objectPosition: "bottom right",
-                                            marginBottom: '-15px'
-                                        }}
-                                    />
+                        <Link href="/dining/premium-dining" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                            <div
+                                className="rounded-[30px] border border-[#686868] flex flex-col group overflow-hidden relative"
+                                style={{
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    width: '170px',
+                                    height: '252px'
+                                }}
+                            >
+                                <div className="px-[20px] pt-[20px] pb-1">
+                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                        Premium{"\n"}dining
+                                    </h3>
+                                </div>
+                                <div className="flex-1 relative w-full flex items-end justify-end">
+                                    <div style={{ width: '200px', height: '180px', marginRight: '-30px' }}>
+                                        <Image
+                                            src="/dining/diningimg1.png"
+                                            alt="Premium dining"
+                                            fill
+                                            className="object-contain"
+                                            style={{
+                                                objectPosition: "bottom right",
+                                                marginBottom: '-15px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Club & Chill */}
                         <div
@@ -228,7 +230,7 @@ export default function DiningPage() {
                 </section>
 
                 <section>
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Offers for you</h2>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Exclusive Offers</h2>
                     <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4">
                         {offers.map((offer, i) => (
                             <div key={i} className="flex-shrink-0">

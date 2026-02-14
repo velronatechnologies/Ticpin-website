@@ -11,38 +11,82 @@ export default function Navbar() {
     const pathname = usePathname();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(true); // Mocking logged in for now to show the new profile sidebar
+    const [isExploreOpen, setIsExploreOpen] = useState(false);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [currentLocation, setCurrentLocation] = useState('Location Name');
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const isPlayPage = pathname.startsWith('/play');
 
     const navItems = [
-        { name: 'For you', href: '/' },
         { name: 'Dining', href: '/dining' },
         { name: 'Events', href: '/events' },
         { name: 'Play', href: '/play' },
-        // { name: 'Cinema', href: '#' },
-        // { name: 'Workshops', href: '#' },
-        // { name: 'Comedy', href: '#' }
+    ];
+
+    const exploreCategories = [
+        { name: 'Movies', icon: '🎬', href: '/movies' },
+        { name: 'Music', icon: '🎵', href: '/music' },
+        { name: 'Comedy', icon: '🎭', href: '/comedy' },
+        { name: 'Workshops', icon: '🎨', href: '/workshops' },
+        // { name: 'Theatre', icon: '🏛️', href: '/theatre' },
+        // { name: 'Adventure', icon: '🧗', href: '/adventure' },
+        // { name: 'Kids', icon: '🎈', href: '/kids' },
+        // { name: 'Experiences', icon: '✨', href: '/experiences' },
     ];
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border bg-white h-16 md:h-20 flex items-center">
+        <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white h-16 md:h-20 flex items-center">
             <div className="w-full h-full flex items-center justify-between px-3 md:px-4 lg:px-6">
                 {/* Left: Logo, Explore and Tabs */}
                 <div className="flex items-center gap-3 md:gap-8 min-w-max">
-                    <div className="flex items-center gap-3 md:gap-6">
-                        <Link href="/" className="border-r border-zinc-200 pr-3 md:pr-6 flex items-center">
+                    <div className="flex items-center gap-3 md:gap-6 relative">
+                        <Link href="/dining" className="border-r border-zinc-200 pr-3 md:pr-6 flex items-center">
                             <img
                                 src="/ticpin-logo-black.png"
                                 alt="TicPin Logo"
                                 className="h-4 md:h-7 w-auto object-contain"
                             />
                         </Link>
-                        <div data-layer="Explore" className="hidden sm:flex items-center gap-1 cursor-pointer">
-                            <span className="text-[18px] font-medium text-black" style={{ fontFamily: 'Anek Latin' }}>Explore</span>
-                            <ChevronDown size={18} className="text-black" />
+
+                        {/* Explore Dropdown */}
+                        <div
+                            className="hidden sm:flex items-center gap-1 cursor-pointer group"
+                            onClick={() => setIsExploreOpen(!isExploreOpen)}
+                        >
+                            <span className="text-[18px] font-medium text-black group-hover:text-[#5331EA] transition-colors" style={{ fontFamily: 'Anek Latin' }}>Explore</span>
+                            <ChevronDown size={18} className={`text-black group-hover:text-[#5331EA] transition-transform duration-300 ${isExploreOpen ? 'rotate-180' : ''}`} />
                         </div>
+
+                        {isExploreOpen && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setIsExploreOpen(false)}
+                                />
+                                <div className="absolute top-full left-0 mt-4 w-[280px] bg-white rounded-2xl shadow-2xl border border-zinc-100 p-3 z-20 animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {exploreCategories.map((type) => (
+                                            <Link
+                                                key={type.name}
+                                                href={type.href}
+                                                className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-[#5331EA]/5 transition-colors group"
+                                                onClick={() => setIsExploreOpen(false)}
+                                            >
+                                                <span className="text-xl">{type.icon}</span>
+                                                <span className="text-[16px] font-semibold text-zinc-900 group-hover:text-[#5331EA] transition-colors" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                    {type.name}
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-zinc-50 flex items-center justify-center">
+                                        <button className="text-[12px] font-bold text-zinc-400 uppercase tracking-widest py-2 hover:text-[#5331EA] transition-colors">
+                                            View All Categories
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Tabs */}
