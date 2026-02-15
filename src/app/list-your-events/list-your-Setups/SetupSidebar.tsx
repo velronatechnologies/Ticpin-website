@@ -2,7 +2,15 @@
 
 import React from 'react';
 
-export default function SetupSidebar({ currentStep = '01', completedSteps = [] as string[] }: { currentStep?: string, completedSteps?: string[] }) {
+export default function SetupSidebar({
+    currentStep = '01',
+    completedSteps = [] as string[],
+    category = null as string | null
+}: {
+    currentStep?: string,
+    completedSteps?: string[],
+    category?: string | null
+}) {
     const steps = [
         { number: '01', title: 'Organization details' },
         { number: '02', title: 'GST selection' },
@@ -15,6 +23,7 @@ export default function SetupSidebar({ currentStep = '01', completedSteps = [] a
     const currentStepIndex = steps.findIndex(s => s.number === currentStep);
     const progressPercentage = ((currentStepIndex + 1) / steps.length) * 100;
 
+    const isPlay = category === 'play';
     const activeColor = '#000000';
 
     return (
@@ -58,7 +67,7 @@ export default function SetupSidebar({ currentStep = '01', completedSteps = [] a
                                 </div>
                                 {completedSteps.includes(step.number) && !isActive && (
                                     <img
-                                        src="/list your events/tick icon.svg"
+                                        src={isPlay ? "/list your events/tick.svg" : "/list your events/tick icon.svg"}
                                         alt="completed"
                                         className="w-[16px] h-[16px] object-contain shrink-0"
                                     />

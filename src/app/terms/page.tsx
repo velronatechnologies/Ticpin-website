@@ -10,7 +10,7 @@ export default function TermsPage() {
                 <div className="max-w-4xl mx-auto bg-white rounded-[2rem] md:rounded-[3rem] p-8 md:p-16 shadow-xl border border-zinc-100">
                     <div className="mb-12">
                         <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                            TERMS & CONDITIONS
+                            TERMS & SERVICES
                         </h1>
                         <p className="text-[#686868] font-bold uppercase text-xs tracking-widest">
                             Last Updated: July 31, 2025

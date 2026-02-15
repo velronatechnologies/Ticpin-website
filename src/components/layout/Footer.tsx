@@ -1,8 +1,32 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
+    const pathname = usePathname();
+
+    const getListYourLink = () => {
+        if (pathname.startsWith('/dining')) {
+            return {
+                name: 'List your dining',
+                href: '/list-your-events?category=dining'
+            };
+        } else if (pathname.startsWith('/play')) {
+            return {
+                name: 'List your play/courts',
+                href: '/list-your-events?category=play'
+            };
+        } else {
+            return {
+                name: 'List your events',
+                href: '/list-your-events?category=events'
+            };
+        }
+    };
+
+    const dynamicLink = getListYourLink();
+
     return (
         <footer className="bg-[#212121] text-white border-t border-zinc-800/50">
             <div className="mx-auto max-w-[1440px] px-6 md:px-[68px] min-h-[200px] flex flex-col justify-center py-8 md:py-10">
@@ -16,13 +40,12 @@ export default function Footer() {
                         />
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-x-6 md:gap-x-12 gap-y-3 font-[family-name:var(--font-anek-latin)]">
+                    <div className="flex flex-wrap justify-center items-center gap-x-6 md:gap-x-12 gap-y-3 font-[family-name:var(--font-anek-latin)]">
                         {[
-                            { name: 'Terms & Conditions', href: '/terms' },
+                            { name: 'Terms & Services', href: '/terms' },
                             { name: 'Privacy Policy', href: '/privacy' },
                             { name: 'Refund & Cancellation', href: '/refund' },
-                            { name: 'Contact Us', href: '/contact' },
-                            { name: 'List your events', href: 'list-your-events' }
+                            { name: 'Contact Us', href: '/contact' }
                         ].map((link) => (
                             <Link
                                 key={link.name}
@@ -32,6 +55,12 @@ export default function Footer() {
                                 {link.name}
                             </Link>
                         ))}
+                        <Link
+                            href={dynamicLink.href}
+                            className="text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap"
+                        >
+                            {dynamicLink.name}
+                        </Link>
                     </div>
 
                     {/* QR Code Placeholder */}
