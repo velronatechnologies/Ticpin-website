@@ -22,7 +22,7 @@ export default function Footer() {
                             { name: 'Privacy Policy', href: '/privacy' },
                             { name: 'Refund & Cancellation', href: '/refund' },
                             { name: 'Contact Us', href: '/contact' },
-                            { name: 'List your events', href: '#' }
+                            { name: 'List your events', href: 'list-your-events' }
                         ].map((link) => (
                             <Link
                                 key={link.name}

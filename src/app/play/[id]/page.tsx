@@ -37,7 +37,7 @@ export default function PlayDetailPage() {
                                 </p>
                                 <button
                                     onClick={() => setIsAboutExpanded(!isAboutExpanded)}
-                                    className="flex items-center gap-1 mt-2 text-black font-bold hover:underline"
+                                    className="flex items-center gap-1 mt-2 text-black font-bold"
                                 >
                                     Show {isAboutExpanded ? 'less' : 'more'} <ChevronDown className={`transition-transform grow-0 ${isAboutExpanded ? 'rotate-180' : ''}`} size={16} />
                                 </button>
@@ -51,8 +51,8 @@ export default function PlayDetailPage() {
                                     <Clock size={24} />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[#686868] font-semibold uppercase tracking-wider">Duration</p>
-                                    <p className="text-base font-semibold text-black">{`{ TIME }`}</p>
+                                    <p className="text-xs text-[#686868] font-medium uppercase tracking-wider">Duration</p>
+                                    <p className="text-base font-medium text-black">{`{ TIME }`}</p>
                                 </div>
                             </div>
                         </section>
@@ -86,8 +86,8 @@ export default function PlayDetailPage() {
                                     <h4 className="text-xl text-[#686868] font-medium">{`{ Venue Name }`}</h4>
                                     <p className="text-xl text-[#686868] font-medium">{`{ Venue Address }`}</p>
                                 </div>
-                                <button className="px-6 py-2 border border-[#686868]/40 rounded-lg flex items-center gap-1 text-sm font-semibold uppercase tracking-wider hover:bg-zinc-50 transition-colors">
-                                    <MapPin size={18} /> Get Directions
+                                <button className="flex items-center gap-1.5 px-4 py-2 bg-transparent border border-zinc-300 rounded-[10px] text-black font-medium uppercase tracking-tight text-[18px] hover:bg-zinc-50 transition-colors">
+                                    <MapPin size={18} strokeWidth={1.5} /> GET DIRECTIONS
                                 </button>
                             </div>
                         </section>
@@ -138,18 +138,20 @@ export default function PlayDetailPage() {
                                     </div>
                                     <div className="pt-6 border-t border-[#686868]/20">
                                         <button
-                                            style={{
-                                                width: '357px',
-                                                height: '33px',
-                                                letterSpacing: '0',
-                                                fontFamily: 'var(--font-anek-tamil)',
-                                                fontWeight: 500,
-                                                fontSize: '24px',
-                                                lineHeight: '200%'
-                                            }}
-                                            className="bg-black text-white ml-[-10px] uppercase rounded-[9px] hover:bg-zinc-800 transition-all flex items-center justify-center"
+                                            className="w-full h-[54px] bg-black text-white rounded-[12px] flex items-center justify-center active:scale-[0.98]"
                                         >
-                                            BOOK SLOTS
+                                            <span
+                                                style={{
+                                                    transform: 'scaleY(2)',
+                                                    display: 'inline-block',
+                                                    fontFamily: "var(--font-anek-tamil)",
+                                                    fontWeight: 600,
+                                                    lineHeight: 1
+                                                }}
+                                                className="text-[18px] tracking-wider uppercase"
+                                            >
+                                                BOOK SLOTS
+                                            </span>
                                         </button>
                                     </div>
                                 </div>
@@ -158,9 +160,7 @@ export default function PlayDetailPage() {
                     </div>
                 </div>
 
-                <div className="mt-20">
-                    <AppBanner />
-                </div>
+
             </main>
             <BottomBanner />
             <Footer />
