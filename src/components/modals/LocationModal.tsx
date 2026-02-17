@@ -6,7 +6,7 @@ interface LocationModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
+// d
 const popularCities = [
     'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad',
     'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur'
