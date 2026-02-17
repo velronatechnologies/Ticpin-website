@@ -66,10 +66,10 @@ export default function OrganizerOTPView({
                 </p>
                 <button
                     onClick={handleResendOrganizerOtp}
-                    disabled={!canResendEmailOtp && emailOtpTimer > 270}
-                    className={`text-sm font-bold transition-all ${(!canResendEmailOtp && emailOtpTimer > 270) ? 'text-zinc-300 cursor-not-allowed' : 'text-[#5331EA] hover:underline cursor-pointer'}`}
+                    disabled={!canResendEmailOtp || isLoading}
+                    className={`text-sm font-bold transition-all ${!canResendEmailOtp || isLoading ? 'text-zinc-300 cursor-not-allowed' : 'text-[#5331EA] hover:underline cursor-pointer'}`}
                 >
-                    {emailOtpTimer > 270 ? `Resend in ${emailOtpTimer - 270}s` : 'Resend Code'}
+                    {canResendEmailOtp ? 'Resend Code' : `Resend available in ${emailOtpTimer}s`}
                 </button>
             </div>
 

@@ -37,6 +37,14 @@ function AccountSetupContent() {
     const router = useRouter();
     const { addToast } = useToast();
 
+    // Clear verification when PAN or name changes
+    useEffect(() => {
+        if (panVerification && (panVerification.pan !== pan || panVerification.registered_name?.toLowerCase() !== panName?.toLowerCase())) {
+            setPanVerification(null);
+            updateSetupData({ pan_verification: null });
+        }
+    }, [pan, panName]);
+
     useEffect(() => {
         const checkStatus = async () => {
             const state = useStore.getState();
@@ -99,8 +107,12 @@ function AccountSetupContent() {
             setIsAuthModalOpen(true);
             return;
         }
-        if (!pan || !panName) {
-            addToast('Please enter PAN and Name first', 'warning');
+        if (!pan || pan.length !== 10) {
+            addToast('Please enter a valid 10-character PAN number', 'warning');
+            return;
+        }
+        if (!panName) {
+            addToast('Please enter the name as per PAN card', 'warning');
             return;
         }
         setIsVerifyingPAN(true);
@@ -132,6 +144,7 @@ function AccountSetupContent() {
 
                 if (data.data.status === 'VALID' && isNameMatch) {
                     // Success, now get GSTINs
+                    addToast('✓ PAN verified successfully!', 'success');
                     try {
                         const gstResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/partners/pan-gstin`, {
                             method: 'POST',
@@ -148,18 +161,17 @@ function AccountSetupContent() {
                     } catch (e) {
                         console.error('Error fetching GSTINs:', e);
                     }
-                    addToast('PAN verified successfully', 'success');
                 } else if (data.data.status === 'VALID' && !isNameMatch) {
-                    addToast(`Name mismatch! PAN is registered to "${registeredName}".`, 'error');
+                    addToast(`Name mismatch! PAN is registered as "${registeredName}". Please use the exact name.`, 'error');
                 } else {
-                    addToast('PAN verification failed: ' + (data.data.message || 'Invalid PAN'), 'error');
+                    addToast('PAN verification failed: ' + (data.data.message || 'Invalid PAN number'), 'error');
                 }
             } else {
-                addToast(data.message || 'Verification failed', 'error');
+                addToast(data.message || 'Unable to verify PAN. Please try again.', 'error');
             }
         } catch (err) {
             console.error('Verification error:', err);
-            addToast('Could not verify PAN', 'error');
+            addToast('Network error. Please check your connection and try again.', 'error');
         } finally {
             setIsVerifyingPAN(false);
         }
@@ -171,8 +183,26 @@ function AccountSetupContent() {
             setIsAuthModalOpen(true);
             return;
         }
-        if (!selectedCategory || !pan || !panName || !panImage) {
-            addToast('Please fill all fields and upload PAN card', 'warning');
+        
+        // Detailed validation with specific error messages
+        if (!selectedCategory) {
+            addToast('Please select a category', 'warning');
+            return;
+        }
+        if (!pan || pan.length !== 10) {
+            addToast('Please enter a valid 10-character PAN number', 'warning');
+            return;
+        }
+        if (!panName) {
+            addToast('Please enter the name as per PAN card', 'warning');
+            return;
+        }
+        if (!panVerification || panVerification.status !== 'VALID' || panVerification.pan !== pan) {
+            addToast('Please verify your PAN card before continuing', 'warning');
+            return;
+        }
+        if (!panImage) {
+            addToast('Please upload your PAN card document', 'warning');
             return;
         }
 
@@ -185,11 +215,6 @@ function AccountSetupContent() {
             pan_verification: panVerification,
             gstin_mapping: setupData.gstin_mapping
         });
-
-        if (!panVerification || panVerification.status !== 'VALID') {
-            addToast('Please verify your PAN card before continuing', 'warning');
-            return;
-        }
 
         router.push(`/list-your-events/setup/gst${categoryQuery ? `?category=${categoryQuery}` : ''}`);
     };
@@ -271,10 +296,23 @@ function AccountSetupContent() {
                                             <input
                                                 type="text"
                                                 value={pan}
-                                                onChange={(e) => setPan(e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.toUpperCase();
+                                                    if (val.length <= 10) setPan(val);
+                                                }}
+                                                maxLength={10}
                                                 placeholder="ABCDE1234F"
-                                                className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3"
+                                                className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3 uppercase"
                                             />
+                                            {panVerification?.status === 'VALID' && panVerification?.pan === pan && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-1.5">
+                                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-4 md:gap-3 pl-0 md:pl-10">
@@ -291,31 +329,33 @@ function AccountSetupContent() {
                                             />
                                             <button
                                                 onClick={handleVerifyPAN}
-                                                disabled={isVerifyingPAN || (panVerification?.status === 'VALID' && panVerification?.pan === pan)}
-                                                className={`h-12 px-6 rounded-[14px] text-[14px] font-medium transition-all ${panVerification?.status === 'VALID' && panVerification?.pan === pan
-                                                    ? 'bg-[#E3FFEF] text-[#008B38] border border-[#BFFFD9] cursor-default'
+                                                disabled={isVerifyingPAN || !pan || !panName || (panVerification?.status === 'VALID' && panVerification?.pan === pan)}
+                                                className={`h-12 px-6 rounded-[14px] text-[14px] font-medium transition-all whitespace-nowrap ${panVerification?.status === 'VALID' && panVerification?.pan === pan
+                                                    ? 'bg-[#E3FFEF] text-[#008B38] border border-[#BFFFD9] cursor-not-allowed'
                                                     : panVerification?.status === 'NAME_MISMATCH' && panVerification?.pan === pan
-                                                        ? 'bg-red-50 text-red-600 border border-red-100'
-                                                        : 'bg-black text-white hover:bg-zinc-800 active:scale-95 disabled:opacity-50'
+                                                        ? 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
+                                                        : 'bg-black text-white hover:bg-zinc-800 active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed'
                                                     }`}
                                             >
                                                 {isVerifyingPAN ? (
                                                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                                 ) : panVerification?.status === 'VALID' && panVerification?.pan === pan ? (
-                                                    'Verified'
+                                                    '✓ Verified'
+                                                ) : panVerification?.status === 'NAME_MISMATCH' && panVerification?.pan === pan ? (
+                                                    'Retry'
                                                 ) : (
-                                                    'Verify'
+                                                    'Verify PAN'
                                                 )}
                                             </button>
                                         </div>
                                         {panVerification?.status === 'VALID' && panVerification?.pan === pan && (
-                                            <p className="text-[12px] text-green-600 font-medium mt-1">
-                                                ✓ PAN matches with registered name: {panVerification.registered_name}
+                                            <p className="text-[13px] text-green-600 font-medium mt-2 ml-[-3px] animate-in fade-in slide-in-from-top-1">
+                                                ✓ PAN verified! Registered name: <span className="font-bold">{panVerification.registered_name}</span>
                                             </p>
                                         )}
                                         {panVerification?.status === 'NAME_MISMATCH' && panVerification?.pan === pan && (
-                                            <p className="text-[12px] text-red-600 font-medium mt-1">
-                                                ✕ Name mismatch. 
+                                            <p className="text-[13px] text-red-600 font-medium mt-2 ml-[-3px] animate-in fade-in slide-in-from-top-1">
+                                                ✕ Name mismatch! PAN is registered as: <span className="font-bold">{panVerification.registered_name}</span>. Please correct the name above.
                                             </p>
                                         )}
                                     </div>
