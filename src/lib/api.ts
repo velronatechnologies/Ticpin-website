@@ -66,7 +66,7 @@ export const authApi = {
     },
 
     login: async (phone: string, otp: string, firebaseToken?: string) => {
-        return apiRequest<{ user: any; token: string }>('/api/v1/auth/login', {
+        return apiRequest<{ user: any; token: string; firebase_info?: any }>('/api/v1/auth/login', {
             method: 'POST',
             body: JSON.stringify({ phone, otp, firebase_token: firebaseToken }),
         });
@@ -108,14 +108,14 @@ export const authApi = {
     },
 
     organizerLogin: async (data: any) => {
-        return apiRequest<{ user: any; token: string }>('/api/v1/organizer/auth/login', {
+        return apiRequest<{ user: any; token: string; firebase_info?: any }>('/api/v1/organizer/auth/login', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     },
 
     organizerGoogleLogin: async (data: any) => {
-        return apiRequest<{ user: any; token: string }>('/api/v1/organizer/auth/google', {
+        return apiRequest<{ user: any; token: string; firebase_info?: any }>('/api/v1/organizer/auth/google', {
             method: 'POST',
             body: JSON.stringify(data),
         });
