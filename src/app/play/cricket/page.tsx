@@ -5,16 +5,32 @@ import FilterBar from '@/components/play/FilterBar';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 
-
-const cricketVenues = Array(8).fill({
-    name: 'Name',
-    location: 'Location',
-    image: '/play/m.png'
-});
+import { useState, useEffect } from 'react';
+import { playApi } from '@/lib/api';
 
 const filters = ['Top rated'];
 
 export default function CricketPage() {
+    const [venueList, setVenueList] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchVenues = async () => {
+            setIsLoading(true);
+            try {
+                const response = await playApi.getAll(20, '', 'Cricket');
+                if (response.success && response.data) {
+                    setVenueList(response.data.items || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch cricket venues:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchVenues();
+    }, []);
+
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
             <main className="space-y-12 md:space-y-20">
@@ -31,8 +47,8 @@ export default function CricketPage() {
                             />
                         </div>
                         <div className="h-[60px] md:h-[100px] w-[2px] bg-black/20" />
-                        <h1 className="text-4xl md:text-7xl font-semibold text-black">
-                            CRICKET
+                        <h1 className="text-4xl md:text-7xl font-semibold text-black uppercase">
+                            Cricket
                         </h1>
                     </div>
                 </section>
@@ -44,16 +60,29 @@ export default function CricketPage() {
                     </div>
 
                     {/* All Venues Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl mx-auto">
-                        {cricketVenues.map((venue, i) => (
-                            <VenueCard
-                                key={i}
-                                name={venue.name}
-                                location={venue.location}
-                                image={venue.image}
-                            />
-                        ))}
-                    </div>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center py-20">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl mx-auto">
+                            {venueList.length > 0 ? (
+                                venueList.map((venue, i) => (
+                                    <VenueCard
+                                        key={i}
+                                        id={venue.id}
+                                        name={venue.name}
+                                        location={venue.location?.venue_name || venue.location?.city || "Chennai"}
+                                        image={venue.images?.hero || '/play/m.png'}
+                                    />
+                                ))
+                            ) : (
+                                <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                                    <p className="text-gray-500 text-lg">No cricket venues available right now. Check back soon!</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 

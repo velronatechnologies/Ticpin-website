@@ -20,36 +20,43 @@ export default function ExploreCard() {
         </div>
       </Link>
 
-      <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden relative" style={gradientStyle}>
-        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5 relative z-10">Comedy</h1>
-        <img
-          src="/events/eventcomdey.png"
-          alt="Comedy"
-          className="absolute bottom-[20px] right-[10px] w-[110px] h-auto object-contain"
-        />
-      </div>
+      {/* Comedy Card */}
+      <Link href="/events/comedy" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+        <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden relative" style={gradientStyle}>
+          <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5 relative z-10">Comedy</h1>
+          <img
+            src="/events/eventcomdey.png"
+            alt="Comedy"
+            className="absolute bottom-[20px] right-[10px] w-[110px] h-auto object-contain"
+          />
+        </div>
+      </Link>
 
       {/* Performance Card */}
-      <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Performance</h1>
-        <div className="mt-4"></div>
-        <img
-          src="/events/eventperfomance.png"
-          alt="Performance"
-          className="w-[179px] h-[183px] ml-[26px] mt-[30px]"
-        />
-      </div>
+      <Link href="/events/performance" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+        <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
+          <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Performance</h1>
+          <div className="mt-4"></div>
+          <img
+            src="/events/eventperfomance.png"
+            alt="Performance"
+            className="w-[179px] h-[183px] ml-[26px] mt-[30px]"
+          />
+        </div>
+      </Link>
 
       {/* Sports Card */}
-      <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
-        <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Sports</h1>
-        <div className="mt-4"></div>
-        <img
-          src="/events/eventssports.png"
-          alt="Sports"
-          className="w-[179px] h-[183px] ml-[26px]  mt-[35px]"
-        />
-      </div>
+      <Link href="/events/sports" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+        <div className="w-[173px] h-[232px] rounded-[30px] flex-shrink-0 overflow-hidden" style={gradientStyle}>
+          <h1 className="text-xl md:text-2xl font-medium text-black text-center pt-5">Sports</h1>
+          <div className="mt-4"></div>
+          <img
+            src="/events/eventssports.png"
+            alt="Sports"
+            className="w-[179px] h-[183px] ml-[26px]  mt-[35px]"
+          />
+        </div>
+      </Link>
     </div>
   );
 }

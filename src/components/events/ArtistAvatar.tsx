@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 interface ArtistAvatarProps {
-  id: number;
+  id: string | number;
   name: string;
   image: string;
 }

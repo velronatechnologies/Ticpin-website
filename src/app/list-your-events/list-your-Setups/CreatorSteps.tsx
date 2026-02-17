@@ -24,10 +24,12 @@ const stepsContent = {
 
 interface CreatorStepsProps {
     type?: 'events';
+    category?: string | null;
 }
 
-export default function CreatorSteps({ type = 'events' }: CreatorStepsProps) {
+export default function CreatorSteps({ type = 'events', category = null }: CreatorStepsProps) {
     const steps = stepsContent[type];
+    const isPlay = category === 'play';
 
     return (
         <div className="flex flex-col gap-12 max-w-xl">
@@ -36,7 +38,7 @@ export default function CreatorSteps({ type = 'events' }: CreatorStepsProps) {
                     {/* Fixed width container for number ensures horizontal alignment of text */}
                     <div className="flex-shrink-0 w-[65px] md:w-[85px] lg:w-[100px] flex items-center justify-center">
                         <img
-                            src={`/list your events/${step.number}${step.number.charAt(1)}.svg`}
+                            src={isPlay ? `/list your events/${step.number}.svg` : `/list your events/${step.number}${step.number.charAt(1)}.svg`}
                             alt={step.number}
                             className="h-16 md:h-20 lg:h-24 w-auto object-contain"
                         />

@@ -1,32 +1,116 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, ChevronDown, ChevronLeft, Settings, Mail, ShieldCheck, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { authApi } from '@/lib/api';
+import { useToast } from '@/context/ToastContext';
+
+// Import Views
+import PhoneView from './auth/views/PhoneView';
+import OTPView from './auth/views/OTPView';
+import ProfileView from './auth/views/ProfileView';
+import ProfileEditView from './auth/views/ProfileEditView';
+import EmailVerifyView from './auth/views/EmailVerifyView';
+import EmailLoginView from './auth/views/EmailLoginView';
+import EmailRegisterView from './auth/views/EmailRegisterView';
+import OrganizerOTPView from './auth/views/OrganizerOTPView';
+
+// Firebase
+import { auth as firebaseAuth, googleProvider } from '@/lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup } from 'firebase/auth';
 
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
-    initialView?: 'number' | 'otp' | 'profile' | 'location';
+    initialView?: 'number' | 'otp' | 'profile' | 'location' | 'profile_edit' | 'email_verify' | 'email_login' | 'email_register' | 'email_otp';
+    onAuthSuccess?: (id: string, token: string) => void;
+    isOrganizer?: boolean;
+    category?: string | null;
 }
 
-export default function AuthModal({ isOpen, onClose, initialView = 'number' }: AuthModalProps) {
-    const [view, setView] = useState<'number' | 'otp' | 'profile' | 'location'>(initialView);
+export default function AuthModal({ isOpen, onClose, initialView = 'number', onAuthSuccess, isOrganizer = false, category = null }: AuthModalProps) {
+    const { login: authLogin, logout, phone: savedPhone, isOrganizer: authIsOrganizer } = useAuth();
+    const { addToast } = useToast();
+    const router = useRouter();
+    const [view, setView] = useState<'number' | 'otp' | 'profile' | 'location' | 'profile_edit' | 'email_verify' | 'email_login' | 'email_register' | 'email_otp'>(initialView);
 
     useEffect(() => {
         if (isOpen) {
-            setView(initialView);
+            if (isOrganizer && initialView === 'number') {
+                setView('email_login');
+            } else {
+                setView(initialView);
+            }
         }
-    }, [isOpen, initialView]);
+    }, [isOpen, initialView, isOrganizer]);
+
     const [number, setNumber] = useState('');
+    const [phone, setPhone] = useState('');
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [emailOtp, setEmailOtp] = useState(['', '', '', '', '', '']);
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [userProfile, setUserProfile] = useState<any>(null);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [emailOtpTimer, setEmailOtpTimer] = useState(300);
+    const [canResendEmailOtp, setCanResendEmailOtp] = useState(false);
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const emailOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    // Firebase Phone Auth
+    const confirmationResultRef = useRef<ConfirmationResult | null>(null);
+    const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
     useEffect(() => {
         if (view === 'otp') {
             otpRefs.current[0]?.focus();
+        } else if (['email_otp', 'email_verify'].includes(view)) {
+            setTimeout(() => {
+                emailOtpRefs.current[0]?.focus();
+            }, 100);
         }
     }, [view]);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (view === 'email_otp' && emailOtpTimer > 0) {
+            interval = setInterval(() => {
+                setEmailOtpTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (emailOtpTimer === 0) {
+            setCanResendEmailOtp(true);
+        }
+        return () => clearInterval(interval);
+    }, [view, emailOtpTimer]);
+
+    useEffect(() => {
+        if (view === 'email_otp') {
+            setEmailOtpTimer(300);
+            setCanResendEmailOtp(false);
+        }
+    }, [view]);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await authApi.getProfile();
+                if (response.success) {
+                    setUserProfile(response.data);
+                    setName(response.data.name || '');
+                    setEmail(response.data.email || '');
+                }
+            } catch (error) {
+                console.error('Failed to fetch profile:', error);
+            }
+        };
+
+        if (isOpen && ['profile', 'profile_edit', 'email_verify'].includes(view)) {
+            fetchProfile();
+        }
+    }, [isOpen, view]);
 
     const handleOtpChange = (index: number, value: string) => {
         if (isNaN(Number(value))) return;
@@ -39,25 +123,401 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number' }: A
         }
     };
 
+    const handleEmailOtpChange = (index: number, value: string) => {
+        if (isNaN(Number(value))) return;
+        const newOtp = [...emailOtp];
+        newOtp[index] = value.substring(value.length - 1);
+        setEmailOtp(newOtp);
+
+        if (value && index < 5) {
+            emailOtpRefs.current[index + 1]?.focus();
+        }
+    };
+
     const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Backspace' && !otp[index] && index > 0) {
             otpRefs.current[index - 1]?.focus();
         }
+        if (e.key === 'Enter' && otp.join('').length === 6 && !isLoading) {
+            completeLogin();
+        }
     };
 
-    const completeLogin = () => {
-        setView('profile');
+    const handleEmailOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Backspace' && !emailOtp[index] && index > 0) {
+            emailOtpRefs.current[index - 1]?.focus();
+        }
+        if (e.key === 'Enter' && emailOtp.join('').length === 6 && !isLoading) {
+            if (view === 'email_otp') handleOrganizerVerifyOtp();
+            if (view === 'email_verify') handleVerifyEmail();
+        }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        e.preventDefault();
+        const data = e.clipboardData.getData('text');
+        const digits = data.replace(/\D/g, '').slice(0, 6).split('');
+
+        if (digits.length > 0) {
+            const newOtp = [...otp];
+            digits.forEach((digit, i) => {
+                newOtp[i] = digit;
+            });
+            setOtp(newOtp);
+
+            // Focus the appropriate input
+            const nextIndex = Math.min(digits.length, 5);
+            otpRefs.current[nextIndex]?.focus();
+
+            // If we have all 6 digits, we could potentially auto-submit
+            if (digits.length === 6) {
+                // Optional: trigger login
+            }
+        }
+    };
+
+    const handleEmailPaste = (e: React.ClipboardEvent) => {
+        e.preventDefault();
+        const data = e.clipboardData.getData('text');
+        const digits = data.replace(/\D/g, '').slice(0, 6).split('');
+
+        if (digits.length > 0) {
+            const newOtp = [...emailOtp];
+            digits.forEach((digit, i) => {
+                newOtp[i] = digit;
+            });
+            setEmailOtp(newOtp);
+
+            // Focus the appropriate input
+            const nextIndex = Math.min(digits.length, 5);
+            emailOtpRefs.current[nextIndex]?.focus();
+        }
+    };
+
+    const setupRecaptcha = () => {
+        if (recaptchaVerifierRef.current) return recaptchaVerifierRef.current;
+
+        try {
+            const verifier = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', {
+                'size': 'invisible',
+                'callback': () => {
+                    console.log('Recaptcha verified');
+                },
+                'expired-callback': () => {
+                    addToast('Recaptcha expired. Please try again.', 'error');
+                }
+            });
+            recaptchaVerifierRef.current = verifier;
+            return verifier;
+        } catch (error) {
+            console.error('Recaptcha error:', error);
+            return null;
+        }
+    };
+
+    const handleSendOtp = async () => {
+        if (!number || number.length !== 10) {
+            addToast('Please enter a valid 10-digit number', 'error');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const verifier = setupRecaptcha();
+            if (!verifier) {
+                throw new Error('Failed to setup Recaptcha');
+            }
+
+            const fullNumber = `+91${number}`;
+            const confirmation = await signInWithPhoneNumber(firebaseAuth, fullNumber, verifier);
+            confirmationResultRef.current = confirmation;
+
+            addToast('OTP sent successfully!', 'success');
+            setView('otp');
+        } catch (error: any) {
+            console.error('Firebase Auth Error:', error);
+            if (error?.code === 'auth/invalid-phone-number') {
+                addToast('Invalid phone number format', 'error');
+            } else if (error?.code === 'auth/too-many-requests') {
+                addToast('Too many requests. Try again later.', 'error');
+            } else {
+                addToast(error.message || 'Failed to send OTP via Firebase', 'error');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleUpdateProfile = async () => {
+        setIsLoading(true);
+        try {
+            const response = await authApi.updateProfile({ name, email });
+            if (response.success) {
+                setUserProfile(response.data);
+                addToast('Profile updated!', 'success');
+                if (email && email !== response.data.email || !response.data.is_email_verified) {
+                    await handleSendEmailOtp();
+                } else {
+                    setView('profile');
+                }
+            } else {
+                addToast(response.message || 'Update failed', 'error');
+            }
+        } catch (error) {
+            addToast('Connection error', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSendEmailOtp = async () => {
+        setIsLoading(true);
+        try {
+            const response = await authApi.sendEmailOtp(email);
+            if (response.success) {
+                addToast('Verification OTP sent to your email!', 'success');
+                setView('email_verify');
+            } else {
+                addToast(response.message || 'Failed to send verification email', 'error');
+            }
+        } catch (error) {
+            addToast('Connection error', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const completeLogin = async () => {
+        if (!confirmationResultRef.current) {
+            addToast('Please resend OTP', 'error');
+            setView('number');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const otpCode = otp.join('');
+
+            // 1. Verify OTP with Firebase
+            const userCredential = await confirmationResultRef.current.confirm(otpCode);
+
+            // 2. Get Firebase ID Token
+            const firebaseToken = await userCredential.user.getIdToken();
+
+            // 3. Login to Backend with Firebase Token
+            const response = await authApi.login(number, '', firebaseToken);
+
+            if (response.success && response.data) {
+                authLogin(`+91${number}`, response.data.token, { userId: response.data.user.id });
+                addToast('Login successful!', 'success');
+                setIsLoading(false);
+
+                if (onAuthSuccess) {
+                    onAuthSuccess(`+91${number}`, response.data.token);
+                } else {
+                    onClose();
+                }
+                return;
+            } else {
+                addToast(response.message || 'Backend login failed', 'error');
+            }
+        } catch (error: any) {
+            console.error('Login error:', error);
+            if (error?.code === 'auth/invalid-verification-code') {
+                addToast('Invalid OTP code. Please check and try again.', 'error');
+            } else {
+                addToast(error.message || 'Verification failed', 'error');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleOrganizerLogin = async () => {
+        setIsLoading(true);
+        try {
+            const response = await authApi.organizerLogin({ email, password });
+            if (response.success && response.data) {
+                setUserProfile(response.data.user);
+                authLogin(email, response.data.token, {
+                    email,
+                    isEmailVerified: response.data.user.is_email_verified,
+                    userId: response.data.user.id
+                });
+                addToast('Login successful!', 'success');
+                router.push(`/list-your-events/dashboard${category ? `?category=${category}` : ''}`);
+                onClose();
+                if (onAuthSuccess) onAuthSuccess(email, response.data.token);
+            } else {
+                // UX Improvement: Check specific error cases
+                const msg = response.message?.toLowerCase() || '';
+
+                if (msg.includes('not verified')) {
+                    addToast('Email not verified. Sending new verification code...', 'warning');
+                    await authApi.organizerResendOtp(email);
+                    setTimeout(() => setView('email_otp'), 1500);
+                } else if (msg.includes('invalid credentials') || msg.includes('password mismatch') || msg.includes('incorrect password')) {
+                    addToast('Incorrect password. Please try again.', 'error');
+                } else if (msg.includes('not found') || msg.includes('no account') || msg.includes('invalid user') || msg.includes('invalid email')) {
+                    addToast('No account found with this email. Redirecting to Register...', 'warning');
+                    setTimeout(() => setView('email_register'), 1500);
+                } else {
+                    addToast(response.message || 'Login failed. Please check your credentials.', 'error');
+                }
+            }
+        } catch (error) {
+            addToast('Backend connection failed. Please try again later.', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleOrganizerRegister = async () => {
+        if (!name || !phone || !email || !password) {
+            addToast('Please fill all required fields', 'error');
+            return;
+        }
+        if (password.length < 6) {
+            addToast('Password must be at least 6 characters', 'error');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const response = await authApi.organizerRegister({ name, phone, email, password });
+            if (response.success) {
+                addToast('Account created! Please verify the code sent to your email.', 'success');
+                setView('email_otp');
+            } else {
+                // UX Improvement: If email already exists, offer to move to login
+                const msg = response.message?.toLowerCase() || '';
+                if (msg.includes('already registered') || msg.includes('exists') || msg.includes('already taken')) {
+                    addToast('This email is already registered. Switching to Login...', 'warning');
+                    setTimeout(() => setView('email_login'), 1500);
+                } else {
+                    addToast(response.message || 'Registration failed. Please try again.', 'error');
+                }
+            }
+        } catch (error) {
+            addToast('Connection error. Is the server running?', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleOrganizerVerifyOtp = async () => {
+        setIsLoading(true);
+        try {
+            const otpCode = emailOtp.join('');
+            const response = await authApi.organizerVerifyOtp({ email, otp: otpCode });
+            if (response.success && response.data) {
+                authLogin(email, response.data.token, { email, isEmailVerified: true });
+                addToast('Verification successful!', 'success');
+                router.push(`/list-your-events/dashboard${category ? `?category=${category}` : ''}`);
+                onClose();
+                if (onAuthSuccess) onAuthSuccess(email, response.data.token);
+            } else {
+                addToast(response.message || 'Verification failed', 'error');
+            }
+        } catch (error) {
+            addToast('Connection error', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleOrganizerGoogleLogin = async () => {
+        setIsLoading(true);
+        try {
+            // 1. Sign in with Google via Firebase
+            const result = await signInWithPopup(firebaseAuth, googleProvider);
+            const user = result.user;
+
+            // 2. Get the ID token
+            const idToken = await user.getIdToken();
+
+            // 3. Send to backend for verification and session creation
+            const response = await authApi.organizerGoogleLogin({
+                email: user.email || '',
+                name: user.displayName || '',
+                id_token: idToken
+            });
+
+            if (response.success && response.data) {
+                setUserProfile(response.data.user);
+                authLogin(user.email || '', response.data.token, {
+                    email: user.email || '',
+                    isEmailVerified: true,
+                    userId: response.data.user.id
+                });
+                addToast('Google Login successful!', 'success');
+                router.push(`/list-your-events/dashboard${category ? `?category=${category}` : ''}`);
+                onClose();
+                if (onAuthSuccess) onAuthSuccess(user.email || '', response.data.token);
+            } else {
+                addToast(response.message || 'Google login failed on backend', 'error');
+            }
+        } catch (error: any) {
+            console.error('Google Auth Error:', error);
+            if (error.code === 'auth/popup-closed-by-user') {
+                // Ignore popup closures
+            } else {
+                addToast(error.message || 'Google Login failed', 'error');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResendOrganizerOtp = async () => {
+        if (isLoading) return;
+        setIsLoading(true);
+        try {
+            const response = await authApi.organizerResendOtp(email);
+            if (response.success) {
+                addToast('A new code has been sent to your email!', 'success');
+                setEmailOtpTimer(300);
+                setCanResendEmailOtp(false);
+                setEmailOtp(['', '', '', '', '', '']);
+                emailOtpRefs.current[0]?.focus();
+            } else {
+                addToast(response.message || 'Failed to resend OTP', 'error');
+            }
+        } catch (error) {
+            addToast('Connection error', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyEmail = async () => {
+        setIsLoading(true);
+        try {
+            const otpCode = emailOtp.join('');
+            const response = await authApi.verifyEmail(email, otpCode);
+            if (response.success) {
+                addToast('Email verified successfully!', 'success');
+                setView('profile');
+            } else {
+                addToast(response.message || 'Verification failed', 'error');
+            }
+        } catch (error) {
+            addToast('Connection error', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (!isOpen) return null;
 
+    const isCompact = view === 'profile' && authIsOrganizer;
+    const isSidebarView = (['profile_edit', 'email_verify'].includes(view) || (view === 'profile' && !authIsOrganizer));
+
     return (
         <div
-            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${view === 'profile' ? 'justify-end pointer-events-none' : 'items-center justify-center p-4'
+            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${isSidebarView ? 'justify-end pointer-events-none' : 'items-center justify-center p-4'
                 }`}
             style={{ fontFamily: 'var(--font-anek-latin)' }}
         >
-            {/* Backdrop - only clickable here if not profile view, or separate backdrop for profile */}
             <div
                 onClick={onClose}
                 className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-500 pointer-events-auto ${isOpen ? 'opacity-100' : 'opacity-0'
@@ -65,206 +525,134 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number' }: A
             />
 
             <div
-                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${view === 'profile'
+                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${isSidebarView
                     ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
                     : 'rounded-[35px] animate-in zoom-in duration-300'
                     }`}
-                style={view !== 'profile' ? { width: '850px', height: '700px' } : {}}
+                style={isCompact ? { width: '500px', height: 'auto' } : (!isSidebarView ? { width: '850px', height: '700px' } : {})}
             >
-                {/* VIEW: MOBILE NUMBER & OTP */}
-                {(view === 'number' || view === 'otp') && (
-                    <div className="h-full flex flex-col overflow-hidden">
-                        {/* Banner Section */}
-                        <div className="relative h-[320px] flex flex-col items-center justify-center p-0 overflow-hidden shrink-0">
-                            {/* Banner Image */}
-                            <img
-                                src="/login/banner.jpeg"
-                                alt="Login Banner"
-                                className="absolute inset-0 w-full h-full object-cover"
-                            />
+                {/* Hidden Recaptcha Container */}
+                <div id="recaptcha-container"></div>
 
-                            <button onClick={onClose} className="absolute top-6 right-6 text-white/80 hover:text-white transition-colors z-20 bg-black/20 p-2 rounded-full backdrop-blur-sm">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="p-8 space-y-6 flex-1 flex flex-col items-center justify-center bg-white ">
-                            {view === 'number' ? (
-                                <>
-                                    <div className="text-center space-y-2">
-                                        <h3 className="text-[32px] text-zinc-900 font-bold">Enter your mobile number</h3>
-                                        <p className="text-base text-zinc-500 font-medium">Don't have an account? We'll set one up for you</p>
-                                    </div>
-
-                                    <div className="w-full max-w-[604px] space-y-8">
-                                        <div className="flex gap-4">
-                                            <div className="flex items-center gap-2 px-4 bg-white border border-zinc-200 rounded-2xl h-[60px] min-w-[100px] cursor-pointer hover:border-zinc-300 transition-all">
-                                                <img src="https://flagcdn.com/w40/in.png" alt="IN" className="w-6 h-4 object-cover rounded-sm" />
-                                                <span className="text-lg text-zinc-900 font-semibold">+91</span>
-                                                <ChevronDown size={16} className="text-zinc-400" />
-                                            </div>
-                                            <input
-                                                type="tel"
-                                                placeholder="Enter mobile number"
-                                                className="flex-1 px-5 bg-white border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-zinc-900 h-[60px] transition-all"
-                                                value={number}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/\D/g, '');
-                                                    if (val.length <= 10) setNumber(val);
-                                                }}
-                                            />
-                                        </div>
-
-                                        <button
-                                            onClick={() => setView('otp')}
-                                            disabled={number.length !== 10}
-                                            className="w-full h-[55px] bg-black text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-xl shadow-black/10"
-                                        >
-                                            Continue
-                                        </button>
-
-                                        <div className="text-center">
-                                            <p className="text-[13px] text-zinc-500 font-medium leading-relaxed">
-                                                By continuing, you agree to our<br />
-                                                <span className="text-zinc-400 font-semibold cursor-pointer hover:text-zinc-600 transition-colors">Terms of Service</span> &nbsp;
-                                                <span className="text-zinc-400 font-semibold cursor-pointer hover:text-zinc-600 transition-colors">Privacy Policy</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="text-center space-y-2">
-                                        <h3 className="text-[32px] text-zinc-900 font-bold">Enter OTP</h3>
-                                        <p className="text-[15px] text-zinc-500 font-medium">
-                                            We have sent a verification code to {number || '{ NUMBER }'}{' '}
-                                            <span
-                                                className="text-[#7c00e6] font-bold cursor-pointer hover:underline"
-                                                onClick={() => setView('number')}
-                                            >
-                                                (Change)
-                                            </span>
-                                        </p>
-                                    </div>
-
-                                    <div className="w-full max-w-[604px] space-y-10">
-                                        <div className="flex justify-between gap-3">
-                                            {otp.map((digit, i) => (
-                                                <input
-                                                    key={i}
-                                                    ref={(el) => { otpRefs.current[i] = el; }}
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    maxLength={1}
-                                                    className="w-[64px] h-[64px] bg-white border border-zinc-200 rounded-[11px] text-center text-2xl font-bold focus:outline-none focus:border-[#7c00e6] focus:ring-1 focus:ring-[#7c00e6] transition-all shadow-sm"
-                                                    value={digit}
-                                                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                                                    onKeyDown={(e) => handleKeyDown(i, e)}
-                                                />
-                                            ))}
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <button
-                                                onClick={completeLogin}
-                                                disabled={otp.join('').length !== 6}
-                                                className="w-full h-[55px] bg-black text-white text-xl font-bold rounded-[11px] hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-xl shadow-black/10"
-                                            >
-                                                Continue
-                                            </button>
-                                            <div className="text-center">
-                                                <p className="text-[15px] text-zinc-500 font-medium">
-                                                    Didn't get the OPT? <span className="text-[#7c00e6] font-bold cursor-pointer hover:underline">Resend OTP</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                {view === 'number' && (
+                    <PhoneView
+                        onClose={onClose}
+                        setView={setView}
+                        number={number}
+                        setNumber={setNumber}
+                        handleSendOtp={handleSendOtp}
+                        isLoading={isLoading}
+                    />
                 )}
 
-                {/* VIEW: PROFILE PANEL (Sidebar format) */}
+                {view === 'otp' && (
+                    <OTPView
+                        onClose={onClose}
+                        number={number}
+                        setView={setView}
+                        otp={otp}
+                        otpRefs={otpRefs}
+                        handleOtpChange={handleOtpChange}
+                        handleKeyDown={handleKeyDown}
+                        handlePaste={handlePaste}
+                        completeLogin={completeLogin}
+                        handleSendOtp={handleSendOtp}
+                        isLoading={isLoading}
+                    />
+                )}
+
                 {view === 'profile' && (
-                    <div className="h-full flex flex-col bg-[#F6F6F6] animate-in slide-in-from-right duration-500">
-                        {/* Logout Confirmation Overlay */}
-                        {showLogoutConfirm && (
-                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-6 animate-in fade-in duration-200">
-                                <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl flex flex-col items-center text-center space-y-8 animate-in zoom-in duration-300">
-                                    <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500">
-                                        <LogOut size={40} />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <h3 className="text-2xl text-zinc-900 font-bold">Log Out?</h3>
-                                        <p className="text-zinc-500 font-medium">Are you sure you want to log out of your account?</p>
-                                    </div>
-                                    <div className="flex gap-4 w-full">
-                                        <button
-                                            onClick={() => setShowLogoutConfirm(false)}
-                                            className="flex-1 py-4 bg-zinc-100 text-zinc-900 rounded-2xl hover:bg-zinc-200 transition-colors font-bold"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowLogoutConfirm(false);
-                                                setView('number');
-                                                setNumber('');
-                                                setOtp(['', '', '', '', '', '']);
-                                            }}
-                                            className="flex-1 py-4 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 font-bold"
-                                        >
-                                            Log Out
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                    <ProfileView
+                        onClose={onClose}
+                        showLogoutConfirm={showLogoutConfirm}
+                        setShowLogoutConfirm={setShowLogoutConfirm}
+                        logout={logout}
+                        addToast={addToast}
+                        setNumber={setNumber}
+                        setOtp={setOtp}
+                        setView={setView}
+                        userProfile={userProfile}
+                        number={number}
+                        savedPhone={savedPhone}
+                        isOrganizer={authIsOrganizer}
+                    />
+                )}
 
-                        {/* Header */}
-                        <div className="flex items-center gap-6 px-8 pt-10 pb-6 bg-white shrink-0">
-                            <button onClick={onClose} className="p-2 -ml-2 text-zinc-900 hover:bg-zinc-100 rounded-full transition-colors">
-                                <ChevronLeft size={32} strokeWidth={2.5} />
-                            </button>
-                            <h3 className="text-[32px] text-zinc-900 font-bold tracking-tight">Profile</h3>
-                        </div>
+                {view === 'profile_edit' && (
+                    <ProfileEditView
+                        setView={setView}
+                        name={name}
+                        setName={setName}
+                        email={email}
+                        setEmail={setEmail}
+                        handleUpdateProfile={handleUpdateProfile}
+                        isLoading={isLoading}
+                    />
+                )}
 
-                        <div className="flex-1 px-8 py-8 space-y-6 overflow-y-auto overflow-x-hidden scrollbar-hide">
-                            {/* Profile Info Section (No Card Background) */}
-                            <div className="flex items-center gap-6 px-2 py-4">
-                                <div className="w-24 h-24 bg-zinc-200 rounded-full flex items-center justify-center text-zinc-400 shrink-0">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 style={{ fontSize: '36px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-900">Name</h4>
-                                    <p className="text-lg text-zinc-500 font-medium tracking-tight uppercase">{number ? `+91 ${number}` : '{ NUMBER }'}</p>
-                                </div>
-                            </div>
+                {view === 'email_verify' && (
+                    <EmailVerifyView
+                        setView={setView}
+                        email={email}
+                        emailOtp={emailOtp}
+                        emailOtpRefs={emailOtpRefs}
+                        handleEmailOtpChange={handleEmailOtpChange}
+                        handleEmailOtpKeyDown={handleEmailOtpKeyDown}
+                        handleEmailPaste={handleEmailPaste}
+                        handleVerifyEmail={handleVerifyEmail}
+                        handleSendEmailOtp={handleSendEmailOtp}
+                        isLoading={isLoading}
+                    />
+                )}
 
-                            {/* Menu Items Section */}
-                            <div className="space-y-4 pt-4">
-                                {[
-                                    { label: 'View all bookings', action: () => { } },
-                                    { label: 'Chat with us', action: () => { } },
-                                    { label: 'Terms & Conditions', action: () => { } },
-                                    { label: 'Privacy Policy', action: () => { } },
-                                    { label: 'Logout', action: () => setShowLogoutConfirm(true) }
-                                ].map((item, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={item.action}
-                                        className="w-full flex items-center justify-between h-[80px] px-8 bg-white rounded-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.99] group border border-zinc-100/50"
-                                    >
-                                        <span style={{ fontSize: '20px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-500 group-hover:text-zinc-900 transition-colors">{item.label}</span>
-                                        <ChevronLeft size={20} className="rotate-180 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                {view === 'email_login' && (
+                    <EmailLoginView
+                        onClose={onClose}
+                        setView={setView}
+                        email={email}
+                        setEmail={setEmail}
+                        password={password}
+                        setPassword={setPassword}
+                        handleOrganizerLogin={handleOrganizerLogin}
+                        handleOrganizerGoogleLogin={handleOrganizerGoogleLogin}
+                        isLoading={isLoading}
+                        name={name}
+                    />
+                )}
+
+                {view === 'email_register' && (
+                    <EmailRegisterView
+                        setView={setView}
+                        name={name}
+                        setName={setName}
+                        phone={phone}
+                        setPhone={setPhone}
+                        email={email}
+                        setEmail={setEmail}
+                        password={password}
+                        setPassword={setPassword}
+                        handleOrganizerRegister={handleOrganizerRegister}
+                        isLoading={isLoading}
+                    />
+                )}
+
+                {view === 'email_otp' && (
+                    <OrganizerOTPView
+                        email={email}
+                        emailOtp={emailOtp}
+                        emailOtpRefs={emailOtpRefs}
+                        handleEmailOtpChange={handleEmailOtpChange}
+                        handleEmailOtpKeyDown={handleEmailOtpKeyDown}
+                        handleEmailPaste={handleEmailPaste}
+                        emailOtpTimer={emailOtpTimer}
+                        canResendEmailOtp={canResendEmailOtp}
+                        handleResendOrganizerOtp={handleResendOrganizerOtp}
+                        handleOrganizerVerifyOtp={handleOrganizerVerifyOtp}
+                        setView={setView}
+                        isLoading={isLoading}
+                    />
                 )}
             </div>
-        </div >
+        </div>
     );
 }

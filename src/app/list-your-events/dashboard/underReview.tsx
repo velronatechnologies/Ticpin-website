@@ -3,7 +3,16 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 
-export default function UnderReviewDashboard() {
+interface UnderReviewDashboardProps {
+    category?: string | null;
+}
+
+export default function UnderReviewDashboard({ category }: UnderReviewDashboardProps) {
+    const isPlay = category === 'play';
+    const isDining = category === 'dining';
+    const label = isPlay ? 'venues' : isDining ? 'outlets' : 'events';
+    const createLabel = isPlay ? 'venue' : isDining ? 'outlet' : 'event';
+
     return (
         <div className="min-h-screen bg-[#F8F7FF] font-[family-name:var(--font-anek-latin)]">
             {/* Main Content Area */}
@@ -11,15 +20,15 @@ export default function UnderReviewDashboard() {
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                     <div>
-                        <h1 className="text-[32px] md:text-[36px] font-medium text-black leading-tight">Your events</h1>
-                        <p className="text-[18px] text-[#686868] font-medium mt-1">An overview of your events</p>
+                        <h1 className="text-[32px] md:text-[36px] font-medium text-black leading-tight capitaize">Your {label}</h1>
+                        <p className="text-[18px] text-[#686868] font-medium mt-1">An overview of your {label}</p>
                     </div>
                     <button
                         disabled
                         className="bg-[#E5E5E5] text-white px-4 py-3 rounded-[12px] flex items-center justify-center gap-1.5 text-[15px] font-medium cursor-not-allowed leading-none"
                     >
                         <Plus size={15} />
-                        Create event
+                        Create {createLabel}
                     </button>
                 </div>
 

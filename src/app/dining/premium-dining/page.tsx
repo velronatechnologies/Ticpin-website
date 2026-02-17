@@ -1,27 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { diningApi } from '@/lib/api';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import FilterButton from '@/components/dining/FilterButton';
 import EventCard from '@/components/dining/Eventcard';
 
-const premiumDiningRestaurants = [
-    { id: 1, title: 'The Grand Buffet', location: 'Downtown', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=500&fit=crop', rating: 4.8 },
-    { id: 2, title: 'Sushi Zen', location: 'Midtown', image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&h=500&fit=crop', rating: 4.5 },
-    { id: 3, title: 'Steakhouse Elite', location: 'Riverside', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&h=500&fit=crop', rating: 4.7 },
-    { id: 4, title: 'Le Petit Cafe', location: 'Old Town', image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&h=500&fit=crop', rating: 4.2 },
-    { id: 5, title: 'Skyline Bar', location: 'Rooftop', image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&h=500&fit=crop', rating: 4.6 },
-    { id: 6, title: 'Spice Garden', location: 'Main Street', image: 'https://images.unsplash.com/photo-1543353071-873f17a7a088?w=800&h=500&fit=crop', rating: 4.4 },
-    { id: 7, title: 'The Grand Buffet', location: 'Downtown', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=500&fit=crop', rating: 4.8 },
-    { id: 8, title: 'Sushi Zen', location: 'Midtown', image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&h=500&fit=crop', rating: 4.5 },
-    { id: 9, title: 'Steakhouse Elite', location: 'Riverside', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&h=500&fit=crop', rating: 4.7 },
-];
-
 export default function PremiumDiningPage() {
     const [activeFilter, setActiveFilter] = useState('Filters');
+    const [restaurantList, setRestaurantList] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRestaurants = async () => {
+            setIsLoading(true);
+            try {
+                const response = await diningApi.getAll(20, '', 'Premium Dining');
+                if (response.success && response.data) {
+                    setRestaurantList(response.data.items || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch premium dining venues:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchRestaurants();
+    }, []);
 
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
@@ -61,21 +69,33 @@ export default function PremiumDiningPage() {
                     </div>
 
                     {/* Restaurants Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                        {premiumDiningRestaurants.map((res, i) => (
-                            <Link key={i} href={`/dining/venue/${res.id}`}>
-                                <EventCard
-                                    variant="wide"
-                                    title={res.title}
-                                    location={res.location}
-                                    date="Rating"
-                                    tag="Flat 50% Off"
-                                    image={res.image}
-                                    rating={res.rating}
-                                />
-                            </Link>
-                        ))}
-                    </div>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center py-20">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                            {restaurantList.length > 0 ? (
+                                restaurantList.map((res) => (
+                                    <Link key={res.id} href={`/dining/venue/${res.id}`}>
+                                        <EventCard
+                                            variant="wide"
+                                            title={res.name}
+                                            location={res.location?.venue_name || res.location?.city || "Chennai"}
+                                            date="Rating"
+                                            tag={res.offers?.[0]?.title || "Flat 50% Off"}
+                                            image={res.images?.hero || '/placeholder.jpg'}
+                                            rating={res.rating || 4.5}
+                                        />
+                                    </Link>
+                                ))
+                            ) : (
+                                <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                                    <p className="text-gray-500 text-lg">No restaurants available in this category right now.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 

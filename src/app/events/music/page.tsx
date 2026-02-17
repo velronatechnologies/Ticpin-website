@@ -1,16 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { eventsApi } from '@/lib/api';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import FilterButton from '@/components/events/FilterButton';
 import EventCard from '@/components/events/EventCard';
-import { events } from '@/data/mockData';
-
-const musicEvents = Array(8).fill(events.find(e => e.id === 1) || events[0]);
 
 export default function MusicPage() {
     const [activeFilter, setActiveFilter] = useState('Today');
+    const [eventList, setEventList] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            setIsLoading(true);
+            try {
+                const response = await eventsApi.getAll(20, '', 'Music');
+                if (response.success && response.data) {
+                    setEventList(response.data.items || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch music events:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchEvents();
+    }, []);
 
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
@@ -48,20 +65,32 @@ export default function MusicPage() {
                     </div>
 
                     {/* Events Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl mx-auto">
-                        {musicEvents.map((event, i) => (
-                            <EventCard
-                                key={i}
-                                id={event.id?.toString()}
-                                name={event.name}
-                                location={event.location}
-                                date={event.date}
-                                time={event.time}
-                                ticketPrice={event.ticketPrice}
-                                image={event.image}
-                            />
-                        ))}
-                    </div>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center py-20">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl mx-auto">
+                            {eventList.length > 0 ? (
+                                eventList.map((event, i) => (
+                                    <EventCard
+                                        key={i}
+                                        id={event.id}
+                                        name={event.name}
+                                        location={event.location?.venue_name || event.location?.city || "Chennai"}
+                                        date={new Date(event.start_date).toLocaleDateString()}
+                                        time={new Date(event.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        ticketPrice={event.price ? `₹${event.price}` : "Free"}
+                                        image={event.images?.hero || '/placeholder.jpg'}
+                                    />
+                                ))
+                            ) : (
+                                <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                                    <p className="text-gray-500 text-lg">No music events available right now. Check back soon!</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 

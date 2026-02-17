@@ -1,20 +1,30 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
+import { useStore } from '@/store/useStore';
+import { useSearchParams } from 'next/navigation';
 
-export default function GstSelectionPage() {
+function GstSelectionContent() {
+    const { setupData, updateSetupData } = useStore();
+    const searchParams = useSearchParams();
+    const category = searchParams.get('category');
+    const isPlay = category === 'play';
+    const [hasGst, setHasGst] = useState(setupData.has_gst || false);
+
+    const isMockPan = setupData.pan === '5555555';
+
     return (
-        <div className="min-h-screen bg-[#FBFBFF] flex flex-col font-[family-name:var(--font-anek-latin)]">
+        <div className={`min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] transition-colors duration-500 ${isPlay ? 'bg-[#FFF1A81A]' : 'bg-[#FBFBFF]'}`}>
             {/* Content Area */}
             <main className="flex-1 px-4 md:px-14 lg:px-32 py-12 md:py-20">
                 <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="02" completedSteps={['01']} />
+                        <SetupSidebar currentStep="02" completedSteps={['01']} category={category} />
                     </aside>
 
                     {/* Content Column */}
@@ -22,14 +32,14 @@ export default function GstSelectionPage() {
                         {/* Header Info */}
                         <div className="mb-12">
                             <p className="text-[14px] font-medium text-black opacity-80" style={{ fontFamily: 'Anek Latin' }}>
-                                PAN confirmed as a &#123; TYPE OF ACCOUNT &#125;
+                                PAN confirmed as a {setupData.category || '{ TYPE OF ACCOUNT }'}
                             </p>
                             <div className="w-[120px] h-[1px] bg-zinc-300 mt-6" />
                         </div>
 
                         {/* Mobile Sidebar */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="02" completedSteps={['01']} />
+                            <SetupSidebar currentStep="02" completedSteps={['01']} category={category} />
                         </div>
 
                         {/* Form Section */}
@@ -43,41 +53,46 @@ export default function GstSelectionPage() {
                             </p>
 
                             {/* GST Account Card */}
-                            <div className="bg-white border border-zinc-200 rounded-[20px] p-6 flex items-center gap-6 shadow-sm max-w-4xl">
+                            <div className="bg-transparent border-[1.5px] border-[#AEAEAE] rounded-[20px] p-6 flex items-center gap-6 max-w-4xl">
                                 <input
                                     type="checkbox"
-                                    className="w-6 h-6 rounded-[8px] border border-zinc-300 bg-white text-[#5331EA] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                    checked={hasGst}
+                                    onChange={(e) => {
+                                        setHasGst(e.target.checked);
+                                        updateSetupData({ has_gst: e.target.checked, gstin: e.target.checked ? (isMockPan ? '22AAAAA0000A1Z5' : '') : '' });
+                                    }}
+                                    className="w-6 h-6 rounded-[8px] border border-zinc-300 bg-white accent-black focus:ring-0 focus:ring-offset-0 cursor-pointer"
                                 />
 
                                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 flex-1">
                                     <div className="space-y-0.5">
                                         <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Brand name</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>&#123; NAME &#125;</p>
+                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? setupData.pan_name : '{ NAME }'}</p>
                                     </div>
                                     <div className="space-y-0.5">
                                         <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Address</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>&#123; ADDRESS &#125;</p>
+                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? '123 Main St, Bangalore' : '{ ADDRESS }'}</p>
                                     </div>
                                     <div className="space-y-0.5">
                                         <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">GSTIN</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>&#123; GST NUM &#125;</p>
+                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? '22AAAAA0000A1Z5' : '{ GST NUM }'}</p>
                                     </div>
                                     <div className="space-y-0.5">
                                         <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Taxpayer type</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>&#123; Type &#125;</p>
+                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? 'Regular' : '{ Type }'}</p>
                                     </div>
                                     <div className="space-y-0.5">
                                         <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">GST status</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>&#123; STATUS &#125;</p>
+                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? 'Active' : '{ STATUS }'}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Continue Button */}
-                            <div className="pt-6">
-                                <Link href="/list-your-events/setup/bank">
-                                    <button className="bg-black text-white px-8 py-3.5 rounded-[12px] flex items-center gap-3 text-[16px] font-medium transition-all group active:scale-95">
-                                        Continue <ChevronRight size={18} />
+                            <div className="pt-2 flex justify-center md:justify-start">
+                                <Link href={`/list-your-events/setup/bank${category ? `?category=${category}` : ''}`} className="block w-full max-w-[110px]">
+                                    <button className="bg-black text-white w-full h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95">
+                                        Continue<ChevronRight size={18} className="transition-transform" />
                                     </button>
                                 </Link>
                             </div>
@@ -86,5 +101,13 @@ export default function GstSelectionPage() {
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function GstSelectionPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen animate-pulse bg-zinc-50" />}>
+            <GstSelectionContent />
+        </Suspense>
     );
 }

@@ -5,39 +5,65 @@ import CouponCard from '@/components/dining/CouponCard';
 import Link from 'next/link';
 import Image from 'next/image';
 import AppBanner from '@/components/layout/AppBanner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FilterButton from '@/components/dining/FilterButton';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
+import { useAuth } from '@/context/AuthContext';
+import { useStore } from '@/store/useStore';
 
-const diningCategories = [
-    { name: 'Premium\ndining', image: '/dining/diningimg1.png', align: 'center' },
-    { name: 'Club &\nChill', image: '/dining/diningimg2.png', align: 'center' },
-    { name: 'Pure\nveg', image: '/dining/diningimg3.png', align: 'center' },
-    { name: 'Cafe\nvibes', image: '/dining/diningimg4.png', align: 'center' },
-    { name: 'Family\nfavourites', image: '/dining/diningimg5.png', align: 'center' },
-    { name: 'Bar &\nbites', image: '/dining/diningimg6.png', align: 'center' }
-];
-const offers = [
-    { discount: '50%', code: 'DETAILS' },
-    { discount: '30%', code: 'WELCOME' },
-    { discount: '20%', code: 'OFFER20' },
-    { discount: '50%', code: 'DETAILS' },
-];
-
-const restaurants = [
-    { id: 1, title: 'The Grand Buffet', location: 'Downtown', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=500&fit=crop', rating: 4.8 },
-    { id: 2, title: 'Sushi Zen', location: 'Midtown', image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&h=500&fit=crop', rating: 4.5 },
-    { id: 3, title: 'Steakhouse Elite', location: 'Riverside', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&h=500&fit=crop', rating: 4.7 },
-    { id: 4, title: 'Le Petit Cafe', location: 'Old Town', image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&h=500&fit=crop', rating: 4.2 },
-    { id: 5, title: 'Skyline Bar', location: 'Rooftop', image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&h=500&fit=crop', rating: 4.6 },
-    { id: 6, title: 'Spice Garden', location: 'Main Street', image: 'https://images.unsplash.com/photo-1543353071-873f17a7a088?w=800&h=500&fit=crop', rating: 4.4 },
-];
-
-
+import { diningCategories } from '@/data/diningData';
+import { diningApi, offersApi } from '@/lib/api';
 
 export default function DiningPage() {
+    const { userId } = useAuth();
+    const { location: storeLocation } = useStore();
     const [activeFilter, setActiveFilter] = useState('Filters');
+    const [restaurantList, setRestaurantList] = useState<any[]>([]);
+    const [offerList, setOfferList] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isOffersLoading, setIsOffersLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const response = await diningApi.getAll(20, '', '', storeLocation);
+                if (response.success && response.data) {
+                    setRestaurantList(response.data.items || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch dining venues:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [storeLocation]);
+
+    useEffect(() => {
+        const fetchOffers = async () => {
+            setIsOffersLoading(true);
+            try {
+                let response;
+                if (userId) {
+                    response = await offersApi.getByUserId(userId);
+                } else {
+                    response = await offersApi.getAll();
+                }
+
+                if (response.success && response.data) {
+                    // Filter for active offers or user specific
+                    setOfferList(response.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch offers:", error);
+            } finally {
+                setIsOffersLoading(false);
+            }
+        };
+        fetchOffers();
+    }, [userId]);
 
     return (
         <div className="min-h-screen bg-[#f8f4ff] font-sans text-sm md:text-base">
@@ -78,167 +104,187 @@ export default function DiningPage() {
                         </Link>
 
                         {/* Club & Chill */}
-                        <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                            style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                width: '170px',
-                                height: '252px'
-                            }}
-                        >
-                            <div className="px-[20px] pt-[20px] pb-1">
-                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                    Club &{"\n"}Chill
-                                </h3>
-                            </div>
-                            <div className="flex-1 relative w-full flex items-end justify-end">
-                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
-                                    <Image
-                                        src="/dining/diningimg2.png"
-                                        alt="Club & Chill"
-                                        fill
-                                        className="object-contain"
-                                        style={{
-                                            objectPosition: "bottom right",
-                                            marginBottom: '-15px'
-                                        }}
-                                    />
+                        <Link href="/dining/club-chill" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                            <div
+                                className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                                style={{
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    width: '170px',
+                                    height: '252px'
+                                }}
+                            >
+                                <div className="px-[20px] pt-[20px] pb-1">
+                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                        Club &{"\n"}Chill
+                                    </h3>
+                                </div>
+                                <div className="flex-1 relative w-full flex items-end justify-end">
+                                    <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                        <Image
+                                            src="/dining/diningimg2.png"
+                                            alt="Club & Chill"
+                                            fill
+                                            className="object-contain"
+                                            style={{
+                                                objectPosition: "bottom right",
+                                                marginBottom: '-15px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Pure Veg */}
-                        <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                            style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                width: '170px',
-                                height: '252px'
-                            }}
-                        >
-                            <div className="px-[20px] pt-[20px] pb-1">
-                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                    Pure{"\n"}veg
-                                </h3>
-                            </div>
-                            <div className="flex-1 relative w-full flex items-end justify-end">
-                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
-                                    <Image
-                                        src="/dining/diningimg3.png"
-                                        alt="Pure veg"
-                                        fill
-                                        className="object-contain"
-                                        style={{
-                                            objectPosition: "bottom right",
-                                            marginBottom: '-15px'
-                                        }}
-                                    />
+                        <Link href="/dining/pure-veg" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                            <div
+                                className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                                style={{
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    width: '170px',
+                                    height: '252px'
+                                }}
+                            >
+                                <div className="px-[20px] pt-[20px] pb-1">
+                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                        Pure{"\n"}veg
+                                    </h3>
+                                </div>
+                                <div className="flex-1 relative w-full flex items-end justify-end">
+                                    <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                        <Image
+                                            src="/dining/diningimg3.png"
+                                            alt="Pure veg"
+                                            fill
+                                            className="object-contain"
+                                            style={{
+                                                objectPosition: "bottom right",
+                                                marginBottom: '-15px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Cafe Vibes */}
-                        <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                            style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                width: '170px',
-                                height: '252px'
-                            }}
-                        >
-                            <div className="px-[20px] pt-[20px] pb-1">
-                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                    Cafe{"\n"}vibes
-                                </h3>
-                            </div>
-                            <div className="flex-1 relative w-full flex items-end justify-end">
-                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
-                                    <Image
-                                        src="/dining/diningimg4.png"
-                                        alt="Cafe vibes"
-                                        fill
-                                        className="object-contain"
-                                        style={{
-                                            objectPosition: "bottom right",
-                                            marginBottom: '-15px'
-                                        }}
-                                    />
+                        <Link href="/dining/cafe-vibes" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                            <div
+                                className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                                style={{
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    width: '170px',
+                                    height: '252px'
+                                }}
+                            >
+                                <div className="px-[20px] pt-[20px] pb-1">
+                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                        Cafe{"\n"}vibes
+                                    </h3>
+                                </div>
+                                <div className="flex-1 relative w-full flex items-end justify-end">
+                                    <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                        <Image
+                                            src="/dining/diningimg4.png"
+                                            alt="Cafe vibes"
+                                            fill
+                                            className="object-contain"
+                                            style={{
+                                                objectPosition: "bottom right",
+                                                marginBottom: '-15px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Family Favourites */}
-                        <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                            style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                width: '170px',
-                                height: '252px'
-                            }}
-                        >
-                            <div className="px-[20px] pt-[20px] pb-1">
-                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                    Family{"\n"}favourites
-                                </h3>
-                            </div>
-                            <div className="flex-1 relative w-full flex items-end justify-end">
-                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
-                                    <Image
-                                        src="/dining/diningimg5.png"
-                                        alt="Family favourites"
-                                        fill
-                                        className="object-contain"
-                                        style={{
-                                            objectPosition: "bottom right",
-                                            marginBottom: '-15px'
-                                        }}
-                                    />
+                        <Link href="/dining/family-favourites" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                            <div
+                                className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                                style={{
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    width: '170px',
+                                    height: '252px'
+                                }}
+                            >
+                                <div className="px-[20px] pt-[20px] pb-1">
+                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                        Family{"\n"}favourites
+                                    </h3>
+                                </div>
+                                <div className="flex-1 relative w-full flex items-end justify-end">
+                                    <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                        <Image
+                                            src="/dining/diningimg5.png"
+                                            alt="Family favourites"
+                                            fill
+                                            className="object-contain"
+                                            style={{
+                                                objectPosition: "bottom right",
+                                                marginBottom: '-15px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Bar & Bites */}
-                        <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
-                            style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
-                                width: '170px',
-                                height: '252px'
-                            }}
-                        >
-                            <div className="px-[20px] pt-[20px] pb-1">
-                                <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
-                                    Bar &{"\n"}bites
-                                </h3>
-                            </div>
-                            <div className="flex-1 relative w-full flex items-end justify-end">
-                                <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
-                                    <Image
-                                        src="/dining/diningimg6.png"
-                                        alt="Bar & bites"
-                                        fill
-                                        className="object-contain"
-                                        style={{
-                                            objectPosition: "bottom right",
-                                            marginBottom: '-15px'
-                                        }}
-                                    />
+                        <Link href="/dining/bar-bites" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                            <div
+                                className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                                style={{
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    width: '170px',
+                                    height: '252px'
+                                }}
+                            >
+                                <div className="px-[20px] pt-[20px] pb-1">
+                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line">
+                                        Bar &{"\n"}bites
+                                    </h3>
+                                </div>
+                                <div className="flex-1 relative w-full flex items-end justify-end">
+                                    <div className="relative" style={{ width: '180px', height: '180px', marginRight: '-25px' }}>
+                                        <Image
+                                            src="/dining/diningimg6.png"
+                                            alt="Bar & bites"
+                                            fill
+                                            className="object-contain"
+                                            style={{
+                                                objectPosition: "bottom right",
+                                                marginBottom: '-15px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
                     </div>
                 </section>
 
-                <section>
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Exclusive Offers</h2>
-                    <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4">
-                        {offers.map((offer, i) => (
-                            <div key={i} className="flex-shrink-0">
-                                <CouponCard discount={offer.discount} code={offer.code} />
+                {(isOffersLoading || offerList.length > 0) && (
+                    <section>
+                        <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Exclusive Offers</h2>
+                        {isOffersLoading ? (
+                            <div className="flex gap-4 overflow-x-auto pb-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="w-[300px] h-[120px] bg-zinc-200 animate-pulse rounded-2xl flex-shrink-0" />
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </section>
+                        ) : (
+                            <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4">
+                                {offerList.map((offer, i) => (
+                                    <div key={i} className="flex-shrink-0">
+                                        <CouponCard discount={offer.discount} code={offer.code} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
 
                 <section className="space-y-6 md:space-y-8">
                     <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All Restaurants</h2>
@@ -253,22 +299,34 @@ export default function DiningPage() {
                             />
                         ))}
                     </div>
-                    {/* Restaurants Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                        {restaurants.map((res) => (
-                            <Link key={res.id} href={`/dining/venue/${res.id}`}>
-                                <EventCard
-                                    variant="wide"
-                                    title={res.title}
-                                    location={res.location}
-                                    date="Rating"
-                                    tag="Flat 50% Off"
-                                    image={res.image}
-                                    rating={res.rating}
-                                />
-                            </Link>
-                        ))}
-                    </div>
+
+                    {isLoading ? (
+                        <div className="flex justify-center items-center py-20">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#866BFF]"></div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                            {restaurantList.length > 0 ? (
+                                restaurantList.map((res) => (
+                                    <Link key={res.id} href={`/dining/venue/${res.id}`}>
+                                        <EventCard
+                                            variant="wide"
+                                            title={res.name}
+                                            location={res.location?.venue_name || res.location?.city || "Chennai"}
+                                            date="Rating"
+                                            tag={res.offers?.[0]?.title || "Special Offer"}
+                                            image={res.images?.hero || '/placeholder.jpg'}
+                                            rating={res.rating || 4.5}
+                                        />
+                                    </Link>
+                                ))
+                            ) : (
+                                <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
+                                    <p className="text-gray-500 text-lg">No restaurants available right now. Check back soon!</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </section>
 
                 {/* <div className="mt-20">

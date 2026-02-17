@@ -1,18 +1,59 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { artistsApi, eventsApi } from '@/lib/api';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import EventCard from '@/components/events/EventCard';
-import { artists, events } from '@/data/mockData';
 
 export default function ArtistDetailPage() {
-    const { id } = useParams();
-    const artistId = Number(id);
-    const artist = artists.find((a) => a.id === artistId) || artists[0];
+    const params = useParams();
+    const id = params.id as string;
+    const [artist, setArtist] = useState<any>(null);
+    const [artistEvents, setArtistEvents] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Mocking events for this specific artist
-    const artistEvents = Array(8).fill(events[0]);
+    useEffect(() => {
+        const fetchArtistData = async () => {
+            if (!id) return;
+            setIsLoading(true);
+            try {
+                const response = await artistsApi.getById(id);
+                if (response.success && response.data) {
+                    setArtist(response.data);
+
+                    // Also fetch all events and filter for ones with this artist
+                    // In a real app, this would be a filtered API call
+                    const eventsRes = await eventsApi.getAll(50);
+                    if (eventsRes.success && eventsRes.data) {
+                        const filtered = (eventsRes.data.items || []).filter((event: any) =>
+                            event.artists?.some((a: any) => a.name === response.data.name)
+                        );
+                        setArtistEvents(filtered);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch artist details:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchArtistData();
+    }, [id]);
+
+    if (isLoading) {
+        return <div className="min-h-screen flex justify-center items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>;
+    }
+
+    if (!artist) {
+        return <div className="min-h-screen flex flex-col justify-center items-center gap-4">
+            <h1 className="text-2xl font-bold">Artist Not Found</h1>
+            <a href="/events" className="text-purple-600 font-bold uppercase tracking-wider underline">Go Back</a>
+        </div>;
+    }
 
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
@@ -22,7 +63,7 @@ export default function ArtistDetailPage() {
                 <section className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-16">
                     <div className="w-[280px] h-[280px] md:w-[400px] md:h-[400px] rounded-[30px] overflow-hidden flex-shrink-0">
                         <img
-                            src={artist.image}
+                            src={artist.image_url || '/placeholder.jpg'}
                             alt={artist.name}
                             className="w-full h-full object-cover"
                         />

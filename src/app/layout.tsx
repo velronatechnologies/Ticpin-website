@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Anek_Latin, Anek_Tamil, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
+import { AuthProvider } from "@/context/AuthContext";
+import { ToastProvider } from "@/context/ToastContext";
 
 const anekLatin = Anek_Latin({
   subsets: ["latin"],
@@ -34,8 +36,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${anekLatin.variable} ${inter.variable} ${anekTamil.variable} font-sans antialiased`}>
-        <Navbar />
-        {children}
+        <AuthProvider>
+          <ToastProvider>
+            <Navbar />
+            {children}
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );
