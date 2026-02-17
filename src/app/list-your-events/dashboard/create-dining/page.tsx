@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     ChevronLeft, Plus, Trash2, MapPin,
@@ -11,7 +11,7 @@ import {
 import { useStore } from '@/store/useStore';
 import { useToast } from '@/context/ToastContext';
 
-export default function CreateDiningVenuePage() {
+function CreateDiningVenueForm() {
     const { token, organizerCategory } = useStore();
     const { addToast } = useToast();
     const router = useRouter();
@@ -246,6 +246,14 @@ export default function CreateDiningVenuePage() {
                 </Section>
             </div>
         </div>
+    );
+}
+
+export default function CreateDiningVenuePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#FBFBFF] flex items-center justify-center">Loading...</div>}>
+            <CreateDiningVenueForm />
+        </Suspense>
     );
 }
 
