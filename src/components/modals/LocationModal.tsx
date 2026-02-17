@@ -31,22 +31,42 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     // Using reverse geocoding (OpenStreetMap Nominatim - Free, but limited)
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                     const data = await response.json();
-                    
-                    // Priority: district > city > town > village > state
-                    const location = data.address.state_district || 
-                                   data.address.county || 
-                                   data.address.city || 
-                                   data.address.town || 
-                                   data.address.village || 
-                                   data.address.state;
-                    
-                    console.log('Detected location:', location, 'Full address:', data.address);
-                    
-                    if (location) {
-                        setLocation(location);
+
+                    console.log('Full address data:', data.address);
+
+                    // Specific locality for "Exact Location"
+                    const locality = data.address.neighbourhood ||
+                        data.address.suburb ||
+                        data.address.sub_locality ||
+                        data.address.residential ||
+                        data.address.village ||
+                        data.address.hamlet ||
+                        data.address.town;
+
+                    // Broader context
+                    const city = data.address.city ||
+                        data.address.municipality ||
+                        data.address.state_district ||
+                        data.address.county;
+
+                    const state = data.address.state;
+
+                    let finalLocation = "";
+                    if (locality && city) {
+                        finalLocation = `${locality}, ${city}`;
+                    } else if (city && state) {
+                        finalLocation = `${city}, ${state}`;
+                    } else {
+                        finalLocation = locality || city || state || "Unknown Location";
+                    }
+
+                    console.log('Detected location:', finalLocation);
+
+                    if (finalLocation) {
+                        setLocation(finalLocation);
                         onClose();
                     } else {
-                        alert("Unable to detect location. Please select manually.");
+                        alert("Unable to detect location precisely. Please select manually.");
                     }
                 } catch (error) {
                     console.error("Error getting location from coordinates:", error);
@@ -54,7 +74,11 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                 }
             }, (error) => {
                 console.error("Geolocation error:", error);
-                alert("Permission denied or location unavailable.");
+                alert("Please enable location permissions to detect your area.");
+            }, {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
             });
         } else {
             alert("Geolocation is not supported by your browser.");

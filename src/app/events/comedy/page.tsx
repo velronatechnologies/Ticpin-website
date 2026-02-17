@@ -5,6 +5,7 @@ import { eventsApi } from '@/lib/api';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import FilterButton from '@/components/events/FilterButton';
+import Link from 'next/link';
 import EventCard from '@/components/events/EventCard';
 
 export default function ComedyPage() {
@@ -73,16 +74,17 @@ export default function ComedyPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl mx-auto">
                             {eventList.length > 0 ? (
                                 eventList.map((event, i) => (
-                                    <EventCard
-                                        key={i}
-                                        id={event.id}
-                                        name={event.name}
-                                        location={event.location?.venue_name || event.location?.city || "Chennai"}
-                                        date={new Date(event.start_date).toLocaleDateString()}
-                                        time={new Date(event.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        ticketPrice={event.price ? `₹${event.price}` : "Free"}
-                                        image={event.images?.hero || '/placeholder.jpg'}
-                                    />
+                                    <Link key={event.id} href={`/events/${event.id}`}>
+                                        <EventCard
+                                            id={event.id}
+                                            name={event.name}
+                                            location={event.location?.venue_name || event.location?.city || "Chennai"}
+                                            date={event.dates?.[0]?.date || "Date TBA"}
+                                            time={event.dates?.[0]?.show_time || "Time TBA"}
+                                            ticketPrice={event.price_range?.min || 0}
+                                            image={event.images?.hero || '/placeholder.jpg'}
+                                        />
+                                    </Link>
                                 ))
                             ) : (
                                 <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">

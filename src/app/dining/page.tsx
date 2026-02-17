@@ -28,7 +28,9 @@ export default function DiningPage() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await diningApi.getAll(20, '', '', storeLocation);
+                // Extract city from "Area, City" - empty = show all cities
+                const cityOnly = storeLocation ? (storeLocation.includes(',') ? storeLocation.split(',').pop()?.trim() : storeLocation) : '';
+                const response = await diningApi.getAll(20, '', '', cityOnly);
                 if (response.success && response.data) {
                     setRestaurantList(response.data.items || []);
                 }
@@ -39,7 +41,7 @@ export default function DiningPage() {
             }
         };
         fetchData();
-    }, [storeLocation]);
+    }, [storeLocation]); // Re-fetch when location changes
 
     useEffect(() => {
         const fetchOffers = async () => {

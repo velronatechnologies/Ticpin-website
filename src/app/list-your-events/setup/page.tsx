@@ -7,6 +7,7 @@ import { ChevronDown, FileText, ChevronRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthModal from '@/components/modals/AuthModal';
+import { useToast } from '@/context/ToastContext';
 
 const categories = [
     { id: 'individual', label: 'Individual' },
@@ -29,9 +30,12 @@ function AccountSetupContent() {
     const [pan, setPan] = useState(setupData.pan || '');
     const [panName, setPanName] = useState(setupData.pan_name || '');
     const [panImage, setPanImage] = useState(setupData.pan_image || '');
+    const [panVerification, setPanVerification] = useState<any>(setupData.pan_verification || null);
+    const [isVerifyingPAN, setIsVerifyingPAN] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const router = useRouter();
+    const { addToast } = useToast();
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -56,7 +60,7 @@ function AccountSetupContent() {
         if (!file) return;
 
         if (file.size > 5 * 1024 * 1024) {
-            alert('File too large. Max 5MB');
+            addToast('File too large. Max 5MB', 'error');
             return;
         }
 
@@ -74,17 +78,90 @@ function AccountSetupContent() {
                 body: formData
             });
             const data = await response.json();
-            if (data.status === 200) {
+            if (data.status === 200 || data.success) {
                 setPanImage(data.data.url);
                 updateSetupData({ pan_image: data.data.url });
+                addToast('PAN card uploaded successfully', 'success');
             } else {
-                alert(data.message || 'Upload failed');
+                addToast(data.message || 'Upload failed', 'error');
             }
         } catch (err) {
             console.error('Upload error:', err);
-            alert('Could not upload file');
+            addToast('Could not upload file', 'error');
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleVerifyPAN = async () => {
+        const state = useStore.getState();
+        if (!state.token) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+        if (!pan || !panName) {
+            addToast('Please enter PAN and Name first', 'warning');
+            return;
+        }
+        setIsVerifyingPAN(true);
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/partners/verify-pan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.token}`
+                },
+                body: JSON.stringify({ pan, name: panName })
+            });
+            const data = await response.json();
+            if (data.status === 200 || data.success) {
+                const registeredName = data.data.registered_name || data.data.name_pan_card || "";
+                const enteredNameLower = panName.trim().toLowerCase();
+                const registeredNameLower = registeredName.trim().toLowerCase();
+                const isNameMatch = enteredNameLower === registeredNameLower;
+
+                // Store PAN with verification data
+                const verificationData = {
+                    ...data.data,
+                    pan,
+                    status: (data.data.status === 'VALID' && !isNameMatch) ? 'NAME_MISMATCH' : data.data.status
+                };
+
+                setPanVerification(verificationData);
+                updateSetupData({ pan_verification: verificationData });
+
+                if (data.data.status === 'VALID' && isNameMatch) {
+                    // Success, now get GSTINs
+                    try {
+                        const gstResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/partners/pan-gstin`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${state.token}`
+                            },
+                            body: JSON.stringify({ pan })
+                        });
+                        const gstData = await gstResponse.json();
+                        if (gstData.status === 200 || gstData.success) {
+                            updateSetupData({ gstin_mapping: gstData.data });
+                        }
+                    } catch (e) {
+                        console.error('Error fetching GSTINs:', e);
+                    }
+                    addToast('PAN verified successfully', 'success');
+                } else if (data.data.status === 'VALID' && !isNameMatch) {
+                    addToast(`Name mismatch! PAN is registered to "${registeredName}".`, 'error');
+                } else {
+                    addToast('PAN verification failed: ' + (data.data.message || 'Invalid PAN'), 'error');
+                }
+            } else {
+                addToast(data.message || 'Verification failed', 'error');
+            }
+        } catch (err) {
+            console.error('Verification error:', err);
+            addToast('Could not verify PAN', 'error');
+        } finally {
+            setIsVerifyingPAN(false);
         }
     };
 
@@ -95,7 +172,7 @@ function AccountSetupContent() {
             return;
         }
         if (!selectedCategory || !pan || !panName || !panImage) {
-            alert('Please fill all fields and upload PAN card');
+            addToast('Please fill all fields and upload PAN card', 'warning');
             return;
         }
 
@@ -104,8 +181,15 @@ function AccountSetupContent() {
             category: selectedCategory,
             pan: pan,
             pan_name: panName,
-            pan_image: panImage
+            pan_image: panImage,
+            pan_verification: panVerification,
+            gstin_mapping: setupData.gstin_mapping
         });
+
+        if (!panVerification || panVerification.status !== 'VALID') {
+            addToast('Please verify your PAN card before continuing', 'warning');
+            return;
+        }
 
         router.push(`/list-your-events/setup/gst${categoryQuery ? `?category=${categoryQuery}` : ''}`);
     };
@@ -183,7 +267,7 @@ function AccountSetupContent() {
                                         <label className="text-[16px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
                                             Enter your PAN
                                         </label>
-                                        <div className="ml-[-3px]">
+                                        <div className="ml-[-3px] relative">
                                             <input
                                                 type="text"
                                                 value={pan}
@@ -197,15 +281,43 @@ function AccountSetupContent() {
                                         <label className="text-[16px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
                                             Enter your PAN name / your company's name
                                         </label>
-                                        <div className="ml-[-3px]">
+                                        <div className="ml-[-3px] flex items-center gap-3 mt-3">
                                             <input
                                                 type="text"
                                                 value={panName}
                                                 onChange={(e) => setPanName(e.target.value)}
                                                 placeholder="Velrona Technologies Pvt Ltd."
-                                                className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3"
+                                                className="flex-1 h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400"
                                             />
+                                            <button
+                                                onClick={handleVerifyPAN}
+                                                disabled={isVerifyingPAN || (panVerification?.status === 'VALID' && panVerification?.pan === pan)}
+                                                className={`h-12 px-6 rounded-[14px] text-[14px] font-medium transition-all ${panVerification?.status === 'VALID' && panVerification?.pan === pan
+                                                    ? 'bg-[#E3FFEF] text-[#008B38] border border-[#BFFFD9] cursor-default'
+                                                    : panVerification?.status === 'NAME_MISMATCH' && panVerification?.pan === pan
+                                                        ? 'bg-red-50 text-red-600 border border-red-100'
+                                                        : 'bg-black text-white hover:bg-zinc-800 active:scale-95 disabled:opacity-50'
+                                                    }`}
+                                            >
+                                                {isVerifyingPAN ? (
+                                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : panVerification?.status === 'VALID' && panVerification?.pan === pan ? (
+                                                    'Verified'
+                                                ) : (
+                                                    'Verify'
+                                                )}
+                                            </button>
                                         </div>
+                                        {panVerification?.status === 'VALID' && panVerification?.pan === pan && (
+                                            <p className="text-[12px] text-green-600 font-medium mt-1">
+                                                ✓ PAN matches with registered name: {panVerification.registered_name}
+                                            </p>
+                                        )}
+                                        {panVerification?.status === 'NAME_MISMATCH' && panVerification?.pan === pan && (
+                                            <p className="text-[12px] text-red-600 font-medium mt-1">
+                                                ✕ Name mismatch. 
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

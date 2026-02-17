@@ -57,7 +57,7 @@ export default function Navbar() {
 
                 if (isPlayPage) {
                     const res = await playApi.getAll(10, '', '', storeLocation, query);
-                    if (res.success && res.data) {
+                    if (res.success && res.data && res.data.items) {
                         results.items = res.data.items.map((v: any) => ({
                             id: v.id,
                             name: v.name,
@@ -68,7 +68,7 @@ export default function Navbar() {
                     results.categories = sportsCategories.filter(c => c.name.toLowerCase().includes(query));
                 } else if (isDiningPage) {
                     const res = await diningApi.getAll(10, '', '', storeLocation, query);
-                    if (res.success && res.data) {
+                    if (res.success && res.data && res.data.items) {
                         results.items = res.data.items.map((r: any) => ({
                             id: r.id,
                             title: r.name,
@@ -79,7 +79,7 @@ export default function Navbar() {
                     results.categories = diningCategories.filter(c => c.name.toLowerCase().includes(query));
                 } else if (isEventsPage) {
                     const res = await eventsApi.getAll(10, '', '', storeLocation, query);
-                    if (res.success && res.data) {
+                    if (res.success && res.data && res.data.items) {
                         results.items = res.data.items.map((e: any) => ({
                             id: e.id,
                             name: e.title || e.name,
@@ -223,17 +223,40 @@ export default function Navbar() {
                     {!isSearchVisible ? (
                         <>
                             <div
-                                onClick={() => setIsLocationOpen(true)}
-                                className="hidden lg:flex items-center gap-2 cursor-pointer hover:text-primary transition-colors min-w-max"
+                                className="hidden lg:flex items-center gap-2 cursor-pointer hover:text-primary transition-colors min-w-max group"
                             >
-                                <img
-                                    src="/loc.png"
-                                    alt="Location"
-                                    className="w-4.5 h-4.5 object-contain"
-                                />
-                                <span className="text-[16px] font-medium text-black break-words" style={{ fontFamily: 'Anek Latin' }}>
-                                    {storeLocation || 'Set Location'}
-                                </span>
+                                <div
+                                    onClick={() => setIsLocationOpen(true)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <img
+                                        src="/loc.png"
+                                        alt="Location"
+                                        className="w-4.5 h-4.5 object-contain flex-shrink-0"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-[17px] font-bold text-black leading-tight tracking-tight" style={{ fontFamily: 'Anek Latin' }}>
+                                            {storeLocation ? storeLocation.split(',')[0].trim() : 'Set Location'}
+                                        </span>
+                                        {storeLocation && storeLocation.includes(',') && (
+                                            <span className="text-[13px] font-medium text-[#686868] leading-tight" style={{ fontFamily: 'Anek Latin' }}>
+                                                {storeLocation.split(',').slice(1).join(',').trim()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                {storeLocation && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setLocation('');
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded-full"
+                                        title="Clear location filter"
+                                    >
+                                        <X size={14} className="text-gray-600" />
+                                    </button>
+                                )}
                             </div>
                             <div
                                 onClick={() => setIsSearchVisible(true)}

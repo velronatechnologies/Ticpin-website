@@ -52,12 +52,12 @@ export default function DiningVenueDetail() {
         </div>;
     }
 
-    const smallImages = venue.images?.gallery || [
+    const smallImages = (venue.images?.gallery || [
         '/images.png',
         '/images.png',
         '/images.png',
         '/images.png',
-    ];
+    ]).filter((src: string) => src && src.trim() !== "");
 
     return (
         <div className="min-h-screen bg-[#f8f4ff] font-[family-name:var(--font-anek-latin)] text-sm md:text-base selection:bg-primary selection:text-white">
@@ -135,7 +135,7 @@ export default function DiningVenueDetail() {
                             <section className="space-y-6">
                                 <h2 className="text-[32px] font-semibold text-black">Menu</h2>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {venue.menu_images.map((src: string, i: number) => (
+                                    {(venue.menu_images || []).filter((src: string) => src && src.trim() !== "").map((src: string, i: number) => (
                                         <div key={i} className="relative aspect-[3/4] rounded-[24px] overflow-hidden border border-zinc-100 shadow-sm bg-white">
                                             <Image src={src} fill className="object-cover" alt={`Menu Page ${i + 1}`} />
                                         </div>

@@ -33,6 +33,8 @@ interface SetupData {
     pan: string;
     pan_name: string;
     pan_image: string;
+    pan_verification: any;
+    gstin_mapping: any;
     has_gst: boolean;
     gstin: string;
     bank_details: {
@@ -41,6 +43,7 @@ interface SetupData {
         ifsc_code: string;
         bank_name: string;
         branch_name: string;
+        city: string;
     };
     backup_contact: {
         name: string;
@@ -103,7 +106,7 @@ export const useStore = create<UserState>()(
                 token,
                 isEmailVerified: extra?.isEmailVerified ?? false,
                 isOrganizer: phoneOrEmail.includes('@'),
-                isAdmin: extra?.isAdmin ?? (phoneOrEmail === '6383667872' || phoneOrEmail === '+916383667872'),
+                isAdmin: extra?.isAdmin ?? (phoneOrEmail === '0000000000' || phoneOrEmail === '+910000000000'),
                 organizerCategory: extra?.organizerCategory ?? null,
                 userId: extra?.userId ?? ''
             }),

@@ -216,33 +216,21 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     };
 
     const handleSendOtp = async () => {
-        if (!number || number.length !== 10) {
-            addToast('Please enter a valid 10-digit number', 'error');
+        // TESTING: Simplified validation - allow any number
+        if (!number || number.length < 1) {
+            addToast('Please enter a phone number', 'error');
             return;
         }
 
         setIsLoading(true);
         try {
-            const verifier = setupRecaptcha();
-            if (!verifier) {
-                throw new Error('Failed to setup Recaptcha');
-            }
-
-            const fullNumber = `+91${number}`;
-            const confirmation = await signInWithPhoneNumber(firebaseAuth, fullNumber, verifier);
-            confirmationResultRef.current = confirmation;
-
-            addToast('OTP sent successfully!', 'success');
+            // TESTING: Skip Firebase - go directly to backend (which now accepts any OTP)
+            // Backend is set to bypass OTP verification for testing
+            addToast('OTP: Use any code for normal users, 123456 for admin (1000000000)', 'success');
             setView('otp');
         } catch (error: any) {
-            console.error('Firebase Auth Error:', error);
-            if (error?.code === 'auth/invalid-phone-number') {
-                addToast('Invalid phone number format', 'error');
-            } else if (error?.code === 'auth/too-many-requests') {
-                addToast('Too many requests. Try again later.', 'error');
-            } else {
-                addToast('We encountered an issue sending the verification code. Please try again.', 'error');
-            }
+            console.error('Error:', error);
+            addToast('Failed to proceed', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -288,46 +276,38 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     };
 
     const completeLogin = async () => {
-        if (!confirmationResultRef.current) {
-            addToast('Please resend OTP', 'error');
-            setView('number');
-            return;
-        }
-
         setIsLoading(true);
         try {
             const otpCode = otp.join('');
 
-            // 1. Verify OTP with Firebase
-            const userCredential = await confirmationResultRef.current.confirm(otpCode);
+            if (!otpCode || otpCode.length !== 6) {
+                addToast('Please enter 6-digit OTP', 'error');
+                setIsLoading(false);
+                return;
+            }
 
-            // 2. Get Firebase ID Token
-            const firebaseToken = await userCredential.user.getIdToken();
-
-            // 3. Login to Backend with Firebase Token
-            const response = await authApi.login(number, '', firebaseToken);
+            // TESTING: Direct backend login with OTP (backend accepts any OTP now)
+            // Admin: 1000000000 requires 123456
+            // Others: any number with any OTP
+            const response = await authApi.login(number, otpCode, '');
 
             if (response.success && response.data) {
-                authLogin(`+91${number}`, response.data.token, { userId: response.data.user.id });
+                authLogin(number, response.data.token, { userId: response.data.user.id });
                 addToast('Login successful!', 'success');
                 setIsLoading(false);
 
                 if (onAuthSuccess) {
-                    onAuthSuccess(`+91${number}`, response.data.token);
+                    onAuthSuccess(number, response.data.token);
                 } else {
                     onClose();
                 }
                 return;
             } else {
-                addToast(response.message || 'Backend login failed', 'error');
+                addToast(response.message || 'Login failed', 'error');
             }
         } catch (error: any) {
             console.error('Login error:', error);
-            if (error?.code === 'auth/invalid-verification-code') {
-                addToast('Invalid OTP code. Please check and try again.', 'error');
-            } else {
-                addToast(error.message || 'Verification failed', 'error');
-            }
+            addToast(error.message || 'Login failed', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -531,8 +511,8 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                     }`}
                 style={isCompact ? { width: '500px', height: 'auto' } : (!isSidebarView ? { width: '850px', height: '700px' } : {})}
             >
-                {/* Hidden Recaptcha Container */}
-                <div id="recaptcha-container"></div>
+                {/* TESTING: Recaptcha disabled */}
+                {/* <div id="recaptcha-container"></div> */}
 
                 {view === 'number' && (
                     <PhoneView

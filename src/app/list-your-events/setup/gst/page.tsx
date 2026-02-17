@@ -13,6 +13,9 @@ function GstSelectionContent() {
     const category = searchParams.get('category');
     const isPlay = category === 'play';
     const [hasGst, setHasGst] = useState(setupData.has_gst || false);
+    const [selectedGstin, setSelectedGstin] = useState(setupData.gstin || '');
+    const panVerification = setupData.pan_verification;
+    const gstinMapping = setupData.gstin_mapping;
 
     const isMockPan = setupData.pan === '5555555';
 
@@ -52,40 +55,74 @@ function GstSelectionContent() {
                                 Select one or more GST accounts to onboard on Ticpin, you can configure these while creating events later. Please note, we only support Regular and Active GSTs to onboard as partners.
                             </p>
 
-                            {/* GST Account Card */}
-                            <div className="bg-transparent border-[1.5px] border-[#AEAEAE] rounded-[20px] p-6 flex items-center gap-6 max-w-4xl">
-                                <input
-                                    type="checkbox"
-                                    checked={hasGst}
-                                    onChange={(e) => {
-                                        setHasGst(e.target.checked);
-                                        updateSetupData({ has_gst: e.target.checked, gstin: e.target.checked ? (isMockPan ? '22AAAAA0000A1Z5' : '') : '' });
-                                    }}
-                                    className="w-6 h-6 rounded-[8px] border border-zinc-300 bg-white accent-black focus:ring-0 focus:ring-offset-0 cursor-pointer"
-                                />
+                            {/* GST Account Cards */}
+                            <div className="space-y-4 max-w-4xl">
+                                {gstinMapping?.gstin_list && gstinMapping.gstin_list.length > 0 ? (
+                                    gstinMapping.gstin_list.map((item: any, index: number) => (
+                                        <div key={index} className="bg-transparent border-[1.5px] border-[#AEAEAE] rounded-[20px] p-6 flex items-center gap-6">
+                                            <input
+                                                type="radio"
+                                                name="gstin_selection"
+                                                checked={selectedGstin === item.gstin}
+                                                onChange={() => {
+                                                    setSelectedGstin(item.gstin);
+                                                    setHasGst(true);
+                                                    updateSetupData({ has_gst: true, gstin: item.gstin });
+                                                }}
+                                                className="w-6 h-6 rounded-full border border-zinc-300 bg-white accent-black cursor-pointer"
+                                            />
 
-                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 flex-1">
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Brand name</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? setupData.pan_name : '{ NAME }'}</p>
+                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 flex-1">
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Brand name</p>
+                                                    <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>
+                                                        {panVerification?.registered_name || setupData.pan_name || '{ NAME }'}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">State</p>
+                                                    <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>
+                                                        {item.state}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">GSTIN</p>
+                                                    <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{item.gstin}</p>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">GST status</p>
+                                                    <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{item.status}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="bg-transparent border-[1.5px] border-[#AEAEAE] border-dashed rounded-[20px] p-10 text-center">
+                                        <p className="text-[16px] text-[#686868] font-medium" style={{ fontFamily: 'Anek Latin' }}>
+                                            {panVerification?.status === 'VALID' ? 'No GSTINs found associated with this PAN.' : 'Please verify your PAN first.'}
+                                        </p>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Address</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? '123 Main St, Bangalore' : '{ ADDRESS }'}</p>
+                                )}
+
+                                {(!gstinMapping?.gstin_list || gstinMapping.gstin_list.length === 0) && (
+                                    <div className="flex items-center gap-3 pt-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={!hasGst && selectedGstin === ''}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setHasGst(false);
+                                                    setSelectedGstin('');
+                                                    updateSetupData({ has_gst: false, gstin: '' });
+                                                }
+                                            }}
+                                            className="w-5 h-5 rounded-[4px] border border-zinc-300 bg-white accent-black cursor-pointer"
+                                        />
+                                        <label className="text-[14px] text-[#686868] font-medium" style={{ fontFamily: 'Anek Latin' }}>
+                                            I don't have a GSTIN for this PAN
+                                        </label>
                                     </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">GSTIN</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? '22AAAAA0000A1Z5' : '{ GST NUM }'}</p>
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Taxpayer type</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? 'Regular' : '{ Type }'}</p>
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">GST status</p>
-                                        <p className="text-[14px] text-black font-medium" style={{ fontFamily: 'Anek Latin' }}>{isMockPan ? 'Active' : '{ STATUS }'}</p>
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Continue Button */}

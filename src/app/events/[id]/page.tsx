@@ -104,12 +104,12 @@ export default function EventDetailPage() {
         </div>;
     }
 
-    const galleryImages = event.images?.gallery || [
+    const galleryImages = (event.images?.gallery || [
         '/images.png',
         '/images.png',
         '/images.png',
         '/images.png',
-    ];
+    ]).filter((src: string) => src && src.trim() !== "");
 
     return (
         <div className="min-h-screen bg-[#f8f4ff] font-[family-name:var(--font-anek-latin)] text-sm md:text-base">

@@ -51,7 +51,7 @@ export default function AdminEventPostersPage() {
 
     const fetchPosters = async (category = activeCategory) => {
         if (!token) {
-            setError('Access denied. You must be logged in as an administrator.');
+            setError('You must be logged in to access this page.');
             setLoading(false);
             return;
         }
@@ -70,7 +70,7 @@ export default function AdminEventPostersPage() {
             });
 
             if (response.status === 403) {
-                setError('Access denied. You must be logged in as an administrator.');
+                setError('Access denied. Please try logging in again.');
                 setLoading(false);
                 return;
             }

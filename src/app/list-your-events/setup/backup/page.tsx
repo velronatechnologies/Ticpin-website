@@ -66,7 +66,7 @@ function BackupContactContent() {
 
     const handleContinue = () => {
         if (!name || !phone || !email) {
-            alert('Please fill all fields');
+            addToast('Please fill all fields', 'warning');
             return;
         }
 

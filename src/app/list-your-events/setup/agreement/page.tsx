@@ -40,7 +40,9 @@ function AgreementContent() {
                         category: setupData.category,
                         pan: setupData.pan,
                         pan_name: setupData.pan_name,
-                        pan_image: setupData.pan_image || ''
+                        pan_image: setupData.pan_image || '',
+                        pan_verification: setupData.pan_verification,
+                        gstin_mapping: setupData.gstin_mapping || {}
                     },
                     gst_details: {
                         has_gst: setupData.has_gst,

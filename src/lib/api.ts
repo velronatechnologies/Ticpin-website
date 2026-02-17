@@ -195,6 +195,18 @@ export const eventsApi = {
     },
     getById: async (id: string) => {
         return apiRequest<any>(`/api/v1/events/${id}`);
+    },
+    adminCreate: async (data: any) => {
+        return apiRequest<any>('/api/v1/admin/events', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    adminUpdate: async (id: string, data: any) => {
+        return apiRequest<any>(`/api/v1/admin/events/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
     }
 };
 
@@ -224,6 +236,18 @@ export const playApi = {
     },
     getBySlug: async (slug: string) => {
         return apiRequest<any>(`/api/v1/play/${slug}`);
+    },
+    adminCreate: async (data: any) => {
+        return apiRequest<any>('/api/v1/admin/play', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    adminUpdate: async (id: string, data: any) => {
+        return apiRequest<any>(`/api/v1/admin/play/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
     }
 };
 
@@ -241,6 +265,18 @@ export const diningApi = {
     },
     getBySlug: async (slug: string) => {
         return apiRequest<any>(`/api/v1/dining/${slug}`);
+    },
+    adminCreate: async (data: any) => {
+        return apiRequest<any>('/api/v1/admin/dining', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    adminUpdate: async (id: string, data: any) => {
+        return apiRequest<any>(`/api/v1/admin/dining/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
     }
 };
 

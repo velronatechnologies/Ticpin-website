@@ -7,9 +7,9 @@ import AppBanner from '@/components/layout/AppBanner';
 import ExploreCard from '@/components/events/ExploreCard';
 import ArtistAvatar from '@/components/events/ArtistAvatar';
 import FilterButton from '@/components/events/FilterButton';
+import Link from 'next/link';
 import EventCard from '@/components/events/EventCard';
 import { eventsApi, artistsApi } from '@/lib/api';
-import Link from 'next/link';
 import { useStore } from '@/store/useStore';
 
 export default function EventsPage() {
@@ -28,14 +28,21 @@ export default function EventsPage() {
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
+            // Extract city from "Area, City" - empty = show all cities
+            const cityOnly = storeLocation ? (storeLocation.includes(',') ? storeLocation.split(',').pop()?.trim() : storeLocation) : '';
+            console.log('🔍 Events page - fetching with location filter:', cityOnly || 'ALL CITIES');
             try {
                 const [eventsRes, artistsRes] = await Promise.all([
-                    eventsApi.getAll(20, '', '', storeLocation),
+                    eventsApi.getAll(20, '', '', cityOnly),  // Empty city = show all
                     artistsApi.getAll()
                 ]);
+                console.log('📊 Events API response:', eventsRes, `(${eventsRes.data?.items?.length || 0} events)`);
 
                 if (eventsRes.success && eventsRes.data) {
+                    console.log('✅ Events loaded:', eventsRes.data.items?.length || 0, 'events');
                     setEventList(eventsRes.data.items || []);
+                } else {
+                    console.log('❌ No events data received');
                 }
 
                 if (artistsRes.success && artistsRes.data) {
@@ -48,7 +55,7 @@ export default function EventsPage() {
             }
         };
         fetchData();
-    }, [storeLocation]);
+    }, [storeLocation]); // Re-fetch when location changes
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-100 via-purple-50 to-pink-50">
@@ -147,11 +154,12 @@ export default function EventsPage() {
                                 eventList.map((event) => (
                                     <Link key={event.id} href={`/events/${event.id}`}>
                                         <EventCard
+                                            id={event.id}
                                             name={event.title || event.name}
                                             location={event.venue?.city || event.location?.city || "Chennai"}
                                             date={event.start_datetime ? new Date(event.start_datetime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : "Coming Soon"}
                                             time={event.start_datetime ? new Date(event.start_datetime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : "TBA"}
-                                            ticketPrice={event.price_start || 0}
+                                            ticketPrice={String(event.price_start || 0)}
                                             image={event.images?.hero || '/placeholder.jpg'}
                                         />
                                     </Link>

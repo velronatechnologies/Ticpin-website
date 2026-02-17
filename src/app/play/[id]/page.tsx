@@ -1,7 +1,5 @@
 'use client';
 
-export const revalidate = 300;
-
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AppBanner from '@/components/layout/AppBanner';
@@ -78,12 +76,12 @@ export default function PlayDetailPage() {
         </div>;
     }
 
-    const galleryImages = venue.images?.gallery || [
+    const galleryImages = (venue.images?.gallery || [
         '/play/1.png',
         '/play/1.png',
         '/play/1.png',
         '/play/1.png',
-    ];
+    ]).filter((src: string) => src && src.trim() !== "");
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">

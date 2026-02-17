@@ -25,7 +25,9 @@ export default function PlayPage() {
         const fetchPlay = async () => {
             setIsLoading(true);
             try {
-                const response = await playApi.getAll(20, '', '', storeLocation);
+                // Extract city from "Area, City" - empty = show all cities
+                const cityOnly = storeLocation ? (storeLocation.includes(',') ? storeLocation.split(',').pop()?.trim() : storeLocation) : '';
+                const response = await playApi.getAll(20, '', '', cityOnly);
                 if (response.success && response.data) {
                     setVenueList(response.data.items || []);
                 }
@@ -36,7 +38,7 @@ export default function PlayPage() {
             }
         };
         fetchPlay();
-    }, [storeLocation]);
+    }, [storeLocation]); // Re-fetch when location changes
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">

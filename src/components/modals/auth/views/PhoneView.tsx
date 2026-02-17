@@ -54,11 +54,12 @@ export default function PhoneView({
                             className="flex-1 px-5 bg-white border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-zinc-900 h-[60px] transition-all"
                             value={number}
                             onChange={(e) => {
+                                // TESTING: Accept any digits (no length limit)
                                 const val = e.target.value.replace(/\D/g, '');
-                                if (val.length <= 10) setNumber(val);
+                                setNumber(val);
                             }}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && number.length === 10 && !isLoading) {
+                                if (e.key === 'Enter' && number.length > 0 && !isLoading) {
                                     handleSendOtp();
                                 }
                             }}
@@ -67,7 +68,7 @@ export default function PhoneView({
 
                     <button
                         onClick={handleSendOtp}
-                        disabled={number.length !== 10 || isLoading}
+                        disabled={number.length < 1 || isLoading}
                         className="w-full h-[55px] bg-black text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-xl shadow-black/10 flex items-center justify-center"
                     >
                         {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Continue'}

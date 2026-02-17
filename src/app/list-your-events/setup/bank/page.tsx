@@ -6,24 +6,59 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useToast } from '@/context/ToastContext';
+
+const stateCityMap: { [key: string]: string[] } = {
+    'TAMIL NADU': ['Chennai', 'Coimbatore', 'Madurai', 'Trichy', 'Salem', 'Tiruppur', 'Erode'],
+    'KARNATAKA': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore', 'Belgaum'],
+    'MAHARASHTRA': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad'],
+    'DELHI': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'],
+    'TELANGANA': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar'],
+    'ANDHRA PRADESH': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore'],
+    'WEST BENGAL': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri'],
+    'GUJARAT': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar'],
+    'KERALA': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur'],
+    'UTTAR PRADESH': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi'],
+};
 
 function BankDetailsContent() {
     const { setupData, updateSetupData } = useStore();
     const searchParams = useSearchParams();
-    const category = searchParams.get('category');
-    const isPlay = category === 'play';
+    const categoryQuery = searchParams.get('category');
+    const isPlay = categoryQuery === 'play';
     const [bankDetails, setBankDetails] = useState(setupData.bank_details || {
         account_holder_name: '',
         account_number: '',
         ifsc_code: '',
         bank_name: '',
-        branch_name: ''
+        branch_name: '',
+        city: ''
     });
     const router = useRouter();
+    const { addToast } = useToast();
+
+    // Derived values from PAN/GST
+    const panAddress = setupData.pan_verification?.address || {};
+    const panState = panAddress.state?.toUpperCase();
+    const panCity = panAddress.city;
+
+    // Get cities based on state
+    const stateCities = panState ? (stateCityMap[panState] || []) : [];
+
+    // Available cities: Detected city + State cities + some defaults if needed
+    const availableCities = Array.from(new Set([
+        panCity,
+        ...stateCities,
+        'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Kolkata'
+    ].filter(Boolean)));
 
     const handleContinue = () => {
+        if (!bankDetails.account_holder_name || !bankDetails.account_number || !bankDetails.ifsc_code || !bankDetails.city) {
+            addToast('Please fill all bank details including city', 'warning');
+            return;
+        }
         updateSetupData({ bank_details: bankDetails });
-        router.push(`/list-your-events/setup/backup${category ? `?category=${category}` : ''}`);
+        router.push(`/list-your-events/setup/backup${categoryQuery ? `?category=${categoryQuery}` : ''}`);
     };
 
     return (
@@ -34,7 +69,7 @@ function BankDetailsContent() {
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="03" completedSteps={['01', '02']} category={category} />
+                        <SetupSidebar currentStep="03" completedSteps={['01', '02']} category={categoryQuery} />
                     </aside>
 
                     {/* Content Column */}
@@ -49,7 +84,7 @@ function BankDetailsContent() {
 
                         {/* Mobile Sidebar */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="03" completedSteps={['01', '02']} category={category} />
+                            <SetupSidebar currentStep="03" completedSteps={['01', '02']} category={categoryQuery} />
                         </div>
 
                         {/* Form Area */}
@@ -123,12 +158,24 @@ function BankDetailsContent() {
                                         Select City
                                     </label>
                                     <div className="relative">
-                                        <select className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-400 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3">
-                                            <option>Select city</option>
-                                            <option>Chennai</option>
-                                            <option>Bangalore</option>
-                                            <option>Mumbai</option>
-                                            <option>Delhi</option>
+                                        <select
+                                            value={bankDetails.city}
+                                            onChange={(e) => setBankDetails({ ...bankDetails, city: e.target.value })}
+                                            className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3"
+                                        >
+                                            <option value="" className="text-zinc-400">Select city</option>
+                                            {availableCities.length > 0 ? (
+                                                availableCities.map((city, idx) => (
+                                                    <option key={idx} value={city}>{city}</option>
+                                                ))
+                                            ) : (
+                                                <>
+                                                    <option>Chennai</option>
+                                                    <option>Bangalore</option>
+                                                    <option>Mumbai</option>
+                                                    <option>Delhi</option>
+                                                </>
+                                            )}
                                         </select>
                                         <ChevronDown size={18} className="absolute right-4 top-[38px] -translate-y-1/2 text-zinc-400 pointer-events-none" />
                                     </div>
