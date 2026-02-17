@@ -25,7 +25,7 @@ async function apiRequest<T>(
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
             headers,
-            credentials: 'include', // Support cookies
+            credentials: 'include',
         });
 
         const contentType = response.headers.get('content-type');
@@ -49,9 +49,17 @@ async function apiRequest<T>(
         };
     } catch (error) {
         console.error('API Error:', error);
+        let message = 'An unknown error occurred';
+
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+            message = 'Our servers are currently under maintenance. Please try again in a few minutes.';
+        } else if (error instanceof Error) {
+            message = error.message;
+        }
+
         return {
             success: false,
-            message: error instanceof Error ? error.message : 'An unknown error occurred',
+            message: message,
         };
     }
 }

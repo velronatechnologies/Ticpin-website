@@ -241,7 +241,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
             } else if (error?.code === 'auth/too-many-requests') {
                 addToast('Too many requests. Try again later.', 'error');
             } else {
-                addToast(error.message || 'Failed to send OTP via Firebase', 'error');
+                addToast('We encountered an issue sending the verification code. Please try again.', 'error');
             }
         } finally {
             setIsLoading(false);
@@ -398,7 +398,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 }
             }
         } catch (error) {
-            addToast('Connection error. Is the server running?', 'error');
+            addToast('Our servers are temporarily unreachable. Please check your connection and try again.', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -419,7 +419,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 addToast(response.message || 'Verification failed', 'error');
             }
         } catch (error) {
-            addToast('Connection error', 'error');
+            addToast('Our servers are temporarily unreachable. Please check your connection and try again.', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -483,7 +483,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 addToast(response.message || 'Failed to resend OTP', 'error');
             }
         } catch (error) {
-            addToast('Connection error', 'error');
+            addToast('Our servers are temporarily unreachable. Please check your connection and try again.', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -501,7 +501,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 addToast(response.message || 'Verification failed', 'error');
             }
         } catch (error) {
-            addToast('Connection error', 'error');
+            addToast('Our servers are temporarily unreachable. Please check your connection and try again.', 'error');
         } finally {
             setIsLoading(false);
         }

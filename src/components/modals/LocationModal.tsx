@@ -31,10 +31,22 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     // Using reverse geocoding (OpenStreetMap Nominatim - Free, but limited)
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                     const data = await response.json();
-                    const city = data.address.city || data.address.town || data.address.village || data.address.state;
-                    if (city) {
-                        setLocation(city);
+                    
+                    // Priority: district > city > town > village > state
+                    const location = data.address.state_district || 
+                                   data.address.county || 
+                                   data.address.city || 
+                                   data.address.town || 
+                                   data.address.village || 
+                                   data.address.state;
+                    
+                    console.log('Detected location:', location, 'Full address:', data.address);
+                    
+                    if (location) {
+                        setLocation(location);
                         onClose();
+                    } else {
+                        alert("Unable to detect location. Please select manually.");
                     }
                 } catch (error) {
                     console.error("Error getting location from coordinates:", error);
