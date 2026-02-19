@@ -41,7 +41,7 @@ export default function BookingPage() {
                     </span>
                 </div>
 
-                {/* Grid for 3 Boxes */}
+                {/* Grid for 3 Boxes heloo*/}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="h-[165px] bg-[#D9D9D9] rounded-[10px] flex items-center justify-center px-2">
                         <span className="text-[12px] font-medium text-black text-center" style={{ fontFamily: 'var(--font-anek-latin)' }}>
