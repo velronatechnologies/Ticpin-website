@@ -22,7 +22,7 @@ const anekTamil = Anek_Tamil({
 });
 
 export const metadata: Metadata = {
-  title: "TICPIN",
+  title: "Ticpin - Dining, Events, Play",
   description: "Your gateway to world-class sports and entertainment.",
 };
 
