@@ -34,6 +34,7 @@ function AccountSetupContent() {
     const [dob, setDob] = useState(setupData.pan_verification?.dob || '');
     const [isPanVerifiedFromDB, setIsPanVerifiedFromDB] = useState(false);
     const [isVerifyingPAN, setIsVerifyingPAN] = useState(false);
+    const [panError, setPanError] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isPrefilling, setIsPrefilling] = useState(false);
@@ -79,8 +80,9 @@ function AccountSetupContent() {
         fetchPrefill();
     }, [isLoggedIn, token]);
 
-    // Clear verification when PAN, name, or DOB changes (only if not prefilled)
+    // Clear verification and error when PAN, name, or DOB changes (only if not prefilled)
     useEffect(() => {
+        setPanError(null);
         if (!isPanVerifiedFromDB && panVerification && (
             panVerification.pan !== pan ||
             panVerification.registered_name?.toLowerCase() !== panName?.toLowerCase() ||
@@ -190,6 +192,7 @@ function AccountSetupContent() {
             return;
         }
 
+        setPanError(null);
         setIsVerifyingPAN(true);
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/partners/verify-pan`, {
@@ -232,18 +235,23 @@ function AccountSetupContent() {
                     console.error('Error fetching GSTINs:', e);
                 }
             } else {
-                // Enhanced error handling with clear recovery instructions
                 const errorMsg = data.message || '';
+                let friendlyError = '';
 
                 if (errorMsg.includes('Name mismatch')) {
-                    addToast('Name check failed. Please ensure the name matches your official PAN card record exactly.', 'error');
+                    friendlyError = '❌ Name mismatch — The name you entered does not match PAN records. Enter your full name exactly as printed on your PAN card.';
                 } else if (errorMsg.includes('Date of birth mismatch')) {
-                    addToast('DOB check failed. Please ensure you enter the date of birth as recorded on your PAN card.', 'error');
+                    friendlyError = '❌ Date of birth mismatch — The DOB you entered does not match PAN records. Enter your date of birth exactly as registered on your PAN card.';
+                } else if (errorMsg.includes('Invalid PAN')) {
+                    friendlyError = '❌ Invalid PAN number — This PAN appears to be invalid or inactive. Please double-check your PAN number.';
                 } else if (errorMsg.includes('already registered')) {
-                    addToast('This PAN is already linked to another account. Please use the account you previously registered with.', 'error');
+                    friendlyError = '❌ This PAN is already linked to another account. Please use the account you originally registered with.';
                 } else {
-                    addToast(errorMsg || 'PAN verification failed. Please check your details and try again.', 'error');
+                    friendlyError = '❌ Verification failed — Please check that your PAN number, name, and date of birth are correct and try again.';
                 }
+
+                setPanError(friendlyError);
+                addToast(friendlyError.replace('❌ ', ''), 'error');
             }
         } catch (err) {
             console.error('Verification error:', err);
@@ -463,6 +471,12 @@ function AccountSetupContent() {
                                             <p className="text-[13px] text-green-600 font-medium mt-2 ml-[-3px] animate-in fade-in slide-in-from-top-1">
                                                 ✓ PAN successfully verified and matched.
                                             </p>
+                                        )}
+                                        {panError && !panVerification && (
+                                            <div className="mt-3 ml-[-3px] p-3 bg-red-50 border border-red-200 rounded-[12px] animate-in fade-in slide-in-from-top-1">
+                                                <p className="text-[13px] text-red-700 font-medium leading-relaxed">{panError}</p>
+                                                <p className="text-[12px] text-red-500 mt-1">Please correct the field highlighted and try again.</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
