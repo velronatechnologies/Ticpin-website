@@ -20,15 +20,16 @@ export default function Footer() {
     const [isNavigating, setIsNavigating] = useState(false);
     const [pendingCategory, setPendingCategory] = useState<string | null>(null);
 
-    const organizerLinks = [
-        { name: 'List your events', category: 'event', path: '/events' },
-        { name: 'List your play/courts', category: 'play', path: '/play' },
-        { name: 'List your dining', category: 'dining', path: '/dining' },
-    ];
-
-    const filteredOrganizerLinks = organizerLinks.filter((link) => {
-        return pathname.startsWith(link.path);
-    });
+    const activeOrganizerLink = (() => {
+        if (pathname === '/dining' || pathname.startsWith('/dining/')) {
+            return { name: 'List your dining', category: 'dining' };
+        }
+        if (pathname === '/events' || pathname.startsWith('/events/')) {
+            return { name: 'List your events', category: 'event' };
+        }
+        // Default to play for home (/) and play-specific pages
+        return { name: 'List your play/courts', category: 'play' };
+    })();
 
     const handleCategoryClick = async (category: string) => {
         setPendingCategory(category);
@@ -155,15 +156,14 @@ export default function Footer() {
                             </Link>
                         ))}
 
-                        {!isAdmin && filteredOrganizerLinks.map((link) => (
+                        {!isAdmin && activeOrganizerLink && (
                             <button
-                                key={link.category}
-                                onClick={() => handleCategoryClick(link.category)}
+                                onClick={() => handleCategoryClick(activeOrganizerLink.category)}
                                 className="text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap cursor-pointer bg-transparent border-none"
                             >
-                                {link.name}
+                                {activeOrganizerLink.name}
                             </button>
-                        ))}
+                        )}
                     </div>
 
                     {/* QR Code Placeholder */}

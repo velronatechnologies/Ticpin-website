@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                                         <li>Name</li>
                                         <li>Mobile number</li>
                                         <li>Email address</li>
-                                        <li>Date of birth (where required)</li>
+                                        <li>Date of Incoporation (where required)</li>
                                         <li>Account login details</li>
                                         <li>Preferences and profile information</li>
                                     </ul>

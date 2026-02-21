@@ -220,7 +220,7 @@ export default function ProfileView({
                         },
                         { label: 'View all bookings', action: () => { window.location.href = '/profile'; onClose(); }, hide: isOrganizer },
                         // { label: 'My Profile', action: () => { window.location.href = '/profile'; onClose(); }, hide: isOrganizer },
-                        { label: 'Chat with us', action: () => { window.location.href = '/contact'; onClose(); }, hide: isOrganizer },
+                        { label: 'Chat with us', action: () => { window.location.href = '/chat'; onClose(); }, hide: isOrganizer },
                         { label: 'Terms & Conditions', action: () => { window.location.href = '/terms'; onClose(); }, hide: isOrganizer },
                         { label: 'Privacy Policy', action: () => { window.location.href = '/privacy'; onClose(); }, hide: isOrganizer },
                         { label: 'Logout', action: () => setShowLogoutConfirm(true) }

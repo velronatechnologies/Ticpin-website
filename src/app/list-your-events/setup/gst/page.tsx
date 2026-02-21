@@ -147,8 +147,11 @@ function GstSelectionContent() {
                                                     setSelectedGstin(item.gstin);
                                                     setHasGst(true);
                                                     // Save state too so bank page can fetch districts
+                                                    // Title-case every word: "TAMIL NADU" → "Tamil Nadu"
                                                     const normalized = item.state
-                                                        ? item.state.charAt(0).toUpperCase() + item.state.slice(1).toLowerCase()
+                                                        ? item.state.trim().split(' ').map((w: string) =>
+                                                            w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                                                          ).join(' ')
                                                         : '';
                                                     updateSetupData({ has_gst: true, gstin: item.gstin, selected_state: normalized });
                                                 }}

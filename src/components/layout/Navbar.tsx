@@ -124,7 +124,7 @@ export default function Navbar() {
     const navItems = [
         { name: 'Dining', href: '/dining' },
         { name: 'Events', href: '/events' },
-        { name: 'Play', href: '/play' },
+        { name: 'Play', href: '/' },
     ];
 
     const exploreCategories = [
@@ -136,7 +136,7 @@ export default function Navbar() {
 
     const hasResults = searchResults.categories.length > 0 || searchResults.items.length > 0;
 
-    if (!isMounted) return null;
+    if (!isMounted || pathname === '/contact' || pathname.startsWith('/chat') || pathname.startsWith('/checkout') || pathname.endsWith('/booking')) return null;
     return (
         <>
             <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white h-16 md:h-20 flex items-center">
@@ -144,7 +144,7 @@ export default function Navbar() {
                     {/* Left: Logo, Explore and Tabs */}
                     <div className="flex items-center gap-3 md:gap-8 min-w-max">
                         <div className="flex items-center gap-3 md:gap-6 relative">
-                            <Link href="/dining" className="border-r border-zinc-200 pr-3 md:pr-6 flex items-center">
+                            <Link href="/" className="border-r border-zinc-200 pr-3 md:pr-6 flex items-center">
                                 <img
                                     src="/ticpin-logo-black.png"
                                     alt="TicPin Logo"

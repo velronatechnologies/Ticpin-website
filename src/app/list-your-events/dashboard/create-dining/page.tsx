@@ -64,7 +64,7 @@ function CreateDiningOutletForm() {
             gallery: ['', '', ''] as string[]
         },
         menu_images: ['', ''] as string[],
-        offers: [{ title: '', code: '', description: '' }],
+        offers: [{ title: '', code: '', description: '', offer_image: '' }],
         facilities: ['AC', 'Parking', 'WiFi'],
         seating_types: [{ type: 'Indoor', total_tables: 10, available_tables: 10, capacity_per_table: 4 }],
         booking_settings: {
@@ -126,6 +126,10 @@ function CreateDiningOutletForm() {
                     const newMenu = [...formData.menu_images];
                     newMenu[index] = data.data.url;
                     setFormData(prev => ({ ...prev, menu_images: newMenu }));
+                } else if (target === 'offer_image' && index !== undefined) {
+                    const newOffers = [...formData.offers];
+                    newOffers[index] = { ...newOffers[index], offer_image: data.data.url };
+                    setFormData(prev => ({ ...prev, offers: newOffers }));
                 }
                 addToast('Image uploaded', 'success');
             }
@@ -165,7 +169,7 @@ function CreateDiningOutletForm() {
     const removeFaq = (index: number) => setFormData({ ...formData, faqs: formData.faqs.filter((_, i) => i !== index) });
     const addTerm = () => setFormData({ ...formData, terms_and_conditions: [...formData.terms_and_conditions, ''] });
     const removeTerm = (index: number) => setFormData({ ...formData, terms_and_conditions: formData.terms_and_conditions.filter((_, i) => i !== index) });
-    const addOffer = () => setFormData({ ...formData, offers: [...formData.offers, { title: '', code: '', description: '' }] });
+    const addOffer = () => setFormData({ ...formData, offers: [...formData.offers, { title: '', code: '', description: '', offer_image: '' }] });
     const removeOffer = (index: number) => setFormData({ ...formData, offers: formData.offers.filter((_, i) => i !== index) });
 
     const handleAutoFill = () => {
@@ -199,8 +203,8 @@ function CreateDiningOutletForm() {
             },
             menu_images: ['', ''],
             offers: [
-                { title: 'Weekday Lunch Special', code: 'LUNCH20', description: 'Get 20% off on weekday lunch buffet' },
-                { title: 'Birthday Blast', code: 'BDAY50', description: 'Birthday person eats free with 4+ guests' }
+                { title: 'Weekday Lunch Special', code: 'LUNCH20', description: 'Get 20% off on weekday lunch buffet', offer_image: '' },
+                { title: 'Birthday Blast', code: 'BDAY50', description: 'Birthday person eats free with 4+ guests', offer_image: '' }
             ],
             facilities: ['AC', 'Parking', 'WiFi', 'Live Kitchen', 'Private Dining', 'Valet'],
             seating_types: [
@@ -356,7 +360,7 @@ function CreateDiningOutletForm() {
                 <Section icon={<Info size={20} />} title="Offers">
                     <div className="space-y-6">
                         {formData.offers.map((offer, i) => (
-                            <div key={i} className="p-6 bg-zinc-50 border border-zinc-200 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                            <div key={i} className="p-6 bg-zinc-50 border border-zinc-200 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-6 relative">
                                 <InputField label="Title" value={offer.title} onChange={v => {
                                     const o = [...formData.offers]; o[i].title = v; setFormData({ ...formData, offers: o });
                                 }} placeholder="eg. 20% Off" />
@@ -366,6 +370,7 @@ function CreateDiningOutletForm() {
                                 <InputField label="Description" value={offer.description} onChange={v => {
                                     const o = [...formData.offers]; o[i].description = v; setFormData({ ...formData, offers: o });
                                 }} placeholder="Min order 500" />
+                                <ImageUploadBox label="Offer Image (poster)" value={(offer as any).offer_image || ''} onUpload={e => handleFileUpload(e, 'offer_image', i)} isUploading={uploading === `offer_image${i}`} />
                                 {i > 0 && (
                                     <button onClick={() => removeOffer(i)} className="absolute -top-3 -right-3 w-8 h-8 bg-white border border-zinc-200 text-red-500 rounded-full flex items-center justify-center shadow-sm">
                                         <Trash2 size={16} />

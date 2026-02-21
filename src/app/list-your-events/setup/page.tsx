@@ -126,8 +126,7 @@ function AccountSetupContent() {
                     return;
                 }
 
-                // If user has PAN verified but no category profile, backend returns status "new_category"
-                // This is handled by prefill fetch which simplifies things for the user
+               
             } catch (e) {
                 console.error('Error checking status:', e);
             }
@@ -188,7 +187,7 @@ function AccountSetupContent() {
             return;
         }
         if (!dob) {
-            addToast('Please enter your date of birth as per PAN records', 'warning');
+            addToast('Please enter your date of incorporation as per PAN records', 'warning');
             return;
         }
 
@@ -241,13 +240,13 @@ function AccountSetupContent() {
                 if (errorMsg.includes('Name mismatch')) {
                     friendlyError = '❌ Name mismatch — The name you entered does not match PAN records. Enter your full name exactly as printed on your PAN card.';
                 } else if (errorMsg.includes('Date of birth mismatch')) {
-                    friendlyError = '❌ Date of birth mismatch — The DOB you entered does not match PAN records. Enter your date of birth exactly as registered on your PAN card.';
+                    friendlyError = '❌ Date of Incorporation mismatch — The date you entered does not match PAN records. Enter your date of incorporation exactly as registered on your PAN card.';
                 } else if (errorMsg.includes('Invalid PAN')) {
                     friendlyError = '❌ Invalid PAN number — This PAN appears to be invalid or inactive. Please double-check your PAN number.';
                 } else if (errorMsg.includes('already registered')) {
                     friendlyError = '❌ This PAN is already linked to another account. Please use the account you originally registered with.';
                 } else {
-                    friendlyError = '❌ Verification failed — Please check that your PAN number, name, and date of birth are correct and try again.';
+                    friendlyError = '❌ Verification failed — Please check that your PAN number, name, and Date of Incorporation are correct and try again.';
                 }
 
                 setPanError(friendlyError);
@@ -413,7 +412,7 @@ function AccountSetupContent() {
                                     {/* DOB Field */}
                                     <div className="flex flex-col gap-4 md:gap-3">
                                         <label className="text-[16px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
-                                            Date of Birth (as per PAN)
+                                            Date of Incorporation (as per PAN)
                                         </label>
                                         <div className="ml-[-3px] flex items-center gap-3 mt-3">
                                             <input

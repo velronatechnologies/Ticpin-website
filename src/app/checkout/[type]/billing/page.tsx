@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { bookingApi } from '@/lib/api';
+import { bookingApi, getAuthToken } from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
 import { useStore } from '@/store/useStore';
 import PassBenefitsCard from '@/components/booking/PassBenefitsCard';
@@ -62,6 +62,9 @@ export default function BillingPage() {
     const [finalAmount, setFinalAmount] = useState(totalAmount);
     const [appliedBenefit, setAppliedBenefit] = useState<'discount' | 'free-booking' | null>(null);
 
+    const bookingFee = Math.round(totalAmount * 0.1);
+    const grandTotal = finalAmount + bookingFee;
+
     const filteredStates = INDIAN_STATES.filter(state =>
         state.toLowerCase().includes(stateSearch.toLowerCase())
     );
@@ -95,27 +98,33 @@ export default function BillingPage() {
             return;
         }
 
+        // ── Step 1: Create payment order (round-robin gateway selection) ──────
         setIsSubmitting(true);
-        try {
-            const selectedTickets = checkoutData.tickets.filter(t => t.quantity > 0);
 
-            if (selectedTickets.length === 0) {
-                addToast('No items selected for booking', 'error');
-                return;
-            }
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000';
+        const token = getAuthToken();
 
+        // Dynamically loads a payment SDK script (idempotent)
+        const loadScript = (src: string): Promise<void> =>
+            new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error(`Failed to load ${src}`));
+                document.body.appendChild(s);
+            });
+
+        // Creates the booking in the backend after payment is confirmed
+        const createBookings = async (paymentId: string, paymentGateway: string, paymentAmount: number) => {
+            const selectedTickets = checkoutData!.tickets.filter(t => t.quantity > 0);
             let lastResponse: any = null;
-
-            // Handle each selected ticket separately if needed, 
-            // but for now let's assume one main booking or loop them if they are distinct
-            // For Play, it's usually just one slot selected anyway.
-            // For Events, we'll book them one by one (simplified)
 
             for (const ticket of selectedTickets) {
                 if (bookingType === 'event') {
                     const payload = {
-                        event_id: checkoutData.id,
-                        event_title: checkoutData.name,
+                        event_id: checkoutData!.id,
+                        event_title: checkoutData!.name,
                         ticket_type: ticket.name,
                         seat_type: ticket.seat_type || '',
                         quantity: ticket.quantity,
@@ -123,52 +132,49 @@ export default function BillingPage() {
                         guest_name: billingData.name,
                         billing_email: billingData.email,
                         billing_state: billingData.state,
+                        payment_id: paymentId,
+                        payment_gateway: paymentGateway,
+                        payment_amount: paymentAmount,
                     };
                     lastResponse = await bookingApi.createEventBooking(payload);
                 } else if (bookingType === 'dining') {
                     const payload = {
-                        restaurant_id: checkoutData.id,
-                        restaurant_name: checkoutData.name,
-                        date: checkoutData.date || new Date().toISOString().split('T')[0],
-                        time_slot: checkoutData.timeSlot || '',
+                        restaurant_id: checkoutData!.id,
+                        restaurant_name: checkoutData!.name,
+                        date: checkoutData!.date || new Date().toISOString().split('T')[0],
+                        time_slot: checkoutData!.timeSlot || '',
                         guest_count: ticket.quantity,
                         guest_name: billingData.name,
+                        billing_email: billingData.email,
                         special_request: '',
+                        payment_id: paymentId,
+                        payment_gateway: paymentGateway,
+                        payment_amount: paymentAmount,
                     };
                     lastResponse = await bookingApi.createDiningBooking(payload);
                 } else {
-                    // play
                     const payload = {
-                        venue_id: checkoutData.id,
-                        venue_name: checkoutData.name,
-                        sport: checkoutData.sport || 'Sports',
-                        date: checkoutData.date || new Date().toISOString().split('T')[0],
-                        time_slot: checkoutData.timeSlot || '08:00 AM',
+                        venue_id: checkoutData!.id,
+                        venue_name: checkoutData!.name,
+                        sport: checkoutData!.sport || 'Sports',
+                        date: checkoutData!.date || new Date().toISOString().split('T')[0],
+                        time_slot: checkoutData!.timeSlot || '08:00 AM',
                         player_name: billingData.name,
                         price: ticket.price * ticket.quantity,
                         billing_email: billingData.email,
                         billing_state: billingData.state,
                         billing_nationality: billingData.nationality,
+                        payment_id: paymentId,
+                        payment_gateway: paymentGateway,
+                        payment_amount: paymentAmount,
                     };
                     lastResponse = await bookingApi.createPlayBooking(payload);
                 }
-
-                if (!lastResponse.success) {
-                    throw new Error(lastResponse.message);
-                }
-
-                // Add to zustand store
-                if (lastResponse.data) {
-                    addBooking({
-                        ...lastResponse.data,
-                        type: bookingType as 'play' | 'dining' | 'event'
-                    });
-                }
+                if (!lastResponse.success) throw new Error(lastResponse.message);
+                if (lastResponse.data) addBooking({ ...lastResponse.data, type: bookingType as 'play' | 'dining' | 'event' });
             }
 
-            addToast('Booking confirmed! Check your email for details', 'success');
-
-            // Send local confirmation email for the whole order
+            // Confirmation email (includes pass-benefit info & payment ref — Go email already sent, this adds the rich template)
             try {
                 await fetch('/api/emails/booking-confirmation', {
                     method: 'POST',
@@ -176,314 +182,441 @@ export default function BillingPage() {
                     body: JSON.stringify({
                         email: billingData.email,
                         name: billingData.name,
-                        bookingType: bookingType,
-                        venueName: checkoutData.name,
+                        bookingType,
+                        venueName: checkoutData!.name,
                         bookingDate: new Date().toLocaleDateString(),
                         totalAmount: finalAmount,
                         originalAmount: totalAmount,
                         passBenefitApplied: appliedBenefit,
                         savingsAmount: totalAmount - finalAmount,
-                        bookingId: lastResponse?.data?.id || `BOOK-${Date.now()}`
-                    })
+                        bookingId: lastResponse?.data?.id || `BOOK-${Date.now()}`,
+                        paymentId,
+                        paymentGateway,
+                    }),
                 });
-            } catch (emailError) {
-                console.warn('Local confirmation email failed:', emailError);
+            } catch { /* non-fatal */ }
+
+            addToast('Booking confirmed! Check your email for details', 'success');
+            clearCheckoutData();
+            setTimeout(() => router.push('/profile'), 1500);
+        };
+
+        // ── Step 2: Verify payment with backend, then create booking ─────────
+        const handlePaymentSuccess = async (gateway: string, orderId: string, paymentId: string, signature: string, paymentAmount: number) => {
+            setIsSubmitting(true);
+            try {
+                const verifyRes = await fetch(`${API_BASE}/api/v1/payment/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ gateway, order_id: orderId, payment_id: paymentId, signature }),
+                });
+                const verifyData = await verifyRes.json();
+                if (verifyData.status !== 200) throw new Error(verifyData.message || 'Payment verification failed');
+                await createBookings(paymentId, gateway, paymentAmount);
+            } catch (err) {
+                addToast(err instanceof Error ? err.message : 'Payment verification failed', 'error');
+                setIsSubmitting(false);
+            }
+        };
+
+        try {
+            const orderRes = await fetch(`${API_BASE}/api/v1/payment/create-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    amount: grandTotal,
+                    booking_ref: (checkoutData.name || 'ticpin').replace(/\s+/g, '_').slice(0, 20),
+                    customer_name: billingData.name,
+                    customer_email: billingData.email,
+                    customer_phone: billingData.phone,
+                }),
+            });
+            const orderData = await orderRes.json();
+            if (orderData.status !== 200) throw new Error(orderData.message || 'Failed to create payment order');
+
+            const { gateway, order_id, key_id, payment_session_id, amount } = orderData.data;
+
+            // ── Razorpay ──────────────────────────────────────────────────────
+            if (gateway === 'razorpay') {
+                await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+                const rzpOptions = {
+                    key: key_id,
+                    amount: Math.round(amount * 100), // paise
+                    currency: 'INR',
+                    name: 'Ticpin',
+                    description: checkoutData.name || 'Booking',
+                    order_id,
+                    prefill: { name: billingData.name, email: billingData.email, contact: billingData.phone },
+                    theme: { color: '#866BFF' },
+                    handler: (response: any) => {
+                        handlePaymentSuccess(
+                            'razorpay',
+                            response.razorpay_order_id,
+                            response.razorpay_payment_id,
+                            response.razorpay_signature,
+                            amount,
+                        );
+                    },
+                    modal: {
+                        ondismiss: () => {
+                            setIsSubmitting(false);
+                            addToast('Payment cancelled', 'error');
+                        },
+                    },
+                };
+                const rzp = new (window as any).Razorpay(rzpOptions);
+                rzp.open();
+                // isSubmitting stays true — will be cleared in handlePaymentSuccess or ondismiss
+                return;
             }
 
-            clearCheckoutData();
-            setTimeout(() => {
-                router.push('/profile');
-            }, 1500);
+            // ── Cashfree ──────────────────────────────────────────────────────
+            if (gateway === 'cashfree') {
+                await loadScript('https://sdk.cashfree.com/js/v3/cashfree.js');
+                const cashfree = (window as any).Cashfree({ mode: 'production' });
+                const result = await cashfree.checkout({
+                    paymentSessionId: payment_session_id,
+                    redirectTarget: '_modal',
+                });
+                if (result?.error) throw new Error(result.error?.message || 'Cashfree payment failed');
+                if (result?.paymentDetails) {
+                    await handlePaymentSuccess('cashfree', order_id, '', '', amount);
+                    return;
+                }
+                throw new Error('Payment was not completed');
+            }
+
+            throw new Error('Unknown payment gateway');
 
         } catch (error) {
-            console.error('❌ Booking failed:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Booking failed. Please try again';
+            const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again';
             addToast(errorMessage, 'error');
-        } finally {
             setIsSubmitting(false);
         }
     };
 
     if (!checkoutData) {
-        return <div className="min-h-screen bg-[#f8f4ff] flex items-center justify-center">Loading...</div>;
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-purple-100 to-white flex items-center justify-center">
+                Loading...
+            </div>
+        );
     }
 
     return (
-        <div className="min-h-screen bg-[#f8f4ff] py-8 px-4 font-[family-name:var(--font-anek-latin)]">
-            <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <div className="flex items-center gap-4 mb-8">
+        <div className="min-h-screen bg-gradient-to-b from-purple-100 to-white pb-12">
+            {/* Header */}
+            <header className="border-b border-gray-200 bg-white">
+                <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+                    <h1 className="text-2xl font-bold">TICPIN</h1>
+                    <h2 className="text-xl font-semibold text-gray-900">Review your booking</h2>
                     <button
                         onClick={() => router.back()}
-                        className="p-2 hover:bg-white rounded-full transition-colors"
+                        className="rounded-full bg-gray-300 p-2 text-gray-700 hover:bg-gray-400 transition-colors"
                     >
-                        <ArrowLeft size={24} />
+                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
                     </button>
-                    <h1 className="text-4xl font-bold text-zinc-900">Billing Details</h1>
                 </div>
+            </header>
 
-                <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Main Content */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-[30px] p-8 shadow-sm">
-                            <h2 className="text-2xl font-bold text-zinc-900 mb-2 text-zinc-400">Step 2</h2>
-                            <h3 className="text-3xl font-bold text-zinc-900 mb-8">Billing Details</h3>
+            <main className="mx-auto max-w-4xl px-6 py-8">
+                {/* Pass Benefits */}
+                {(billingData.email || userPhone) && (
+                    <div className="mb-6">
+                        <PassBenefitsCard
+                            email={billingData.email}
+                            phone={userPhone}
+                            bookingType={bookingType as 'event' | 'play' | 'dining'}
+                            totalAmount={totalAmount}
+                            onDiscountApply={(discountedAmount, isFreeBooking) => {
+                                setFinalAmount(discountedAmount);
+                                setAppliedBenefit(isFreeBooking ? 'free-booking' : 'discount');
+                            }}
+                        />
+                    </div>
+                )}
 
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <p className="text-base text-zinc-600 font-medium pb-2 border-b border-zinc-100">
-                                    These details will be shown on your invoice *
-                                </p>
-
-                                {/* Name Field */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-zinc-400 px-1">Full Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter your name"
-                                        className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[12px] text-base font-bold focus:outline-none focus:border-zinc-900 focus:bg-white transition-all"
-                                        value={billingData.name}
-                                        onChange={(e) => setBillingData({ ...billingData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                {/* Phone Field (Read-only) */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-zinc-400 px-1">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        className="w-full px-5 py-4 bg-zinc-100 border border-zinc-200 rounded-[12px] text-base font-bold text-zinc-600 cursor-not-allowed"
-                                        value={billingData.phone}
-                                        readOnly
-                                    />
-                                </div>
-
-                                {/* Nationality Selection */}
-                                <div className="space-y-4">
-                                    <p className="text-sm font-black uppercase tracking-widest text-zinc-400 px-1">Select nationality</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setBillingData({ ...billingData, nationality: 'indian' })}
-                                            className={`p-4 rounded-[12px] border-2 text-left font-bold transition-all ${billingData.nationality === 'indian'
-                                                ? 'border-black bg-black text-white shadow-lg'
-                                                : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300 text-zinc-600'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-base">Indian Resident</span>
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${billingData.nationality === 'indian' ? 'border-white' : 'border-zinc-300'
-                                                    }`}>
-                                                    {billingData.nationality === 'indian' && (
-                                                        <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setBillingData({ ...billingData, nationality: 'international' })}
-                                            className={`p-4 rounded-[12px] border-2 text-left font-bold transition-all ${billingData.nationality === 'international'
-                                                ? 'border-black bg-black text-white shadow-lg'
-                                                : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300 text-zinc-600'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-base">International</span>
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${billingData.nationality === 'international' ? 'border-white' : 'border-zinc-300'
-                                                    }`}>
-                                                    {billingData.nationality === 'international' && (
-                                                        <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* State Dropdown with Search */}
-                                <div className="relative space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-zinc-400 px-1">State / Region</label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            placeholder="Search or Select State"
-                                            className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[12px] text-base font-bold focus:outline-none focus:border-zinc-900 focus:bg-white transition-all"
-                                            value={stateSearch || billingData.state}
-                                            onChange={(e) => {
-                                                setStateSearch(e.target.value);
-                                                setShowStateDropdown(true);
-                                                if (!e.target.value) setBillingData({ ...billingData, state: '' });
-                                            }}
-                                            onFocus={() => setShowStateDropdown(true)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    if (showStateDropdown && filteredStates.length > 0) {
-                                                        e.preventDefault();
-                                                        setBillingData({ ...billingData, state: filteredStates[0] });
-                                                        setStateSearch(filteredStates[0]);
-                                                        setShowStateDropdown(false);
-                                                    }
-                                                }
-                                            }}
-                                            autoComplete="off"
-                                        />
-                                        <ChevronDown size={20} className={`absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 transition-transform ${showStateDropdown ? 'rotate-180' : ''} pointer-events-none`} />
-                                    </div>
-
-                                    {showStateDropdown && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-zinc-200 rounded-[12px] shadow-2xl max-h-[300px] overflow-y-auto z-30">
-                                            {filteredStates.length > 0 ? (
-                                                filteredStates.map((state) => (
-                                                    <button
-                                                        key={state}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setBillingData({ ...billingData, state });
-                                                            setStateSearch(state);
-                                                            setShowStateDropdown(false);
-                                                        }}
-                                                        className="w-full px-5 py-3 text-left text-base font-bold hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-b-0 text-zinc-700"
-                                                    >
-                                                        {state}
-                                                    </button>
-                                                ))
-                                            ) : (
-                                                <div className="px-5 py-3 text-zinc-500 text-sm">No states found</div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Email Field */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-zinc-400 px-1">Email Address</label>
-                                    <input
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-[12px] text-base font-bold focus:outline-none focus:border-zinc-900 focus:bg-white transition-all"
-                                        value={billingData.email}
-                                        onChange={(e) => setBillingData({ ...billingData, email: e.target.value })}
-                                        required
-                                    />
-                                    <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mt-2 px-1">
-                                        Confirmation will be sent here
-                                    </p>
-                                </div>
-
-                                {/* Terms & Conditions */}
-                                <div className="flex items-start gap-4 pt-4">
-                                    <div className="relative flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            id="terms"
-                                            checked={billingData.acceptedTerms}
-                                            onChange={(e) => setBillingData({ ...billingData, acceptedTerms: e.target.checked })}
-                                            className="w-6 h-6 rounded-lg border-2 border-zinc-200 checked:bg-black checked:border-black cursor-pointer appearance-none transition-all"
-                                        />
-                                        {billingData.acceptedTerms && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-white">
-                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <label htmlFor="terms" className="text-sm text-zinc-600 font-bold uppercase tracking-tight cursor-pointer select-none mt-0.5">
-                                        Accept{' '}
-                                        <a href="/terms" target="_blank" className="text-[#5331EA] hover:underline">
-                                            Terms & Conditions
-                                        </a>
-                                    </label>
-                                </div>
-
-                                {/* Submit Button */}
-                                <div className="pt-6">
-                                    <button
-                                        type="submit"
-                                        disabled={!isFormValid() || isSubmitting}
-                                        className="w-full h-[64px] bg-black text-white rounded-[15px] text-lg font-black uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed shadow-xl shadow-black/10"
-                                    >
-                                        {isSubmitting ? 'PROCESSING...' : 'COMPLETE BOOKING'}
-                                    </button>
-                                </div>
-                            </form>
+                {/* Order Summary Card */}
+                <div className="mb-6 rounded-lg border border-gray-300 bg-white p-6">
+                    <div className="mb-6 flex items-start justify-between">
+                        <h3 className="text-2xl font-bold text-gray-900">Order Summary</h3>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+                            <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
                         </div>
                     </div>
 
-                    {/* Sidebar: Order Summary */}
-                    <div className="lg:col-span-1">
-                        <div className="sticky top-8 space-y-6">
-                            {/* Pass Benefits Card */}
-                            {(billingData.email || userPhone) && (
-                                <PassBenefitsCard
-                                    email={billingData.email}
-                                    phone={userPhone}
-                                    bookingType={bookingType as 'event' | 'play' | 'dining'}
-                                    totalAmount={totalAmount}
-                                    onDiscountApply={(discountedAmount, isFreeBooking) => {
-                                        setFinalAmount(discountedAmount);
-                                        setAppliedBenefit(isFreeBooking ? 'free-booking' : 'discount');
-                                    }}
-                                />
-                            )}
-
-                            {/* Order Summary */}
-                            <div className="bg-white rounded-[30px] p-8 shadow-sm border border-zinc-100">
-                                <h3 className="text-2xl font-bold text-zinc-900 mb-2">Order Summary</h3>
-                                <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6">{checkoutData.name}</p>
-
-                                <div className="space-y-4 mb-6 pb-6 border-b border-zinc-100">
-                                    {checkoutData.tickets.map((ticket) => (
-                                        ticket.quantity > 0 && (
-                                            <div key={ticket.id} className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="font-bold text-zinc-900">{ticket.name}</p>
-                                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Qty: {ticket.quantity}</p>
-                                                </div>
-                                                <p className="font-bold text-zinc-900">
-                                                    ₹{(ticket.price * ticket.quantity).toLocaleString()}
-                                                </p>
-                                            </div>
-                                        )
-                                    ))}
-                                </div>
-
-                                <div className="flex justify-between items-center mb-6">
-                                    <p className="text-sm text-zinc-400 font-bold uppercase tracking-widest">Total Items</p>
-                                    <p className="text-2xl font-black text-zinc-900">{totalTickets}</p>
-                                </div>
-
-                                {appliedBenefit && (
-                                    <div className="flex justify-between items-center mb-6 p-4 bg-green-50 rounded-[15px] border border-green-100">
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle2 size={16} className="text-green-600" />
-                                            <p className="text-xs text-green-700 font-black uppercase tracking-wider">
-                                                Benefit Applied
+                    {/* Tickets Section */}
+                    <div className="mb-6 border-b border-gray-200 pb-6">
+                        <h4 className="mb-4 font-bold text-gray-900">TICKETS</h4>
+                        <div className="space-y-3">
+                            {checkoutData.tickets.filter(t => t.quantity > 0).map(ticket => (
+                                <div key={ticket.id} className="rounded bg-gray-50 p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold text-gray-900">
+                                                {checkoutData.name}{ticket.seat_type && ` | ${ticket.seat_type}`}
+                                            </p>
+                                            <p className="text-sm text-gray-600">{ticket.name}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-semibold text-gray-600">
+                                                {ticket.quantity} ticket{ticket.quantity !== 1 ? 's' : ''}
+                                            </p>
+                                            <p className="text-lg font-bold text-gray-900">
+                                                ₹{(ticket.price * ticket.quantity).toLocaleString()}
                                             </p>
                                         </div>
-                                        <p className="text-sm font-black text-green-600">-₹{(totalAmount - finalAmount).toLocaleString()}</p>
                                     </div>
-                                )}
-
-                                <div className="flex justify-between items-center mb-10">
-                                    <p className="text-lg text-zinc-900 font-black uppercase tracking-widest">Payable</p>
-                                    <p className="text-4xl font-black text-[#5331EA]">₹{finalAmount.toLocaleString()}</p>
                                 </div>
+                            ))}
+                            {totalTickets === 0 && (
+                                <p className="text-sm text-gray-500 text-center py-4">No tickets selected</p>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="mt-3 text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1"
+                        >
+                            <svg className="inline h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            Edit tickets
+                        </button>
+                    </div>
 
-                                <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.2em] text-center leading-relaxed">
-                                        By clickable "Complete Booking" you agree to our policies and ticketing terms.
-                                    </p>
+                    {/* Offers Section */}
+                    <div className="mb-6 border-b border-gray-200 pb-6">
+                        <h4 className="mb-4 font-bold text-gray-900">OFFERS</h4>
+                        <button type="button" className="mb-2 flex w-full items-center justify-between rounded bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-2">
+                                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                                </svg>
+                                <span className="font-semibold text-gray-900">View all event offers</span>
+                            </div>
+                            <svg className="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                        <button type="button" className="flex w-full items-center justify-between rounded bg-gray-50 px-4 py-3 hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-2">
+                                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                                </svg>
+                                <span className="font-semibold text-gray-900">View all coupon codes</span>
+                            </div>
+                            <svg className="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Payment Details */}
+                    <div className="mb-6 border-b border-gray-200 pb-6">
+                        <h4 className="mb-4 font-bold text-gray-900">PAYMENT DETAILS</h4>
+                        <div className="space-y-3">
+                            <div className="flex justify-between">
+                                <span className="text-gray-700">Order amount</span>
+                                <span className="font-semibold text-gray-900">₹{finalAmount.toLocaleString()}</span>
+                            </div>
+                            {appliedBenefit && (
+                                <div className="flex items-center justify-between text-green-700">
+                                    <div className="flex items-center gap-1">
+                                        <CheckCircle2 size={14} />
+                                        <span className="text-sm font-semibold">
+                                            {appliedBenefit === 'free-booking' ? 'Free booking applied' : 'Discount applied'}
+                                        </span>
+                                    </div>
+                                    <span className="font-semibold text-green-600">
+                                        −₹{(totalAmount - finalAmount).toLocaleString()}
+                                    </span>
                                 </div>
+                            )}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                    <span className="text-gray-700">Booking fee (inc. of GST)</span>
+                                    <button type="button" title="10% of order amount" className="text-gray-500 hover:text-gray-700">
+                                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <span className="font-semibold text-gray-900">₹{bookingFee.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
+
+                    {/* Grand Total */}
+                    <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-gray-900">Grand total</span>
+                        <span className="text-2xl font-bold text-gray-900">₹{grandTotal.toLocaleString()}</span>
+                    </div>
                 </div>
-            </div>
+
+                {/* Billing Details Card */}
+                <div className="rounded-lg border border-gray-300 bg-white p-6">
+                    <div className="mb-6 flex items-start justify-between">
+                        <h3 className="text-2xl font-bold text-gray-900">Billing Details</h3>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+                            <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p className="mb-6 text-sm text-gray-600">These details will be shown on your invoice *</p>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Name */}
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Full name"
+                                className="w-full rounded border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-gray-900 focus:outline-none focus:bg-white transition-colors"
+                                value={billingData.name}
+                                onChange={e => setBillingData({ ...billingData, name: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        {/* Phone (read-only) */}
+                        <div>
+                            <input
+                                type="tel"
+                                className="w-full rounded border border-gray-200 bg-gray-100 px-4 py-3 text-gray-600 cursor-not-allowed"
+                                value={billingData.phone}
+                                readOnly
+                            />
+                        </div>
+
+                        {/* Nationality */}
+                        <div>
+                            <label className="mb-3 block text-sm font-semibold text-gray-900">Select nationality</label>
+                            <div className="flex gap-3">
+                                <label className={`flex flex-1 cursor-pointer items-center gap-3 rounded border px-4 py-3 transition-colors ${billingData.nationality === 'indian' ? 'border-gray-900 bg-gray-50' : 'border-gray-300 bg-white'}`}>
+                                    <input
+                                        type="radio"
+                                        name="nationality"
+                                        value="indian"
+                                        checked={billingData.nationality === 'indian'}
+                                        onChange={() => setBillingData({ ...billingData, nationality: 'indian' })}
+                                        className="h-5 w-5 accent-gray-900"
+                                    />
+                                    <span className="font-semibold text-gray-900">Indian resident</span>
+                                </label>
+                                <label className={`flex flex-1 cursor-pointer items-center gap-3 rounded border px-4 py-3 transition-colors ${billingData.nationality === 'international' ? 'border-gray-900 bg-gray-50' : 'border-gray-300 bg-white'}`}>
+                                    <input
+                                        type="radio"
+                                        name="nationality"
+                                        value="international"
+                                        checked={billingData.nationality === 'international'}
+                                        onChange={() => setBillingData({ ...billingData, nationality: 'international' })}
+                                        className="h-5 w-5 accent-gray-900"
+                                    />
+                                    <span className="font-semibold text-gray-900">International visitor</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* State Dropdown */}
+                        <div className="relative">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="State / Region"
+                                    className="w-full rounded border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-gray-900 focus:outline-none focus:bg-white transition-colors"
+                                    value={stateSearch || billingData.state}
+                                    onChange={e => {
+                                        setStateSearch(e.target.value);
+                                        setShowStateDropdown(true);
+                                        if (!e.target.value) setBillingData({ ...billingData, state: '' });
+                                    }}
+                                    onFocus={() => setShowStateDropdown(true)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && showStateDropdown && filteredStates.length > 0) {
+                                            e.preventDefault();
+                                            setBillingData({ ...billingData, state: filteredStates[0] });
+                                            setStateSearch(filteredStates[0]);
+                                            setShowStateDropdown(false);
+                                        }
+                                    }}
+                                    autoComplete="off"
+                                />
+                                <ChevronDown size={18} className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform ${showStateDropdown ? 'rotate-180' : ''}`} />
+                            </div>
+                            {showStateDropdown && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-60 overflow-y-auto z-30">
+                                    {filteredStates.length > 0 ? (
+                                        filteredStates.map(state => (
+                                            <button
+                                                key={state}
+                                                type="button"
+                                                onClick={() => {
+                                                    setBillingData({ ...billingData, state });
+                                                    setStateSearch(state);
+                                                    setShowStateDropdown(false);
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0 text-gray-700"
+                                            >
+                                                {state}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-3 text-gray-500 text-sm">No states found</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Email */}
+                        <div>
+                            <input
+                                type="email"
+                                placeholder="Email address"
+                                className="w-full rounded border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-gray-900 focus:outline-none focus:bg-white transition-colors"
+                                value={billingData.email}
+                                onChange={e => setBillingData({ ...billingData, email: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <p className="text-sm text-gray-600">We'll mail you ticket confirmation and invoices</p>
+
+                        {/* Terms */}
+                        <div className="flex items-start gap-3 py-4">
+                            <input
+                                type="checkbox"
+                                id="terms"
+                                checked={billingData.acceptedTerms}
+                                onChange={e => setBillingData({ ...billingData, acceptedTerms: e.target.checked })}
+                                className="mt-1 h-5 w-5 accent-gray-900"
+                            />
+                            <label htmlFor="terms" className="text-sm text-gray-700">
+                                I have read and accepted the{' '}
+                                <a href="/terms" target="_blank" className="font-semibold text-blue-600 hover:text-blue-700">
+                                    terms and conditions
+                                </a>
+                            </label>
+                        </div>
+
+                        {/* Submit */}
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="submit"
+                                disabled={!isFormValid() || isSubmitting}
+                                className="rounded bg-gray-900 px-8 py-3 font-bold text-white transition-all hover:bg-black disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? 'PROCESSING...' : 'PAY ₹1 (TEST)'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </main>
         </div>
     );
 }
-
-// Add the missing imports for Lucide components if needed
-import { CheckCircle2 } from 'lucide-react';

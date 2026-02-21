@@ -42,6 +42,41 @@ export default function AdminEventPostersPage() {
     const [activeStatus, setActiveStatus] = useState('all');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EventPoster | null>(null);
+    const [viewingPAN, setViewingPAN] = useState<string | null>(null); // poster id being fetched
+
+    // Extract GCS object path from a Firebase Storage download URL
+    const extractStoragePath = (url: string): string | null => {
+        try {
+            const match = url.match(/\/o\/([^?]+)/);
+            if (!match) return null;
+            return decodeURIComponent(match[1]);
+        } catch {
+            return null;
+        }
+    };
+
+    // Opens a secure document by fetching a 15-min signed URL from the backend
+    const viewSecureDoc = async (posterId: string, fileUrl: string) => {
+        const path = extractStoragePath(fileUrl);
+        if (!path) { window.open(fileUrl, '_blank'); return; }
+        setViewingPAN(posterId);
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/admin/signed-url?path=${encodeURIComponent(path)}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const data = await res.json();
+            if (data.status === 200 && data.data?.url) {
+                window.open(data.data.url, '_blank');
+            } else {
+                alert('Could not generate secure link. Try again.');
+            }
+        } catch {
+            alert('Error fetching secure document.');
+        } finally {
+            setViewingPAN(null);
+        }
+    };
 
     const tabs = [
         { id: 'all', label: 'All Requests' },
@@ -252,16 +287,17 @@ export default function AdminEventPostersPage() {
                                                         <span className="text-xs font-bold uppercase">Organization</span>
                                                     </div>
                                                     {poster.organization_details.pan_image && (
-                                                        <a
-                                                            href={poster.organization_details.pan_image}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-1.5 hover:bg-zinc-100 rounded-lg text-[#5331EA] transition-colors flex items-center gap-1.5"
-                                                            title="View PAN Card"
+                                                        <button
+                                                            onClick={() => viewSecureDoc(poster.id, poster.organization_details.pan_image)}
+                                                            disabled={viewingPAN === poster.id}
+                                                            className="p-1.5 hover:bg-zinc-100 rounded-lg text-[#5331EA] transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                                            title="View PAN Card (secure)"
                                                         >
                                                             <Eye size={14} />
-                                                            <span className="text-[10px] font-bold uppercase">View PAN</span>
-                                                        </a>
+                                                            <span className="text-[10px] font-bold uppercase">
+                                                                {viewingPAN === poster.id ? 'Loading…' : 'View PAN'}
+                                                            </span>
+                                                        </button>
                                                     )}
                                                 </div>
                                                 {editingId === poster.id ? (

@@ -49,7 +49,8 @@ function AdminCreatePlayVenueForm() {
             slot_duration_minutes: 60,
             open_time: '06:00',
             close_time: '23:00',
-            max_days_advance_booking: 7
+            max_days_advance_booking: 7,
+            total_courts: 1
         },
         faqs: [{ question: '', answer: '' }],
         terms_and_conditions: ['']
@@ -150,7 +151,8 @@ function AdminCreatePlayVenueForm() {
                 slot_duration_minutes: 60,
                 open_time: '06:00',
                 close_time: '23:00',
-                max_days_advance_booking: 7
+                max_days_advance_booking: 7,
+                total_courts: 1
             },
             faqs: [
                 { question: 'Is parking available?', answer: 'Yes, free parking for up to 30 vehicles.' },
@@ -307,6 +309,7 @@ function AdminCreatePlayVenueForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <InputField label="Opening Time" type="time" value={formData.slot_settings.open_time} onChange={v => setFormData({ ...formData, slot_settings: { ...formData.slot_settings, open_time: v } })} />
                         <InputField label="Closing Time" type="time" value={formData.slot_settings.close_time} onChange={v => setFormData({ ...formData, slot_settings: { ...formData.slot_settings, close_time: v } })} />
+                        <InputField label="Total Courts / Lanes" type="number" value={String(formData.slot_settings.total_courts ?? 1)} onChange={v => setFormData({ ...formData, slot_settings: { ...formData.slot_settings, total_courts: Math.max(1, parseInt(v) || 1) } })} placeholder="e.g. 3" />
                     </div>
                 </Section>
 

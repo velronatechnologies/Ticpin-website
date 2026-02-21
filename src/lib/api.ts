@@ -550,4 +550,10 @@ export const commonApi = {
     searchLocations: async (q: string) => {
         return apiRequest<any>(`/api/v1/locations/search?q=${encodeURIComponent(q)}`);
     },
+    submitContactForm: async (data: any) => {
+        return apiRequest<any>('/api/v1/contact', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
 };
