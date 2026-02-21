@@ -34,43 +34,55 @@ function BankDetailsContent() {
 
     const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
     const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
-    const [isCertified, setIsCertified] = useState(hasPreviousBankDetails); // Auto-certify if prefilled
+    const [allStates, setAllStates] = useState<string[]>([]);
+    const [isCertified, setIsCertified] = useState(hasPreviousBankDetails);
     const router = useRouter();
     const { addToast } = useToast();
 
-    // Derived values from PAN
-    const panState = setupData.pan_verification?.address?.state;
-    const panCity = setupData.pan_verification?.address?.city;
+    // State comes from the GSTIN the organizer selected (saved by GST page)
+    // Fall back to PAN address state (may be empty for PAN Lite)
+    const [selectedState, setSelectedState] = useState<string>(
+        setupData.selected_state || setupData.pan_verification?.address?.state || ''
+    );
 
-    // Fetch districts based on PAN state
+    // Fetch all states for the no-GSTIN picker
+    React.useEffect(() => {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/states`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 200 && res.data?.states) {
+                    setAllStates((res.data.states as string[]).sort());
+                }
+            })
+            .catch(() => {});
+    }, []);
+
+    // Fetch districts whenever selectedState changes
     React.useEffect(() => {
         const fetchDistricts = async () => {
-            if (!panState) return;
-
+            if (!selectedState) {
+                setAvailableDistricts([]);
+                return;
+            }
             setIsLoadingDistricts(true);
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/states/${encodeURIComponent(panState)}/districts`);
-                const res = await response.json();
-                if (res.status === 200) {
-                    setAvailableDistricts(res.data.districts);
-
-                    // If current city is not in districts but matches something, maybe try to match
-                    if (!bankDetails.city && panCity) {
-                        const match = res.data.districts.find((d: string) => d.toLowerCase() === panCity.toLowerCase());
-                        if (match) {
-                            setBankDetails(prev => ({ ...prev, city: match }));
-                        }
-                    }
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/states/${encodeURIComponent(selectedState)}/districts`
+                );
+                const data = await res.json();
+                if (data.status === 200 && data.data?.districts) {
+                    setAvailableDistricts(data.data.districts);
+                } else {
+                    setAvailableDistricts([]);
                 }
-            } catch (err) {
-                console.error('Error fetching districts:', err);
+            } catch {
+                setAvailableDistricts([]);
             } finally {
                 setIsLoadingDistricts(false);
             }
         };
-
         fetchDistricts();
-    }, [panState, panCity]);
+    }, [selectedState]);
 
     // Auth & Flow guard
     React.useEffect(() => {
@@ -84,8 +96,16 @@ function BankDetailsContent() {
     }, [isLoggedIn, token, router, categoryQuery, setupData.category]);
 
     const handleContinue = () => {
-        if (!bankDetails.account_holder_name || !bankDetails.account_number || !bankDetails.ifsc_code || !bankDetails.city) {
-            addToast('Please fill all bank details including district', 'warning');
+        if (!bankDetails.account_holder_name || !bankDetails.account_number || !bankDetails.ifsc_code) {
+            addToast('Please fill all bank details', 'warning');
+            return;
+        }
+        if (!selectedState) {
+            addToast('Please select a state', 'warning');
+            return;
+        }
+        if (!bankDetails.city) {
+            addToast('Please select a district', 'warning');
             return;
         }
         if (!isCertified) {
@@ -205,33 +225,54 @@ function BankDetailsContent() {
                                     />
                                 </div>
 
-                                {/* City Dropdown */}
+                                {/* State selector — shown only when no GSTIN was selected */}
+                                {!setupData.selected_state && (
+                                    <div className="space-y-3">
+                                        <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
+                                            Select State
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedState}
+                                                onChange={(e) => {
+                                                    setSelectedState(e.target.value);
+                                                    setBankDetails(prev => ({ ...prev, city: '' }));
+                                                    updateSetupData({ selected_state: e.target.value });
+                                                }}
+                                                disabled={hasPreviousBankDetails}
+                                                className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3 ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
+                                            >
+                                                <option value="">Select state</option>
+                                                {allStates.map((s) => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown size={18} className="absolute right-4 top-[38px] -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* District Dropdown */}
                                 <div className="space-y-3">
                                     <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
                                         Select District
+                                        {selectedState && (
+                                            <span className="ml-2 text-[12px] text-zinc-400">({selectedState})</span>
+                                        )}
                                     </label>
                                     <div className="relative">
                                         <select
                                             value={bankDetails.city}
                                             onChange={(e) => setBankDetails({ ...bankDetails, city: e.target.value })}
-                                            disabled={hasPreviousBankDetails}
-                                            className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3 ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
+                                            disabled={hasPreviousBankDetails || !selectedState}
+                                            className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3 ${(hasPreviousBankDetails || !selectedState) ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
                                         >
-                                            <option value="" className="text-zinc-400">
-                                                {isLoadingDistricts ? 'Loading districts...' : 'Select district'}
+                                            <option value="">
+                                                {!selectedState ? 'Select a state first' : isLoadingDistricts ? 'Loading districts...' : 'Select district'}
                                             </option>
-                                            {availableDistricts.length > 0 ? (
-                                                availableDistricts.map((district: string, idx: number) => (
-                                                    <option key={idx} value={district}>{district}</option>
-                                                ))
-                                            ) : !isLoadingDistricts && (
-                                                <>
-                                                    <option>Chennai</option>
-                                                    <option>Bangalore</option>
-                                                    <option>Mumbai</option>
-                                                    <option>Delhi</option>
-                                                </>
-                                            )}
+                                            {availableDistricts.map((district, idx) => (
+                                                <option key={idx} value={district}>{district}</option>
+                                            ))}
                                         </select>
                                         <ChevronDown size={18} className="absolute right-4 top-[38px] -translate-y-1/2 text-zinc-400 pointer-events-none" />
                                     </div>

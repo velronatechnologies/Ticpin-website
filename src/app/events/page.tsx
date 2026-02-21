@@ -64,17 +64,21 @@ export default function EventsPage() {
             setIsLoading(true);
             // Extract city from "Area, City" - empty = show all cities
             const cityOnly = storeLocation ? (storeLocation.includes(',') ? storeLocation.split(',').pop()?.trim() : storeLocation) : '';
-            console.log('🔍 Events page - fetching with location filter:', cityOnly || 'ALL CITIES');
             try {
                 const [eventsRes, artistsRes] = await Promise.all([
-                    eventsApi.getAll(20, '', '', cityOnly),  // Empty city = show all
+                    eventsApi.getAll(20, '', '', cityOnly),
                     artistsApi.getAll()
                 ]);
-                console.log('📊 Events API response:', eventsRes, `(${eventsRes.data?.items?.length || 0} events)`);
 
                 if (eventsRes.success && eventsRes.data) {
-                    console.log('✅ Events loaded:', eventsRes.data.items?.length || 0, 'events');
-                    const items = eventsRes.data.items || [];
+                    let items = eventsRes.data.items || [];
+                    // If city filter yielded nothing, fall back to all
+                    if (items.length === 0 && cityOnly) {
+                        const fallback = await eventsApi.getAll(20, '', '', '');
+                        if (fallback.success && fallback.data) {
+                            items = fallback.data.items || [];
+                        }
+                    }
                     setEventList(items);
 
                     // Extract unique artists from events to supplement the artistList
@@ -92,8 +96,6 @@ export default function EventsPage() {
                             return unique;
                         });
                     }
-                } else {
-                    console.log('❌ No events data received');
                 }
 
                 if (artistsRes.success && artistsRes.data) {

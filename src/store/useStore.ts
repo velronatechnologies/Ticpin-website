@@ -56,6 +56,7 @@ interface SetupData {
     gstin_mapping: any;
     has_gst: boolean;
     gstin: string;
+    selected_state: string;   // state from selected GSTIN (e.g. "Karnataka")
     gst_details?: {
         has_gst: boolean;
         gstin: string;

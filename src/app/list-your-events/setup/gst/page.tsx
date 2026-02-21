@@ -146,7 +146,11 @@ function GstSelectionContent() {
                                                 onChange={() => {
                                                     setSelectedGstin(item.gstin);
                                                     setHasGst(true);
-                                                    updateSetupData({ has_gst: true, gstin: item.gstin });
+                                                    // Save state too so bank page can fetch districts
+                                                    const normalized = item.state
+                                                        ? item.state.charAt(0).toUpperCase() + item.state.slice(1).toLowerCase()
+                                                        : '';
+                                                    updateSetupData({ has_gst: true, gstin: item.gstin, selected_state: normalized });
                                                 }}
                                                 className="w-6 h-6 rounded-full border border-zinc-300 bg-white accent-black cursor-pointer"
                                             />
@@ -199,7 +203,7 @@ function GstSelectionContent() {
                                                 if (e.target.checked) {
                                                     setHasGst(false);
                                                     setSelectedGstin('');
-                                                    updateSetupData({ has_gst: false, gstin: '' });
+                                                    updateSetupData({ has_gst: false, gstin: '', selected_state: '' });
                                                 }
                                             }}
                                             className="w-5 h-5 rounded-[4px] border border-zinc-300 bg-white accent-black cursor-pointer"

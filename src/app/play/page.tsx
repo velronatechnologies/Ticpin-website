@@ -32,7 +32,18 @@ export default function PlayPage() {
                     : '';
                 const response = await playApi.getAll(20, '', activeCategory, cityOnly);
                 if (response.success && response.data) {
-                    setVenueList(response.data.items || []);
+                    const items = response.data.items || [];
+                    if (items.length > 0) {
+                        setVenueList(items);
+                    } else if (cityOnly) {
+                        // No venues in this city — fall back to all
+                        const fallback = await playApi.getAll(20, '', activeCategory, '');
+                        if (fallback.success && fallback.data) {
+                            setVenueList(fallback.data.items || []);
+                        }
+                    } else {
+                        setVenueList([]);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch play venues:', error);

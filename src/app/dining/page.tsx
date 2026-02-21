@@ -66,7 +66,18 @@ export default function DiningPage() {
                 const cityOnly = storeLocation ? (storeLocation.includes(',') ? storeLocation.split(',').pop()?.trim() : storeLocation) : '';
                 const response = await diningApi.getAll(20, '', '', cityOnly);
                 if (response.success && response.data) {
-                    setRestaurantList(response.data.items || []);
+                    const items = response.data.items || [];
+                    if (items.length > 0) {
+                        setRestaurantList(items);
+                    } else if (cityOnly) {
+                        // No results for this city — fall back to all
+                        const fallback = await diningApi.getAll(20, '', '', '');
+                        if (fallback.success && fallback.data) {
+                            setRestaurantList(fallback.data.items || []);
+                        }
+                    } else {
+                        setRestaurantList([]);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch dining venues:", error);
