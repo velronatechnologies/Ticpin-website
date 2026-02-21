@@ -1,37 +1,136 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { useStore } from '@/store/useStore';
+import { useAuth } from '@/context/AuthContext';
+import { partnerApi } from '@/lib/api';
+import AuthModal from '@/components/modals/AuthModal';
+import { useToast } from '@/context/ToastContext';
 
 export default function Footer() {
+    const { isOrganizer, isAdmin, isLoggedIn, token, organizerCategories } = useAuth();
+    const { setPendingOrganizerCategory } = useStore();
     const pathname = usePathname();
+    const router = useRouter();
+    const { addToast } = useToast();
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [isNavigating, setIsNavigating] = useState(false);
+    const [pendingCategory, setPendingCategory] = useState<string | null>(null);
 
-    const getListYourLink = () => {
-        if (pathname.startsWith('/dining')) {
-            return {
-                name: 'List your dining',
-                href: '/list-your-events?category=dining'
-            };
-        } else if (pathname.startsWith('/play')) {
-            return {
-                name: 'List your play/courts',
-                href: '/list-your-events?category=play'
-            };
-        } else {
-            return {
-                name: 'List your events',
-                href: '/list-your-events?category=events'
-            };
+    const organizerLinks = [
+        { name: 'List your events', category: 'event', path: '/events' },
+        { name: 'List your play/courts', category: 'play', path: '/play' },
+        { name: 'List your dining', category: 'dining', path: '/dining' },
+    ];
+
+    const filteredOrganizerLinks = organizerLinks.filter((link) => {
+        return pathname.startsWith(link.path);
+    });
+
+    const handleCategoryClick = async (category: string) => {
+        setPendingCategory(category);
+        setPendingOrganizerCategory(category);
+
+        if (!isLoggedIn) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        if (!isOrganizer) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        setIsNavigating(true);
+        await checkVerificationAndNavigate(category);
+        setTimeout(() => setIsNavigating(false), 2000);
+    };
+
+    const checkVerificationAndNavigate = async (category: string) => {
+        try {
+            const isVerifiedForCategory = organizerCategories.includes(category) ||
+                (category === 'event' && organizerCategories.some(c => ['event', 'creator', 'individual', 'company', 'non-profit'].includes(c)));
+
+            if (isVerifiedForCategory) {
+                router.push(`/organizer-dashboard?category=${category}`);
+                return;
+            }
+            const response = await partnerApi.getStatusByCategory(category);
+
+            if (response.success && response.data) {
+                const status = response.data.status;
+
+                if (status === 'approved') {
+                    router.push(`/organizer-dashboard?category=${category}`);
+                } else if (status === 'pending' || status === 'under_review') {
+                    router.push(`/organizer-dashboard?category=${category}`);
+                } else if (status === 'new_category' || response.data.is_pan_verified) {
+                    router.push(`/list-your-events/setup?category=${category}`);
+                } else {
+                    router.push(`/list-your-events/setup?category=${category}`);
+                }
+            } else {
+                router.push(`/list-your-events/setup?category=${category}`);
+            }
+        } catch (error) {
+            console.error('Error checking verification:', error);
+            router.push(`/organizer-dashboard?category=${category}`);
         }
     };
 
-    const dynamicLink = getListYourLink();
+    const handleAuthSuccess = async () => {
+        setIsAuthModalOpen(false);
+        setIsNavigating(true);
+        const category = pendingCategory || 'event';
+
+        // After auth, use a fresh backend call since local store may be stale
+        setTimeout(async () => {
+            try {
+                const response = await partnerApi.getStatusByCategory(category);
+
+                if (response.success && response.data) {
+                    const status = response.data.status;
+                    const cats = response.data.organizer_categories || [];
+                    const isVerified = cats.includes(category) ||
+                        (category === 'event' && cats.some((c: string) => ['event', 'creator', 'individual', 'company', 'non-profit'].includes(c)));
+
+                    if (status === 'approved' || isVerified) {
+                        router.push(`/organizer-dashboard?category=${category}`);
+                    } else if (status === 'pending' || status === 'under_review') {
+                        router.push(`/organizer-dashboard?category=${category}`);
+                    } else {
+                        // Not verified yet → setup page to begin verification
+                        router.push(`/list-your-events/setup?category=${category}`);
+                    }
+                } else {
+                    // No verification record → setup page
+                    router.push(`/list-your-events/setup?category=${category}`);
+                }
+            } catch (error) {
+                console.error('Error after auth:', error);
+                // Fallback: go to setup page
+                router.push(`/list-your-events/setup?category=${category}`);
+            } finally {
+                setTimeout(() => setIsNavigating(false), 3000);
+            }
+        }, 800);
+    };
 
     return (
         <footer className="bg-[#212121] text-white border-t border-zinc-800/50">
+            {isNavigating && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-[#5331EA] border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-zinc-600 font-medium animate-pulse text-[15px]">Redirecting to dashboard...</p>
+                    </div>
+                </div>
+            )}
             <div className="mx-auto max-w-[1440px] px-6 md:px-[68px] min-h-[200px] flex flex-col justify-center py-8 md:py-10">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-8 mb-8 md:mb-8">
-                    {/* Brand Logo */}
                     <div className="flex-shrink-0">
                         <img
                             src="/ticpin-logo-black.png"
@@ -55,12 +154,16 @@ export default function Footer() {
                                 {link.name}
                             </Link>
                         ))}
-                        <Link
-                            href={dynamicLink.href}
-                            className="text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap"
-                        >
-                            {dynamicLink.name}
-                        </Link>
+
+                        {!isAdmin && filteredOrganizerLinks.map((link) => (
+                            <button
+                                key={link.category}
+                                onClick={() => handleCategoryClick(link.category)}
+                                className="text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap cursor-pointer bg-transparent border-none"
+                            >
+                                {link.name}
+                            </button>
+                        ))}
                     </div>
 
                     {/* QR Code Placeholder */}
@@ -140,6 +243,16 @@ export default function Footer() {
                     </div>
                 </div>
             </div>
+
+            {/* Auth Modal for organizer flow - email-only */}
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+                isOrganizer={true}
+                category={pendingCategory}
+                initialView="email_login"
+                onAuthSuccess={handleAuthSuccess}
+            />
         </footer>
     );
 }

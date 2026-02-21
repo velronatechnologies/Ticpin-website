@@ -70,7 +70,10 @@ export default function EventCard({
             {/* Info Part */}
             <div className="relative h-[124px] bg-white p-5 flex flex-col justify-between">
                 <div>
-                    <h3 className="text-2xl font-medium text-black line-clamp-1 mb-1 font-[family-name:var(--font-anek-latin)]">
+                    <h3 className={`font-medium text-black line-clamp-1 mb-1 font-[family-name:var(--font-anek-latin)] ${(title || 'Name').length > 25 ? 'text-[18px]' :
+                            (title || 'Name').length > 20 ? 'text-[20px]' :
+                                'text-[24px]'
+                        }`}>
                         {title || 'Name'}
                     </h3>
 

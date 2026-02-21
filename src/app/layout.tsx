@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Anek_Latin, Anek_Tamil, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
+// import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 
@@ -39,7 +40,10 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             <Navbar />
-            {children}
+            <main className="min-h-[calc(100vh-80px)]">
+              {children}
+            </main>
+            {/* <Footer /> */}
           </ToastProvider>
         </AuthProvider>
       </body>

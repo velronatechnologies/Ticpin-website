@@ -25,7 +25,7 @@ export default function EventForm({ onClose, onSuccess }: EventFormProps) {
         start_datetime: '',
         end_datetime: '',
         price_start: 0,
-        status: 'active',
+        status: 'pending',
         venue: {
             name: '',
             address: '',
@@ -40,11 +40,25 @@ export default function EventForm({ onClose, onSuccess }: EventFormProps) {
             poster: '',
             gallery: [] as string[]
         },
-        artists: [{ name: '', role: '', image_url: '', description: '' }],
+        artists: [{
+            name: '', role: '', image_url: '', description: '',
+            genre: '', is_verified: false, rating: 4.8, review_count: 0,
+            events_hosted: 0, location: '', contact_email: '', contact_phone: '',
+            experience_years: 0, specialties: [] as string[], follower_count: 0,
+            social_links: ['']
+        }],
         tickets: [{ ticket_type: 'General', seat_type: 'standing', price: 0, total_quantity: 100, available_quantity: 100 }],
         faqs: [{ question: '', answer: '' }],
         terms_and_conditions: ['']
     });
+
+    const [expandedArtists, setExpandedArtists] = useState<number[]>([]);
+
+    const toggleArtistExpansion = (index: number) => {
+        setExpandedArtists(prev =>
+            prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+        );
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -60,6 +74,11 @@ export default function EventForm({ onClose, onSuccess }: EventFormProps) {
                     ...formData,
                     start_datetime: new Date(formData.start_datetime).toISOString(),
                     end_datetime: new Date(formData.end_datetime).toISOString(),
+                    artists: formData.artists.map(a => ({
+                        ...a,
+                        specialties: typeof a.specialties === 'string' ? (a.specialties as string).split(',').map(s => s.trim()) : a.specialties,
+                        social_links: a.social_links.filter(link => link.trim() !== '')
+                    }))
                 })
             });
             if (response.ok) {
@@ -76,8 +95,20 @@ export default function EventForm({ onClose, onSuccess }: EventFormProps) {
         }
     };
 
-    const addArtist = () => setFormData({ ...formData, artists: [...formData.artists, { name: '', role: '', image_url: '', description: '' }] });
-    const removeArtist = (index: number) => setFormData({ ...formData, artists: formData.artists.filter((_, i) => i !== index) });
+    const addArtist = () => setFormData({
+        ...formData,
+        artists: [...formData.artists, {
+            name: '', role: '', image_url: '', description: '',
+            genre: '', is_verified: false, rating: 4.8, review_count: 0,
+            events_hosted: 0, location: '', contact_email: '', contact_phone: '',
+            experience_years: 0, specialties: [] as string[], follower_count: 0,
+            social_links: ['']
+        }]
+    });
+    const removeArtist = (index: number) => {
+        setFormData({ ...formData, artists: formData.artists.filter((_, i) => i !== index) });
+        setExpandedArtists(prev => prev.filter(i => i !== index));
+    };
 
     const addTicket = () => setFormData({ ...formData, tickets: [...formData.tickets, { ticket_type: '', seat_type: 'standing', price: 0, total_quantity: 0, available_quantity: 0 }] });
     const removeTicket = (index: number) => setFormData({ ...formData, tickets: formData.tickets.filter((_, i) => i !== index) });
@@ -209,6 +240,176 @@ export default function EventForm({ onClose, onSuccess }: EventFormProps) {
                                 <label className="text-sm font-medium text-zinc-600">Full Description</label>
                                 <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full h-32 p-4 bg-zinc-50 border rounded-xl focus:border-[#5331EA] outline-none resize-none" />
                             </div>
+                        </div>
+                    </section>
+
+                    {/* Artists */}
+                    <section className="space-y-6">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <div className="flex items-center gap-2 text-zinc-400">
+                                <Users size={18} />
+                                <h3 className="text-sm font-bold uppercase tracking-wider">Artists / Performers</h3>
+                            </div>
+                            <button type="button" onClick={addArtist} className="text-[#5331EA] flex items-center gap-1 text-sm font-bold hover:underline">
+                                <Plus size={16} /> Add Artist
+                            </button>
+                        </div>
+                        <div className="space-y-6">
+                            {formData.artists.map((artist, index) => (
+                                <div key={index} className="p-6 bg-zinc-50 border rounded-2xl relative space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <h4 className="font-bold text-zinc-900">Artist #{index + 1}</h4>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleArtistExpansion(index)}
+                                                className="text-sm text-zinc-500 hover:text-[#5331EA] font-medium"
+                                            >
+                                                {expandedArtists.includes(index) ? 'Collapse' : 'Add More Details'}
+                                            </button>
+                                            {formData.artists.length > 1 && (
+                                                <button type="button" onClick={() => removeArtist(index)} className="text-zinc-400 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input
+                                            type="text"
+                                            placeholder="Artist Name"
+                                            value={artist.name}
+                                            onChange={e => {
+                                                const newArtists = [...formData.artists];
+                                                newArtists[index].name = e.target.value;
+                                                setFormData({ ...formData, artists: newArtists });
+                                            }}
+                                            className="h-12 px-4 bg-white border rounded-xl focus:border-[#5331EA] outline-none"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Role (eg. Singer, Lead Artist)"
+                                            value={artist.role}
+                                            onChange={e => {
+                                                const newArtists = [...formData.artists];
+                                                newArtists[index].role = e.target.value;
+                                                setFormData({ ...formData, artists: newArtists });
+                                            }}
+                                            className="h-12 px-4 bg-white border rounded-xl focus:border-[#5331EA] outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input
+                                            type="text"
+                                            placeholder="Artist Image URL"
+                                            value={artist.image_url}
+                                            onChange={e => {
+                                                const newArtists = [...formData.artists];
+                                                newArtists[index].image_url = e.target.value;
+                                                setFormData({ ...formData, artists: newArtists });
+                                            }}
+                                            className="h-12 px-4 bg-white border rounded-xl focus:border-[#5331EA] outline-none"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Genre (eg. Rock, Jazz, Techno)"
+                                            value={artist.genre}
+                                            onChange={e => {
+                                                const newArtists = [...formData.artists];
+                                                newArtists[index].genre = e.target.value;
+                                                setFormData({ ...formData, artists: newArtists });
+                                            }}
+                                            className="h-12 px-4 bg-white border rounded-xl focus:border-[#5331EA] outline-none"
+                                        />
+                                    </div>
+
+                                    {expandedArtists.includes(index) && (
+                                        <div className="space-y-4 pt-4 border-t border-zinc-200 animate-in fade-in slide-in-from-top-2">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Location</label>
+                                                    <input type="text" placeholder="eg. Mumbai" value={artist.location} onChange={e => { const a = [...formData.artists]; a[index].location = e.target.value; setFormData({ ...formData, artists: a }); }} className="w-full h-11 px-4 bg-white border rounded-lg text-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Followers</label>
+                                                    <input type="number" placeholder="eg. 5000" value={artist.follower_count} onChange={e => { const a = [...formData.artists]; a[index].follower_count = Number(e.target.value); setFormData({ ...formData, artists: a }); }} className="w-full h-11 px-4 bg-white border rounded-lg text-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Experience (Years)</label>
+                                                    <input type="number" placeholder="eg. 5" value={artist.experience_years} onChange={e => { const a = [...formData.artists]; a[index].experience_years = Number(e.target.value); setFormData({ ...formData, artists: a }); }} className="w-full h-11 px-4 bg-white border rounded-lg text-sm" />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Contact Email</label>
+                                                    <input type="email" placeholder="artist@example.com" value={artist.contact_email} onChange={e => { const a = [...formData.artists]; a[index].contact_email = e.target.value; setFormData({ ...formData, artists: a }); }} className="w-full h-11 px-4 bg-white border rounded-lg text-sm" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-zinc-400 uppercase">Contact Phone</label>
+                                                    <input type="text" placeholder="+91 ..." value={artist.contact_phone} onChange={e => { const a = [...formData.artists]; a[index].contact_phone = e.target.value; setFormData({ ...formData, artists: a }); }} className="w-full h-11 px-4 bg-white border rounded-lg text-sm" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-zinc-400 uppercase">Specialties (eg. DJ, Live Vocals - comma separated)</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="eg. Live Band, Wedding Sets"
+                                                    value={Array.isArray(artist.specialties) ? artist.specialties.join(', ') : artist.specialties}
+                                                    onChange={e => {
+                                                        const a = [...formData.artists];
+                                                        a[index].specialties = e.target.value.split(',').map(s => s.trim());
+                                                        setFormData({ ...formData, artists: a });
+                                                    }}
+                                                    className="w-full h-11 px-4 bg-white border rounded-lg text-sm"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-zinc-400 uppercase">Social Links (One per line)</label>
+                                                <textarea
+                                                    placeholder="https://instagram.com/..."
+                                                    value={artist.social_links.join('\n')}
+                                                    onChange={e => {
+                                                        const a = [...formData.artists];
+                                                        a[index].social_links = e.target.value.split('\n');
+                                                        setFormData({ ...formData, artists: a });
+                                                    }}
+                                                    className="w-full h-24 p-4 bg-white border rounded-lg text-sm resize-none"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-zinc-400 uppercase">Verified & Stats</label>
+                                                <div className="flex items-center gap-6 p-3 bg-white border rounded-lg">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input type="checkbox" checked={artist.is_verified} onChange={e => { const a = [...formData.artists]; a[index].is_verified = e.target.checked; setFormData({ ...formData, artists: a }); }} className="w-4 h-4 rounded text-[#5331EA]" />
+                                                        <span className="text-sm font-medium">Verified Profile</span>
+                                                    </label>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-zinc-500">Rating:</span>
+                                                        <input type="number" step="0.1" value={artist.rating} onChange={e => { const a = [...formData.artists]; a[index].rating = Number(e.target.value); setFormData({ ...formData, artists: a }); }} className="w-16 h-8 px-2 border rounded text-sm" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <textarea
+                                        placeholder="Artist Short Bio"
+                                        value={artist.description}
+                                        onChange={e => {
+                                            const newArtists = [...formData.artists];
+                                            newArtists[index].description = e.target.value;
+                                            setFormData({ ...formData, artists: newArtists });
+                                        }}
+                                        className="w-full h-24 p-4 bg-white border rounded-xl focus:border-[#5331EA] outline-none resize-none"
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </section>
                 </form>

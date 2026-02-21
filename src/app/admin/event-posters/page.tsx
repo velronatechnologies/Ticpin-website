@@ -39,17 +39,19 @@ export default function AdminEventPostersPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState('all');
+    const [activeStatus, setActiveStatus] = useState('all');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EventPoster | null>(null);
 
     const tabs = [
         { id: 'all', label: 'All Requests' },
-        { id: 'play', label: 'Play' },
-        { id: 'dining', label: 'Dining' },
-        { id: 'creator', label: 'Events' },
+        { id: 'pending', label: 'Pending', type: 'status' },
+        { id: 'play', label: 'Play', type: 'category' },
+        { id: 'dining', label: 'Dining', type: 'category' },
+        { id: 'creator', label: 'Events', type: 'category' },
     ];
 
-    const fetchPosters = async (category = activeCategory) => {
+    const fetchPosters = async (category = activeCategory, status = activeStatus) => {
         if (!token) {
             setError('You must be logged in to access this page.');
             setLoading(false);
@@ -61,6 +63,9 @@ export default function AdminEventPostersPage() {
             const url = new URL(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/admin/partners`);
             if (category !== 'all') {
                 url.searchParams.append('category', category);
+            }
+            if (status !== 'all') {
+                url.searchParams.append('status', status);
             }
 
             const response = await fetch(url.toString(), {
@@ -90,8 +95,8 @@ export default function AdminEventPostersPage() {
     };
 
     useEffect(() => {
-        fetchPosters(activeCategory);
-    }, [token, activeCategory]);
+        fetchPosters(activeCategory, activeStatus);
+    }, [token, activeCategory, activeStatus]);
 
     const handleAction = async (id: string, status: string) => {
         if (!confirm(`Are you sure you want to ${status} this request?`)) return;
@@ -178,18 +183,35 @@ export default function AdminEventPostersPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-2 p-1.5 bg-zinc-200/50 w-fit rounded-2xl border border-zinc-200">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveCategory(tab.id)}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeCategory === tab.id
-                                ? 'bg-white text-black shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-800'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                    {tabs.map((tab) => {
+                        const isActive = (tab.id === 'all' && activeCategory === 'all' && activeStatus === 'all') ||
+                            (tab.type === 'category' && activeCategory === tab.id && activeStatus === 'all') ||
+                            (tab.type === 'status' && activeStatus === tab.id && activeCategory === 'all');
+
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => {
+                                    if (tab.id === 'all') {
+                                        setActiveCategory('all');
+                                        setActiveStatus('all');
+                                    } else if (tab.type === 'category') {
+                                        setActiveCategory(tab.id);
+                                        setActiveStatus('all');
+                                    } else if (tab.type === 'status') {
+                                        setActiveStatus(tab.id);
+                                        setActiveCategory('all');
+                                    }
+                                }}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${isActive
+                                    ? 'bg-white text-black shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-800'
+                                    }`}
+                            >
+                                {tab.label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
@@ -381,10 +403,15 @@ export default function AdminEventPostersPage() {
                                                             placeholder="Contact Email"
                                                         />
                                                         <input
+                                                            type="tel"
                                                             value={editForm?.backup_contact.phone}
-                                                            onChange={(e) => updateNestedField('backup_contact.phone', e.target.value)}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                if (val.length <= 10) updateNestedField('backup_contact.phone', val);
+                                                            }}
+                                                            maxLength={10}
                                                             className="w-full px-3 py-2 border rounded-lg text-sm bg-zinc-50 focus:bg-white transition-colors"
-                                                            placeholder="Contact Phone"
+                                                            placeholder="Contact Phone (10 digits)"
                                                         />
                                                     </div>
                                                 ) : (

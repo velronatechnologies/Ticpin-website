@@ -1,6 +1,8 @@
 'use client';
 
 import { ChevronLeft, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getUserPass } from '@/lib/passUtils';
 
 interface ProfileViewProps {
     onClose: () => void;
@@ -31,6 +33,16 @@ export default function ProfileView({
     savedPhone,
     isOrganizer
 }: ProfileViewProps) {
+    const [hasActivePass, setHasActivePass] = useState(false);
+
+    useEffect(() => {
+        const checkPass = async () => {
+            const pass = await getUserPass(userProfile?.email || undefined, number || savedPhone || undefined);
+            setHasActivePass(pass?.status === 'active');
+        };
+        checkPass();
+    }, [userProfile, number, savedPhone]);
+
     if (isOrganizer) {
         return (
             <div className="flex flex-col bg-white p-8 animate-in zoom-in duration-300">
@@ -199,19 +211,36 @@ export default function ProfileView({
                 {/* Menu Items Section */}
                 <div className="space-y-4 pt-4">
                     {[
+                        { label: 'Edit Profile', action: () => setView('profile_edit') },
+                        {
+                            label: hasActivePass ? 'Manage Ticpin Pass' : 'Ticpin Pass',
+                            subLabel: hasActivePass ? 'Active' : 'Get exclusive benefits',
+                            action: () => { window.location.href = hasActivePass ? '/pass-dashboard' : '/ticpin-pass'; onClose(); },
+                            highlight: true
+                        },
                         { label: 'View all bookings', action: () => { window.location.href = '/profile'; onClose(); }, hide: isOrganizer },
-                        { label: 'My Profile', action: () => setView('profile_edit'), hide: isOrganizer },
-                        { label: 'Chat with us', action: () => { }, hide: isOrganizer },
-                        { label: 'Terms & Conditions', action: () => { }, hide: isOrganizer },
-                        { label: 'Privacy Policy', action: () => { }, hide: isOrganizer },
+                        // { label: 'My Profile', action: () => { window.location.href = '/profile'; onClose(); }, hide: isOrganizer },
+                        { label: 'Chat with us', action: () => { window.location.href = '/contact'; onClose(); }, hide: isOrganizer },
+                        { label: 'Terms & Conditions', action: () => { window.location.href = '/terms'; onClose(); }, hide: isOrganizer },
+                        { label: 'Privacy Policy', action: () => { window.location.href = '/privacy'; onClose(); }, hide: isOrganizer },
                         { label: 'Logout', action: () => setShowLogoutConfirm(true) }
                     ].filter(item => !item.hide).map((item, idx) => (
                         <button
                             key={idx}
                             onClick={item.action}
-                            className="w-full flex items-center justify-between h-[80px] px-8 bg-white rounded-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.99] group border border-zinc-100/50"
+                            className={`w-full flex items-center justify-between h-[80px] px-8 bg-white rounded-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.99] group border border-zinc-100/50 ${item.highlight ? 'hover:border-l-[6px] hover:border-l-[#5331EA]' : ''
+                                }`}
                         >
-                            <span style={{ fontSize: '20px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-500 group-hover:text-zinc-900 transition-colors">{item.label}</span>
+                            <div className="flex flex-col items-start">
+                                <span style={{ fontSize: '20px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-500 group-hover:text-zinc-900 transition-colors">
+                                    {item.label}
+                                </span>
+                                {item.subLabel && (
+                                    <span className="text-[14px] font-medium text-[#5331EA] mt-1">
+                                        {item.subLabel}
+                                    </span>
+                                )}
+                            </div>
                             <ChevronLeft size={20} className="rotate-180 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
                         </button>
                     ))}

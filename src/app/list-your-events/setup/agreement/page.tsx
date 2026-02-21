@@ -11,17 +11,49 @@ function AgreementContent() {
     const { setupData, token, clearSetupData, isLoggedIn } = useStore();
     const searchParams = useSearchParams();
     const categoryQuery = searchParams.get('category');
-    const isPlay = categoryQuery === 'play';
+    const effectiveCategory = setupData.category || categoryQuery;
+    const isPlay = effectiveCategory === 'play';
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [submittedCategory, setSubmittedCategory] = useState<string | null>(null);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [isAgreed, setIsAgreed] = useState(false);
     const router = useRouter();
+
+    // Auth check
+    React.useEffect(() => {
+        const state = useStore.getState();
+        if (!state.isLoggedIn || !state.token) {
+            router.replace('/list-your-events');
+            return;
+        }
+    }, [router]);
+
+    // Auth & Flow guard
+    useEffect(() => {
+        const state = useStore.getState();
+        if (!state.isLoggedIn) {
+            router.replace('/list-your-events/setup');
+            return;
+        }
+        if (!state.setupData.category && !categoryQuery) {
+            router.replace('/list-your-events/setup');
+        }
+    }, [router, categoryQuery]);
 
     const handleSubmit = async (manualToken?: string) => {
         const state = useStore.getState();
         const authToken = manualToken || state.token;
         const loggedIn = state.isLoggedIn;
+
+        // Determine the category - prefer setupData, fallback to URL param
+        const categoryToSubmit = state.setupData.category || categoryQuery;
+        if (!categoryToSubmit) {
+            alert('Category is missing. Please restart the verification process.');
+            router.push('/list-your-events/setup');
+            return;
+        }
 
         if (!loggedIn && !manualToken) {
             setIsAuthModalOpen(true);
@@ -37,7 +69,7 @@ function AgreementContent() {
                 },
                 body: JSON.stringify({
                     organization_details: {
-                        category: setupData.category,
+                        category: categoryToSubmit,
                         pan: setupData.pan,
                         pan_name: setupData.pan_name,
                         pan_image: setupData.pan_image || '',
@@ -54,6 +86,7 @@ function AgreementContent() {
             });
 
             if (response.ok) {
+                setSubmittedCategory(categoryToSubmit);
                 setIsSuccess(true);
                 clearSetupData();
             } else {
@@ -69,12 +102,13 @@ function AgreementContent() {
     };
 
     if (isSuccess) {
+        const isPlaySuccess = submittedCategory === 'play';
         return (
-            <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${isPlay ? 'bg-[#FFF1A81A]' : 'bg-white'} px-4`}>
+            <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${isPlaySuccess ? 'bg-[#FFF1A81A]' : 'bg-white'} px-4`}>
                 <div className="text-center space-y-8 max-w-lg">
                     <div className="flex justify-center">
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isPlay ? 'bg-[#F9C333]/20' : 'bg-green-100'}`}>
-                            <img src={isPlay ? "/list your events/tick.svg" : "/list your events/tick icon.svg"} alt="Success" className="w-10 h-10" />
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isPlaySuccess ? 'bg-[#F9C333]/20' : 'bg-green-100'}`}>
+                            <img src={isPlaySuccess ? "/list your events/tick.svg" : "/list your events/tick icon.svg"} alt="Success" className="w-10 h-10" />
                         </div>
                     </div>
                     <h1 className="text-3xl font-bold text-zinc-900">Verification Submitted!</h1>
@@ -82,10 +116,10 @@ function AgreementContent() {
                         We have received your details. Our team will review your application and send you a verification email. We will verify and send you a response in 24 hrs.
                     </p>
                     <button
-                        onClick={() => router.push('/list-your-events')}
+                        onClick={() => router.push(`/organizer-dashboard?category=${submittedCategory || categoryQuery || 'event'}`)}
                         className="bg-black text-white px-8 py-3 rounded-xl font-medium"
                     >
-                        Return to Dashboard
+                        Go to Dashboard
                     </button>
                 </div>
             </div>
@@ -133,14 +167,45 @@ function AgreementContent() {
                                 </p>
                             </div>
 
+                            <div className="space-y-6 max-w-2xl bg-white/50 border border-zinc-200 rounded-[24px] p-8 shadow-sm">
+                                <div className="space-y-4">
+                                    <h3 className="text-[18px] font-bold text-black">Terms of Agreement</h3>
+                                    <div className="text-[14px] text-zinc-600 space-y-3 leading-relaxed max-h-[200px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-zinc-200">
+                                        <p>1. <strong>Platform Usage:</strong> By signing this agreement, you agree to abide by Ticpin's platform policies and fees structures.</p>
+                                        <p>2. <strong>Financial Settlement:</strong> All payouts for events will be settled to the bank account provided in the previous step within 48-72 hours post-event completion.</p>
+                                        <p>3. <strong>Data Accuracy:</strong> You certify that all details provided (PAN, GST, Bank) are accurate and belong to you or your registered organization.</p>
+                                        <p>4. <strong>Compliance:</strong> You agree to comply with all local taxes and regulatory requirements for your listed events.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 items-center pt-2 cursor-pointer group" onClick={() => setIsAgreed(!isAgreed)}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isAgreed}
+                                        onChange={(e) => setIsAgreed(e.target.checked)}
+                                        className="w-6 h-6 rounded-[8px] border border-zinc-300 accent-black focus:ring-0 cursor-pointer flex-shrink-0"
+                                    />
+                                    <p className="text-[14px] text-zinc-700 font-medium select-none group-hover:text-black transition-colors">
+                                        I have read and agree to the digital platform agreement
+                                    </p>
+                                </div>
+                            </div>
+
                             {/* Action Button */}
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button
                                     onClick={() => handleSubmit()}
-                                    disabled={isSubmitting}
-                                    className="bg-black text-white w-full md:w-[154px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 disabled:opacity-50"
+                                    disabled={isSubmitting || !isAgreed}
+                                    className={`w-full md:w-[200px] h-[54px] rounded-[18px] flex items-center justify-center gap-2 text-[16px] font-bold transition-all shadow-xl active:scale-95 ${!isAgreed || isSubmitting
+                                        ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed shadow-none'
+                                        : 'bg-black text-white hover:bg-zinc-800 shadow-black/10'
+                                        }`}
                                 >
-                                    {isSubmitting ? 'Submitting...' : 'Sign agreement'} <ChevronRight size={18} className="transition-transform" />
+                                    {isSubmitting ? (
+                                        <div className="w-5 h-5 border-2 border-zinc-400 border-t-zinc-600 rounded-full animate-spin" />
+                                    ) : (
+                                        <>Sign & Complete <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" /></>
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -151,7 +216,13 @@ function AgreementContent() {
             <AuthModal
                 isOpen={isAuthModalOpen}
                 isOrganizer={true}
-                onClose={() => setIsAuthModalOpen(false)}
+                category={categoryQuery}
+                onClose={() => {
+                    setIsAuthModalOpen(false);
+                    if (!isLoggedIn) {
+                        router.push('/');
+                    }
+                }}
                 onAuthSuccess={(id, token) => {
                     setIsAuthModalOpen(false);
                     handleSubmit(token);

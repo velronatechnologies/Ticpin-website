@@ -8,6 +8,9 @@ import { ArrowLeft, Share2, MapPin, Calendar, Clock, Star, HelpCircle, ChevronDo
 import { useState, useEffect } from 'react';
 import { authApi, bookingApi, storeAuthToken, getAuthToken, isAuthenticated, eventsApi } from '@/lib/api';
 import AuthModal from '@/components/modals/AuthModal';
+import AIChatPanel from '@/components/shared/AIChatPanel';
+import { Sparkles } from 'lucide-react';
+import { useStore } from '@/store/useStore';
 
 export default function EventDetailPage() {
     const router = useRouter();
@@ -16,6 +19,7 @@ export default function EventDetailPage() {
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
     const [event, setEvent] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { setCheckoutData } = useStore();
 
     // Authentication & Booking State
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -23,8 +27,13 @@ export default function EventDetailPage() {
     const [userPhone, setUserPhone] = useState('');
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAiOpen, setIsAiOpen] = useState(false);
 
     // Fetch Event Data
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         const fetchEvent = async () => {
             setIsLoading(true);
@@ -66,6 +75,23 @@ export default function EventDetailPage() {
         if (!userAuthenticated) {
             setIsAuthModalOpen(true);
         } else {
+            // Prepare tickets from event data — for now using dummy until tickets are fully modeled on frontend
+            const eventTickets = event.tickets?.map((t: any) => ({
+                id: t.id || Math.random().toString(36).substr(2, 9),
+                name: t.ticket_type,
+                seat_type: t.seat_type,
+                price: t.price,
+                description: [],
+                quantity: 0
+            })) || [];
+
+            setCheckoutData({
+                id: event.id,
+                name: event.title,
+                tickets: eventTickets,
+                bookingType: 'event'
+            });
+
             router.push('/checkout/event');
         }
     };
@@ -176,15 +202,23 @@ export default function EventDetailPage() {
                         </div>
 
                         {/* Artist Section */}
-                        {event.artist && (
-                            <section className="space-y-3">
-                                <h2 className="text-lg font-bold text-zinc-900">Artist</h2>
-                                <div className="flex gap-4 items-center">
-                                    <img src={event.artist.image || "/placeholder.jpg"} className="w-[100px] h-[100px] rounded-full object-cover shadow-sm" alt={event.artist.name} />
-                                    <div className="flex flex-col">
-                                        <span className="text-lg font-bold text-zinc-900">{event.artist.name}</span>
-                                        <span className="text-sm text-zinc-500">{event.artist.role || "Performer"}</span>
-                                    </div>
+                        {event.artists && event.artists.length > 0 && (
+                            <section className="space-y-4">
+                                <h2 className="text-lg font-bold text-zinc-900">{event.artists.length > 1 ? 'Artists' : 'Artist'}</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {event.artists.map((artist: any, i: number) => (
+                                        <div
+                                            key={i}
+                                            onClick={() => router.push(`/events/artist/${encodeURIComponent(artist.id || artist.name)}`)}
+                                            className="flex gap-4 items-center p-4 bg-white rounded-2xl border border-zinc-100 shadow-sm cursor-pointer hover:border-purple-600 hover:shadow-md transition-all group"
+                                        >
+                                            <img src={artist.image_url || "/placeholder.jpg"} className="w-[80px] h-[80px] rounded-full object-cover shadow-sm bg-zinc-50 group-hover:scale-110 transition-transform" alt={artist.name} />
+                                            <div className="flex flex-col">
+                                                <span className="text-lg font-bold text-zinc-900 group-hover:text-purple-600 transition-colors">{artist.name}</span>
+                                                <span className="text-sm text-zinc-500">{artist.role || "Performer"}</span>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </section>
                         )}
@@ -217,6 +251,12 @@ export default function EventDetailPage() {
                                 >
                                     <MapPin size={18} /> Get Directions
                                 </a>
+                                <button
+                                    onClick={() => setIsAiOpen(true)}
+                                    className="px-6 py-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
+                                >
+                                    <Sparkles size={18} className="text-purple-600" /> Ask AI
+                                </button>
                             </div>
                         </section>
 
@@ -246,7 +286,7 @@ export default function EventDetailPage() {
                         )}
 
                         {/* Terms Section */}
-                        {event.terms && event.terms.length > 0 && (
+                        {event.terms_and_conditions && event.terms_and_conditions.length > 0 && (
                             <section className="space-y-3">
                                 <div
                                     onClick={() => setActiveFaq(activeFaq === 2 ? null : 2)}
@@ -258,7 +298,7 @@ export default function EventDetailPage() {
                                     </div>
                                     {activeFaq === 2 && (
                                         <div className="mt-6 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            {event.terms.map((term: string, i: number) => (
+                                            {event.terms_and_conditions.map((term: string, i: number) => (
                                                 <div key={i} className="flex gap-2 text-zinc-600">
                                                     <span className="text-purple-600 font-bold">•</span>
                                                     <p className="text-sm">{term}</p>
@@ -333,6 +373,12 @@ export default function EventDetailPage() {
 
             <BottomBanner />
             <Footer />
+            <AIChatPanel
+                isOpen={isAiOpen}
+                onClose={() => setIsAiOpen(false)}
+                venueData={event}
+                venueType="event"
+            />
         </div>
     );
 }

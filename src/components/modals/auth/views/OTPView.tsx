@@ -66,7 +66,7 @@ export default function OTPView({
                                 type="text"
                                 inputMode="numeric"
                                 maxLength={1}
-                                className="w-[64px] h-[64px] bg-white border border-zinc-200 rounded-[11px] text-center text-2xl font-bold focus:outline-none focus:border-[#7c00e6] focus:ring-1 focus:ring-[#7c00e6] transition-all shadow-sm"
+                                className="w-[64px] h-[64px] bg-white border border-zinc-200 rounded-[11px] text-center text-2xl font-bold text-black focus:outline-none focus:border-[#7c00e6] focus:ring-1 focus:ring-[#7c00e6] transition-all shadow-sm"
                                 value={digit}
                                 onChange={(e) => handleOtpChange(i, e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(i, e)}

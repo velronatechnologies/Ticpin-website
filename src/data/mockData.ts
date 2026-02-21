@@ -2,6 +2,7 @@ export interface ExploreEvent {
   id: number;
   name: string;
   image: string;
+  href: string;
 }
 
 export interface Artist {
@@ -25,21 +26,25 @@ export const exploreEvents: ExploreEvent[] = [
     id: 1,
     name: "Music",
     image: "/events/eventsmusic.png",
+    href: "/events/music"
   },
   {
     id: 2,
     name: "Comedy",
     image: "/events/eventcomdey.png",
+    href: "/events/comedy"
   },
   {
     id: 3,
     name: "Performance",
     image: "/events/eventperfomance.png",
+    href: "/events/performance"
   },
   {
     id: 4,
     name: "Sports",
     image: "/events/eventssports.png",
+    href: "/events/sports"
   },
 ];
 

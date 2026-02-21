@@ -6,10 +6,12 @@ import AppBanner from '@/components/layout/AppBanner';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import AuthModal from '@/components/modals/AuthModal';
-import { ChevronDown, MapPin, Clock, Share2, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, MapPin, Clock, Share2, CheckCircle2, Sparkles } from 'lucide-react';
 import { playApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
+import AIChatPanel from '@/components/shared/AIChatPanel';
+import { useStore } from '@/store/useStore';
 
 export default function PlayDetailPage() {
     const router = useRouter();
@@ -20,10 +22,16 @@ export default function PlayDetailPage() {
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [venue, setVenue] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { setCheckoutData } = useStore();
 
     // Booking State
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAiOpen, setIsAiOpen] = useState(false);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     useEffect(() => {
         const fetchVenue = async () => {
@@ -51,6 +59,25 @@ export default function PlayDetailPage() {
         if (!isLoggedIn) {
             setIsAuthModalOpen(true);
         } else {
+            // Prepare default tickets from venue options if available
+            const playTickets = venue.play_options?.map((opt: any) => ({
+                id: opt.id || Math.random().toString(36).substr(2, 9),
+                name: opt.sport || venue.category || "Sport",
+                price: opt.price_per_slot || 500,
+                description: [opt.court_type, opt.surface].filter(Boolean),
+                quantity: 0
+            })) || [
+                    { id: 'default', name: venue.category || "Sport", price: 500, description: ["Standard Slot"], quantity: 0 }
+                ];
+
+            setCheckoutData({
+                id: venue.id,
+                name: venue.name,
+                sport: venue.category || "Sport",
+                tickets: playTickets,
+                bookingType: 'play'
+            });
+
             router.push(`/checkout/play?venue=${venueId}`);
         }
     };
@@ -58,6 +85,24 @@ export default function PlayDetailPage() {
     // Handle successful authentication
     const handleAuthSuccess = (phone: string) => {
         setIsAuthModalOpen(false);
+        const playTickets = venue.play_options?.map((opt: any) => ({
+            id: opt.id || Math.random().toString(36).substr(2, 9),
+            name: opt.sport || venue.category || "Sport",
+            price: opt.price_per_slot || 500,
+            description: [opt.court_type, opt.surface].filter(Boolean),
+            quantity: 0
+        })) || [
+                { id: 'default', name: venue.category || "Sport", price: 500, description: ["Standard Slot"], quantity: 0 }
+            ];
+
+        setCheckoutData({
+            id: venue.id,
+            name: venue.name,
+            sport: venue.category || "Sport",
+            tickets: playTickets,
+            bookingType: 'play'
+        });
+
         setTimeout(() => {
             router.push(`/checkout/play?venue=${venueId}`);
         }, 300);
@@ -155,6 +200,12 @@ export default function PlayDetailPage() {
                                 >
                                     <MapPin size={18} strokeWidth={1.5} /> GET DIRECTIONS
                                 </a>
+                                <button
+                                    onClick={() => setIsAiOpen(true)}
+                                    className="flex items-center gap-2.5 px-6 py-2.5 border border-purple-200 rounded-[10px] bg-purple-50 text-[18px] font-semibold text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
+                                >
+                                    <Sparkles size={18} className="text-purple-600" /> Ask AI
+                                </button>
                             </div>
                         </section>
 
@@ -253,6 +304,12 @@ export default function PlayDetailPage() {
 
             <BottomBanner />
             <Footer />
+            <AIChatPanel
+                isOpen={isAiOpen}
+                onClose={() => setIsAiOpen(false)}
+                venueData={venue}
+                venueType="play"
+            />
         </div>
     );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -24,6 +24,25 @@ function BackupContactContent() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']); // OTP state
     const otpRefs = React.useRef<(HTMLInputElement | null)[]>([]); // Refs for inputs
     const router = useRouter();
+
+    // Auth & Flow guard
+    useEffect(() => {
+        const state = useStore.getState();
+        if (!state.isLoggedIn || !state.token) {
+            addToast('Please login to continue', 'warning');
+            router.replace('/list-your-events');
+            return;
+        }
+        if (!state.setupData.category && !categoryQuery) {
+            router.replace('/list-your-events/setup');
+        }
+    }, [router, categoryQuery, addToast]);
+
+    // Auto-reset OTP when email changes
+    useEffect(() => {
+        setIsOtpSent(false);
+        setOtp(['', '', '', '', '', '']);
+    }, [email]);
 
     const handleOtpChange = (index: number, value: string) => {
         if (isNaN(Number(value))) return;
@@ -83,7 +102,8 @@ function BackupContactContent() {
         }
 
         updateSetupData({ backup_contact: { email, name, phone } });
-        router.push(`/list-your-events/setup/agreement${categoryQuery ? `?category=${categoryQuery}` : ''}`);
+        const effectiveCategory = setupData.category || categoryQuery;
+        router.push(`/list-your-events/setup/agreement?category=${effectiveCategory}`);
     };
 
     return (
@@ -139,10 +159,15 @@ function BackupContactContent() {
                                     <input
                                         type="tel"
                                         value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
-                                        placeholder="+91 00000 00000"
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length <= 10) setPhone(val);
+                                        }}
+                                        placeholder="00000 00000"
+                                        maxLength={10}
                                         className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400"
                                     />
+                                    <p className="text-[11px] text-[#686868] font-medium ml-1">Indian 10-digit mobile number</p>
                                 </div>
 
                                 <div className="space-y-4">
@@ -209,17 +234,28 @@ function BackupContactContent() {
                                 {!isOtpSent ? (
                                     <button
                                         onClick={handleSendOtp}
-                                        disabled={isLoading}
-                                        className="bg-black text-white w-full md:w-[124px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 disabled:opacity-50"
+                                        disabled={isLoading || !email || !name || phone.length !== 10}
+                                        className={`w-full md:w-[150px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 ${isLoading || !email || !name || phone.length !== 10
+                                            ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                            : 'bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/5'
+                                            }`}
                                     >
-                                        {isLoading ? 'Sending...' : 'Send OTP'} <ChevronRight size={18} className="transition-transform" />
+                                        {isLoading ? (
+                                            <div className="w-5 h-5 border-2 border-zinc-400 border-t-zinc-600 rounded-full animate-spin" />
+                                        ) : (
+                                            <>Send OTP <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" /></>
+                                        )}
                                     </button>
                                 ) : (
                                     <button
                                         onClick={handleContinue}
-                                        className="bg-black text-white w-full md:w-[154px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95"
+                                        disabled={otp.some(d => !d)}
+                                        className={`w-full md:w-[180px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 ${otp.some(d => !d)
+                                            ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                            : 'bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/5'
+                                            }`}
                                     >
-                                        Verify & Continue <ChevronRight size={18} className="transition-transform" />
+                                        Verify & Continue <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
                                     </button>
                                 )}
                             </div>

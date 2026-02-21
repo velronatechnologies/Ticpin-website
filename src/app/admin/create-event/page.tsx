@@ -153,7 +153,7 @@ function AdminCreateEventForm() {
             language: 'English & Hindi',
             duration_minutes: 240,
             age_limit: '18+ only',
-            description: 'Sunburn is a commercial EDM Festival held in India. Asia\'s largest music festival.',
+            description: 'Sunburn is a commercial EDM Festival held in India. It was previously in Vagator, Goa, India every year, but has now been shifted to Pune, Maharashtra. It is Asia\'s largest music festival.',
             short_description: 'Asia\'s largest EDM music festival is back!',
             start_datetime: start.toISOString().slice(0, 16),
             end_datetime: end.toISOString().slice(0, 16),
@@ -168,7 +168,11 @@ function AdminCreateEventForm() {
                 longitude: 73.7336,
                 map_url: 'https://maps.app.goo.gl/vagator'
             },
-            images: { hero: '', poster: '', gallery: ['', '', ''] },
+            images: {
+                hero: '',
+                poster: '',
+                gallery: ['', '', '']
+            },
             artists: [
                 { name: 'Martin Garrix', role: 'Main Headliner', image_url: '', description: 'World #1 DJ 4 times.' },
                 { name: 'DJ Snake', role: 'Special Guest', image_url: '', description: 'Pardon my French.' }
@@ -179,7 +183,7 @@ function AdminCreateEventForm() {
                 { ticket_type: 'Fan Pit', seat_type: 'standing', price: 7999, total_quantity: 50, available_quantity: 50 }
             ],
             faqs: [
-                { question: 'Is alcohol allowed?', answer: 'No outside alcohol. Available at venue for 21+ only.' },
+                { question: 'Is alcohol allowed?', answer: 'No outside alcohol is permitted. Available at venue for 21+ only.' },
                 { question: 'Is there an age limit?', answer: 'Yes, strictly 18+.' }
             ],
             terms_and_conditions: ['Tickets are non-refundable.', 'Valid ID proof is mandatory.', 'Zero tolerance for drugs.']

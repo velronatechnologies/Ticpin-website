@@ -21,7 +21,12 @@ export default function VenueCard({ id = '1', name, location, image }: VenueCard
                     </div>
                     <div className="p-5 h-[116px] bg-white border-t border-[#686868] rounded-b-[15px] flex flex-col items-start justify-between font-[family-name:var(--font-anek-latin)]">
                         <div className="flex flex-col items-start">
-                            <h3 className="text-[24px] font-medium text-black leading-tight">{name}</h3>
+                            <h3 className={`font-medium text-black leading-tight ${name.length > 25 ? 'text-[18px]' :
+                                    name.length > 20 ? 'text-[20px]' :
+                                        'text-[24px]'
+                                }`}>
+                                {name}
+                            </h3>
                             <div className="text-base text-[#686868] font-medium">
                                 {location}
                             </div>

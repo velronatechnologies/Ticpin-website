@@ -5,13 +5,23 @@ import Link from 'next/link';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 function GstSelectionContent() {
     const { setupData, updateSetupData } = useStore();
     const searchParams = useSearchParams();
+    const router = useRouter();
     const category = searchParams.get('category');
     const isPlay = category === 'play';
+
+    // Auth & Flow guard
+    React.useEffect(() => {
+        const state = useStore.getState();
+        if (!state.isLoggedIn || !state.token) {
+            router.replace('/list-your-events');
+            return;
+        }
+    }, [router]);
     const [hasGst, setHasGst] = useState(setupData.has_gst || false);
     const [selectedGstin, setSelectedGstin] = useState(setupData.gstin || '');
     const panVerification = setupData.pan_verification;
@@ -127,11 +137,21 @@ function GstSelectionContent() {
 
                             {/* Continue Button */}
                             <div className="pt-2 flex justify-center md:justify-start">
-                                <Link href={`/list-your-events/setup/bank${category ? `?category=${category}` : ''}`} className="block w-full max-w-[110px]">
-                                    <button className="bg-black text-white w-full h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95">
-                                        Continue<ChevronRight size={18} className="transition-transform" />
-                                    </button>
-                                </Link>
+                                <button
+                                    onClick={() => {
+                                        if (selectedGstin || !hasGst) {
+                                            const effectiveCategory = setupData.category || category;
+                                            router.push(`/list-your-events/setup/bank?category=${effectiveCategory}`);
+                                        }
+                                    }}
+                                    disabled={!selectedGstin && hasGst}
+                                    className={`w-full max-w-[150px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 ${!selectedGstin && hasGst
+                                        ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                        : 'bg-black text-white hover:bg-zinc-800'
+                                        }`}
+                                >
+                                    Continue<ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
+                                </button>
                             </div>
                         </div>
                     </div>

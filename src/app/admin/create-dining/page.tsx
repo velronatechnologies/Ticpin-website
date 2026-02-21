@@ -116,6 +116,64 @@ function AdminCreateDiningForm() {
     const addOffer = () => setFormData({ ...formData, offers: [...formData.offers, { title: '', code: '', description: '' }] });
     const removeOffer = (index: number) => setFormData({ ...formData, offers: formData.offers.filter((_, i) => i !== index) });
 
+    const handleAutoFill = () => {
+        const randomID = Math.floor(1000 + Math.random() * 9000);
+        setFormData({
+            name: `The Grand Buffet ${randomID}`,
+            slug: `the-grand-buffet-${randomID}`,
+            status: 'active',
+            description: 'Experience the finest multi-cuisine dining at The Grand Buffet. Our restaurant features an extensive buffet spread with over 100 dishes including North Indian, South Indian, Chinese, Continental, and live grill stations. Set in an elegant ambiance with indoor and outdoor seating, perfect for family dinners, celebrations, and corporate events.',
+            short_description: 'Premium multi-cuisine buffet restaurant with 100+ dishes',
+            rating: 4.5,
+            is_open: true,
+            opening_time: '11:00',
+            closing_time: '23:00',
+            contact: {
+                phone: '+91 9876543210',
+                email: 'reservations@grandbuffet.in'
+            },
+            location: {
+                venue_name: 'The Grand Buffet',
+                address: '12, Anna Salai, Mount Road',
+                city: 'Chennai',
+                state: 'Tamil Nadu',
+                latitude: 13.0605,
+                longitude: 80.2624,
+                map_url: 'https://maps.app.goo.gl/grandBuffetChennai'
+            },
+            images: {
+                hero: '',
+                gallery: ['', '', '']
+            },
+            menu_images: ['', ''],
+            offers: [
+                { title: 'Weekday Lunch Special', code: 'LUNCH20', description: 'Get 20% off on weekday lunch buffet' },
+                { title: 'Birthday Blast', code: 'BDAY50', description: 'Birthday person eats free with 4+ guests' }
+            ],
+            facilities: ['AC', 'Parking', 'WiFi', 'Live Kitchen', 'Private Dining', 'Valet'],
+            seating_types: [
+                { type: 'Indoor AC', total_tables: 20, available_tables: 20, capacity_per_table: 4 },
+                { type: 'Outdoor Garden', total_tables: 10, available_tables: 10, capacity_per_table: 6 },
+                { type: 'Private Room', total_tables: 3, available_tables: 3, capacity_per_table: 12 }
+            ],
+            booking_settings: {
+                advance_booking_days: 14,
+                time_slots: ['12:00', '13:00', '14:00', '19:00', '20:00', '21:00'],
+                average_dining_duration_minutes: 90
+            },
+            faqs: [
+                { question: 'Is there a dress code?', answer: 'Smart casual. No sleeveless or shorts allowed in the AC section.' },
+                { question: 'Do you cater to dietary restrictions?', answer: 'Yes! We have dedicated Jain, Vegan, and Gluten-free sections in our buffet.' }
+            ],
+            terms_and_conditions: [
+                'Reservations must be cancelled at least 2 hours in advance.',
+                'Outside food and beverages are not permitted.',
+                'Management reserves the right to refuse service.'
+            ]
+        });
+        addToast('Form auto-filled with test data!', 'success');
+    };
+
     return (
         <div className="min-h-screen bg-[#FBFBFF] font-[family-name:var(--font-anek-latin)]">
             <header className="sticky top-0 z-50 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between">
@@ -128,14 +186,20 @@ function AdminCreateDiningForm() {
                         <p className="text-sm text-amber-600 font-medium">Auto-approved &bull; No organizer check</p>
                     </div>
                 </div>
-                <button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="bg-black text-white px-8 py-2.5 rounded-xl font-bold hover:shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
-                >
-                    {loading ? 'Saving...' : 'Publish Outlet'}
-                    <CheckCircle2 size={18} />
-                </button>
+                <div className="flex items-center gap-3">
+                    <button type="button" onClick={handleAutoFill} className="px-6 py-2.5 bg-zinc-100 text-zinc-900 font-bold rounded-xl hover:bg-zinc-200 transition-all flex items-center gap-2">
+                        <Plus className="rotate-45" size={18} />
+                        Auto Fill (Test)
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="bg-black text-white px-8 py-2.5 rounded-xl font-bold hover:shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
+                    >
+                        {loading ? 'Saving...' : 'Publish Outlet'}
+                        <CheckCircle2 size={18} />
+                    </button>
+                </div>
             </header>
 
             <div className="max-w-[1000px] mx-auto py-12 px-6 space-y-12">
@@ -342,15 +406,38 @@ function ImageUploadBox({ label, value, onUpload, isUploading }: { label?: strin
     return (
         <div className="space-y-2">
             {label && <label className="text-[12px] font-bold text-[#686868] uppercase tracking-wider">{label}</label>}
-            <div className="relative aspect-video rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden flex flex-col items-center justify-center bg-zinc-50">
-                {value ? <img src={value} className="w-full h-full object-cover" alt="" /> : (
-                    <label className="cursor-pointer p-6 flex flex-col items-center">
-                        <Upload size={24} className="text-zinc-400 mb-2" />
-                        <span className="text-sm font-bold text-zinc-500">Upload</span>
-                        <input type="file" className="hidden" onChange={onUpload} accept="image/*" />
+            <div className="relative group aspect-video rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden flex flex-col items-center justify-center bg-zinc-50 hover:bg-zinc-100 transition-all">
+                {value ? (
+                    <>
+                        <img src={value} className="w-full h-full object-cover" alt="" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <label className="cursor-pointer bg-white text-zinc-900 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 hover:scale-105 transition-transform shadow-lg">
+                                <Upload size={16} /> Change Image
+                                <input type="file" className="hidden" onChange={onUpload} accept="image/*" disabled={isUploading} />
+                            </label>
+                        </div>
+                    </>
+                ) : (
+                    <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full p-6">
+                        {isUploading ? (
+                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-400 border-t-transparent" />
+                        ) : (
+                            <>
+                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md mb-3 text-zinc-400">
+                                    <Upload size={24} />
+                                </div>
+                                <span className="text-sm font-bold text-zinc-500">Click to upload</span>
+                                <span className="text-[10px] text-zinc-400 mt-1 uppercase tracking-widest font-bold">Max 5MB</span>
+                            </>
+                        )}
+                        <input type="file" className="hidden" onChange={onUpload} accept="image/*" disabled={isUploading} />
                     </label>
                 )}
-                {isUploading && <div className="absolute inset-0 bg-white/50 flex items-center justify-center">Uploading...</div>}
+                {isUploading && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-600 border-t-transparent" />
+                    </div>
+                )}
             </div>
         </div>
     );

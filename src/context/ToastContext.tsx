@@ -39,17 +39,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {children}
 
             {/* Toast Container */}
-            <div className="fixed bottom-6 right-6 z-[9999] space-y-3 pointer-events-none">
+            <div className="fixed bottom-6 right-6 z-[10001] space-y-3 pointer-events-none">
                 {toasts.map((toast) => (
                     <div
                         key={toast.id}
                         className={`pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-xl shadow-lg animate-in slide-in-from-right duration-300 ${toast.type === 'success'
-                                ? 'bg-green-500 text-white'
-                                : toast.type === 'error'
-                                    ? 'bg-red-500 text-white'
-                                    : toast.type === 'warning'
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-blue-500 text-white'
+                            ? 'bg-green-500 text-white'
+                            : toast.type === 'error'
+                                ? 'bg-red-500 text-white'
+                                : toast.type === 'warning'
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-blue-500 text-white'
                             }`}
                     >
                         <span className="font-medium">{toast.message}</span>

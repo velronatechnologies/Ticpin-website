@@ -9,8 +9,13 @@ import ArtistAvatar from '@/components/events/ArtistAvatar';
 import FilterButton from '@/components/events/FilterButton';
 import Link from 'next/link';
 import EventCard from '@/components/events/EventCard';
+import FilterBar from '@/components/shared/FilterBar';
 import { eventsApi, artistsApi } from '@/lib/api';
 import { useStore } from '@/store/useStore';
+
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getUserPass } from '@/lib/passUtils';
 
 export default function EventsPage() {
     const { location: storeLocation } = useStore();
@@ -19,11 +24,40 @@ export default function EventsPage() {
     const [eventList, setEventList] = useState<any[]>([]);
     const [artistList, setArtistList] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [userHasActivePass, setUserHasActivePass] = useState(false);
+
+    const eventCategories = [
+        { id: 'sort', name: 'Sort By' },
+        { id: 'type', name: 'Event Type' },
+        { id: 'category', name: 'Category' },
+    ];
+
+    const eventOptions = {
+        sort: ['Newest First', 'Price: Low to High', 'Price: High to Low', 'Distance'],
+        type: ['Online', 'Offline', 'Hybrid'],
+        category: ['Music', 'Comedy', 'Workshops', 'Concerts', 'Sports', 'Other']
+    };
+
+    const eventFilters = ['Today', 'Tomorrow', 'This Weekend', 'Music'];
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const container = e.currentTarget;
         setShowLeftArrow(container.scrollLeft > 20);
     };
+
+    useEffect(() => {
+        // Check if user has active pass
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userPass = await getUserPass(user.email || undefined, user.phoneNumber || undefined);
+                setUserHasActivePass(userPass?.status === 'active' || false);
+            } else {
+                setUserHasActivePass(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -40,13 +74,35 @@ export default function EventsPage() {
 
                 if (eventsRes.success && eventsRes.data) {
                     console.log('✅ Events loaded:', eventsRes.data.items?.length || 0, 'events');
-                    setEventList(eventsRes.data.items || []);
+                    const items = eventsRes.data.items || [];
+                    setEventList(items);
+
+                    // Extract unique artists from events to supplement the artistList
+                    const artistsFromEvents = items.flatMap((e: any) => e.artists || []).map((a: any) => ({
+                        id: `event-artist-${a.name}`,
+                        name: a.name,
+                        image_url: a.image_url
+                    }));
+
+                    if (artistsFromEvents.length > 0) {
+                        setArtistList(prev => {
+                            const combined = [...prev, ...artistsFromEvents];
+                            // Remove duplicates by name
+                            const unique = Array.from(new Map(combined.map(a => [a.name, a])).values());
+                            return unique;
+                        });
+                    }
                 } else {
                     console.log('❌ No events data received');
                 }
 
                 if (artistsRes.success && artistsRes.data) {
-                    setArtistList(artistsRes.data || []);
+                    setArtistList(prev => {
+                        const artistData = Array.isArray(artistsRes.data) ? artistsRes.data : [];
+                        const combined = [...prev, ...artistData];
+                        const unique = Array.from(new Map(combined.map(a => [a.name, a])).values());
+                        return unique;
+                    });
                 }
             } catch (error) {
                 console.error("Failed to fetch data:", error);
@@ -132,16 +188,11 @@ export default function EventsPage() {
                 <section>
                     <div className="mb-6">
                         <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All events</h2>
-                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                            {['Filters', 'Today', 'Tomorrow', 'Music'].map((filter) => (
-                                <FilterButton
-                                    key={filter}
-                                    label={filter}
-                                    active={activeFilter === filter}
-                                    onClick={() => setActiveFilter(filter)}
-                                />
-                            ))}
-                        </div>
+                        <FilterBar
+                            filters={eventFilters}
+                            categories={eventCategories}
+                            options={eventOptions}
+                        />
                     </div>
 
                     {isLoading ? (
@@ -161,6 +212,7 @@ export default function EventsPage() {
                                             time={event.start_datetime ? new Date(event.start_datetime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : "TBA"}
                                             ticketPrice={String(event.price_start || 0)}
                                             image={event.images?.hero || '/placeholder.jpg'}
+                                            artists={event.artists}
                                         />
                                     </Link>
                                 ))

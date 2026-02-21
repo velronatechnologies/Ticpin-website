@@ -12,21 +12,23 @@ import { useStore } from '@/store/useStore';
 import { useToast } from '@/context/ToastContext';
 
 function CreateEventForm() {
-    const { token, organizerCategory } = useStore();
+    const { token, organizerCategories } = useStore();
     const { addToast } = useToast();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+
+    const hasEventAccess = organizerCategories.some(c => ['event', 'creator', 'individual', 'company', 'non-profit'].includes(c));
 
     useEffect(() => {
         if (!token) {
             router.push('/list-your-events');
             return;
         }
-        if (organizerCategory === 'play' || organizerCategory === 'dining') {
-            addToast(`Access restricted. You are a ${organizerCategory} organizer.`, 'error');
-            router.push('/list-your-events/dashboard');
+        if (!hasEventAccess) {
+            addToast('Access restricted. You are not verified for Events.', 'error');
+            router.push('/organizer-dashboard?category=event');
         }
-    }, [token, organizerCategory, router]);
+    }, [token, hasEventAccess, router]);
     const [uploading, setUploading] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
@@ -186,7 +188,7 @@ function CreateEventForm() {
             });
             if (response.ok) {
                 addToast(editId ? 'Event updated successfully!' : 'Event created successfully!', 'success');
-                router.push('/list-your-events/dashboard');
+                router.push('/organizer-dashboard?category=event');
             } else {
                 const data = await response.json();
                 addToast(data.message || 'Failed to save event', 'error');
@@ -239,17 +241,13 @@ function CreateEventForm() {
                 map_url: 'https://maps.app.goo.gl/vagator'
             },
             images: {
-                hero: 'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fsunburn_hero.jpg?alt=media',
-                poster: 'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fsunburn_poster.jpg?alt=media',
-                gallery: [
-                    'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fgallery1.jpg?alt=media',
-                    'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fgallery2.jpg?alt=media',
-                    'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fgallery3.jpg?alt=media'
-                ]
+                hero: '',
+                poster: '',
+                gallery: ['', '', '']
             },
             artists: [
-                { name: 'Martin Garrix', role: 'Main Headliner', image_url: 'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fmartin.jpg?alt=media', description: 'World #1 DJ 4 times.' },
-                { name: 'DJ Snake', role: 'Special Guest', image_url: 'https://firebasestorage.googleapis.com/v0/b/finalotp-cfb22.firebasestorage.app/o/others%2Fsnake.jpg?alt=media', description: 'Pardon my French.' }
+                { name: 'Martin Garrix', role: 'Main Headliner', image_url: '', description: 'World #1 DJ 4 times.' },
+                { name: 'DJ Snake', role: 'Special Guest', image_url: '', description: 'Pardon my French.' }
             ],
             tickets: [
                 { ticket_type: 'General Access', seat_type: 'standing', price: 1999, total_quantity: 1000, available_quantity: 1000 },
@@ -299,7 +297,7 @@ function CreateEventForm() {
                         disabled={loading}
                         className="bg-[#5331EA] text-white px-8 py-2.5 rounded-xl font-bold hover:shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
                     >
-                        {loading ? (editId ? 'Updating...' : 'Publishing...') : (editId ? 'Update Event' : 'Publish Event')}
+                        {loading ? (editId ? 'Saving...' : 'Submitting...') : (editId ? 'Save Changes' : 'Submit for Review')}
                         <CheckCircle2 size={18} />
                     </button>
                 </div>
@@ -575,9 +573,9 @@ function CreateEventForm() {
                             disabled={loading}
                             className="w-full max-w-md h-16 bg-black text-white text-xl font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl disabled:opacity-50"
                         >
-                            {loading ? (editId ? 'Updating...' : 'Creating...') : (editId ? 'Update Event Now' : 'Publish Event Now')}
+                            {loading ? (editId ? 'Saving...' : 'Submitting...') : (editId ? 'Save Changes' : 'Submit Event for Review')}
                         </button>
-                        <p className="text-zinc-400 text-sm">By publishing, you agree to Ticpin's Organizer Policy.</p>
+                        <p className="text-zinc-400 text-sm">{editId ? 'Changes will be saved and reflected immediately.' : 'Your event will be reviewed by admin before appearing on the website.'}</p>
                     </div>
                 </form>
             </div>

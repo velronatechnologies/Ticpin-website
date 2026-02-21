@@ -51,15 +51,14 @@ export default function PhoneView({
                         <input
                             type="tel"
                             placeholder="Enter mobile number"
-                            className="flex-1 px-5 bg-white border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-zinc-900 h-[60px] transition-all"
+                            className="flex-1 px-5 bg-white border border-zinc-200 rounded-2xl text-lg font-medium text-black focus:outline-none focus:border-zinc-900 h-[60px] transition-all placeholder:text-zinc-400"
                             value={number}
                             onChange={(e) => {
-                                // TESTING: Accept any digits (no length limit)
                                 const val = e.target.value.replace(/\D/g, '');
-                                setNumber(val);
+                                if (val.length <= 10) setNumber(val);
                             }}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && number.length > 0 && !isLoading) {
+                                if (e.key === 'Enter' && number.length === 10 && !isLoading) {
                                     handleSendOtp();
                                 }
                             }}

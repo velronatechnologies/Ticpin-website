@@ -10,6 +10,7 @@ interface OrganizerOTPViewProps {
     handleEmailOtpKeyDown: (index: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
     handleEmailPaste: (e: React.ClipboardEvent) => void;
     emailOtpTimer: number;
+    resendTimer: number;
     canResendEmailOtp: boolean;
     handleResendOrganizerOtp: () => void;
     handleOrganizerVerifyOtp: () => void;
@@ -25,6 +26,7 @@ export default function OrganizerOTPView({
     handleEmailOtpKeyDown,
     handleEmailPaste,
     emailOtpTimer,
+    resendTimer,
     canResendEmailOtp,
     handleResendOrganizerOtp,
     handleOrganizerVerifyOtp,
@@ -49,7 +51,7 @@ export default function OrganizerOTPView({
                         type="text"
                         inputMode="numeric"
                         maxLength={1}
-                        className="w-12 h-16 bg-white border border-zinc-200 rounded-xl text-center text-2xl font-bold focus:outline-none focus:border-[#5331EA] focus:ring-1 focus:ring-[#5331EA] shadow-sm"
+                        className="w-12 h-16 bg-white border border-zinc-200 rounded-xl text-center text-2xl font-bold text-black focus:outline-none focus:border-[#5331EA] focus:ring-1 focus:ring-[#5331EA] shadow-sm"
                         value={digit}
                         onChange={(e) => handleEmailOtpChange(i, e.target.value)}
                         onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
@@ -69,7 +71,7 @@ export default function OrganizerOTPView({
                     disabled={!canResendEmailOtp || isLoading}
                     className={`text-sm font-bold transition-all ${!canResendEmailOtp || isLoading ? 'text-zinc-300 cursor-not-allowed' : 'text-[#5331EA] hover:underline cursor-pointer'}`}
                 >
-                    {canResendEmailOtp ? 'Resend Code' : `Resend available in ${emailOtpTimer}s`}
+                    {canResendEmailOtp ? 'Resend Code' : `Resend available in ${Math.floor(resendTimer / 60)}:${(resendTimer % 60).toString().padStart(2, '0')}`}
                 </button>
             </div>
 

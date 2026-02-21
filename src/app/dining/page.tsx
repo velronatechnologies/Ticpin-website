@@ -7,6 +7,7 @@ import Image from 'next/image';
 import AppBanner from '@/components/layout/AppBanner';
 import { useState, useEffect } from 'react';
 import FilterButton from '@/components/dining/FilterButton';
+import FilterBar from '@/components/shared/FilterBar';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import { useAuth } from '@/context/AuthContext';
@@ -14,6 +15,10 @@ import { useStore } from '@/store/useStore';
 
 import { diningCategories } from '@/data/diningData';
 import { diningApi, offersApi } from '@/lib/api';
+
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getUserPass } from '@/lib/passUtils';
 
 export default function DiningPage() {
     const { userId } = useAuth();
@@ -23,6 +28,35 @@ export default function DiningPage() {
     const [offerList, setOfferList] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isOffersLoading, setIsOffersLoading] = useState(true);
+    const [userHasActivePass, setUserHasActivePass] = useState(false);
+
+    const diningCategories = [
+        { id: 'sort', name: 'Sort By' },
+        { id: 'cuisine', name: 'Cuisine' },
+        { id: 'features', name: 'Features' },
+    ];
+
+    const diningOptions = {
+        sort: ['Rating: High to Low', 'Distance: Near to Far', 'Cost: Low to High', 'Cost: High to Low'],
+        cuisine: ['Italian', 'Chinese', 'Indian', 'Continental', 'Japanese', 'Mexican'],
+        features: ['Pure Veg', 'Serves Alcohol', 'Outdoor Seating', 'Live Music', 'Valet Parking']
+    };
+
+    const diningFilters = ['Top rated', 'Pure Veg', 'Serves Alcohol', '50% OFF'];
+
+    useEffect(() => {
+        // Check if user has active pass
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userPass = await getUserPass(user.email || undefined, user.phoneNumber || undefined);
+                setUserHasActivePass(userPass?.status === 'active' || false);
+            } else {
+                setUserHasActivePass(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -292,14 +326,11 @@ export default function DiningPage() {
                     <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All Restaurants</h2>
 
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        {['Filters', 'Top rated', 'Pure Veg', 'Serves Alcohol', '50% OFF'].map((filter) => (
-                            <FilterButton
-                                key={filter}
-                                label={filter}
-                                active={activeFilter === filter}
-                                onClick={() => setActiveFilter(filter)}
-                            />
-                        ))}
+                        <FilterBar
+                            filters={diningFilters}
+                            categories={diningCategories}
+                            options={diningOptions}
+                        />
                     </div>
 
                     {isLoading ? (

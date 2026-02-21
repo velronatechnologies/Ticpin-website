@@ -36,34 +36,33 @@ export default function EmailRegisterView({
 
     const onRegister = () => {
         if (password !== confirmPassword) {
-            // This normally shouldn't be reached as we disable the button,
-            // but for Enter key press it's a good safety check
+         
             return;
         }
         handleOrganizerRegister();
     };
 
-    const isFormValid = name && email && phone && password.length >= 6 && password === confirmPassword && !isLoading;
+    const isFormValid = name && phone && email && password.length >= 6 && password === confirmPassword && !isLoading;
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
-            <div className="relative h-[220px] shrink-0">
+        <div className="h-full flex flex-col overflow-hidden bg-white">
+            <div className="relative h-[160px] shrink-0">
                 <img src="/login/banner.jpeg" className="absolute inset-0 w-full h-full object-cover" />
                 <button onClick={() => setView('email_login')} className="absolute top-6 left-6 text-white/80 hover:text-white transition-colors z-20 bg-black/20 p-2 rounded-full backdrop-blur-sm">
                     <ChevronLeft size={24} />
                 </button>
             </div>
 
-            <div className="p-6 space-y-4 flex-1 flex flex-col items-center justify-start bg-white overflow-y-auto scrollbar-hide">
-                <div className="text-center space-y-2">
-                    <h3 className="text-[32px] text-zinc-900 font-bold">Create Organizer Account</h3>
-                    <p className="text-base text-zinc-500 font-medium">Join Ticpin as an event creator</p>
+            <div className="p-5 space-y-3 flex-1 flex flex-col items-center justify-start bg-white overflow-y-auto scrollbar-hide">
+                <div className="text-center space-y-1">
+                    <h3 className="text-[28px] text-zinc-900 font-bold">Create Organizer Account</h3>
+                    <p className="text-sm text-zinc-500 font-medium">Join Ticpin as an event creator</p>
                 </div>
                 <div className="w-full max-w-[500px] space-y-3">
                     <input
                         type="text"
                         placeholder="Full Name"
-                        className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-black transition-all"
+                        className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium text-black focus:outline-none focus:border-black transition-all placeholder:text-zinc-400"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         onKeyDown={(e) => {
@@ -73,12 +72,9 @@ export default function EmailRegisterView({
                     <input
                         type="tel"
                         placeholder="Phone Number"
-                        className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-black transition-all"
+                        className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium text-black focus:outline-none focus:border-black transition-all placeholder:text-zinc-400"
                         value={phone}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            if (val.length <= 10) setPhone(val);
-                        }}
+                        onChange={(e) => setPhone(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && isFormValid) onRegister();
                         }}
@@ -86,7 +82,7 @@ export default function EmailRegisterView({
                     <input
                         type="email"
                         placeholder="Email Address"
-                        className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-black transition-all"
+                        className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium text-black focus:outline-none focus:border-black transition-all placeholder:text-zinc-400"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         onKeyDown={(e) => {
@@ -97,7 +93,7 @@ export default function EmailRegisterView({
                         <input
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Password (Min 6 chars)"
-                            className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium focus:outline-none focus:border-black transition-all pr-12"
+                            className="w-full h-[50px] px-6 border border-zinc-200 rounded-2xl text-lg font-medium text-black focus:outline-none focus:border-black transition-all pr-12 placeholder:text-zinc-400"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             onKeyDown={(e) => {
@@ -125,7 +121,7 @@ export default function EmailRegisterView({
                         <input
                             type={showConfirmPassword ? 'text' : 'password'}
                             placeholder="Confirm Password"
-                            className={`w-full h-[50px] px-6 border ${password && confirmPassword && password !== confirmPassword ? 'border-red-500 bg-red-50' : 'border-zinc-200'} rounded-2xl text-lg font-medium focus:outline-none focus:border-black transition-all pr-12`}
+                            className={`w-full h-[50px] px-6 border ${password && confirmPassword && password !== confirmPassword ? 'border-red-500 bg-red-50' : 'border-zinc-200'} rounded-2xl text-lg font-medium text-black focus:outline-none focus:border-black transition-all pr-12 placeholder:text-zinc-400`}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             onKeyDown={(e) => {
@@ -155,7 +151,7 @@ export default function EmailRegisterView({
                     <button
                         onClick={onRegister}
                         disabled={!isFormValid}
-                        className="w-full h-[55px] bg-black text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all flex items-center justify-center mt-4 disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed"
+                        className="w-full h-[52px] bg-black text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all flex items-center justify-center mt-2 disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed"
                     >
                         {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Create Account'}
                     </button>
@@ -163,9 +159,9 @@ export default function EmailRegisterView({
                         <p className="text-zinc-600 font-medium">
                             Already have an account? <button className="text-[#5331EA] font-bold hover:underline ml-1" onClick={() => setView('email_login')}>Login</button>
                         </p>
-                        <p className="text-zinc-500 text-sm">
+                        {/* <p className="text-zinc-500 text-sm">
                             Not an organizer? <button className="text-zinc-800 font-bold hover:underline ml-1" onClick={() => setView('number')}>Go back to user login</button>
-                        </p>
+                        </p> */}
                     </div>
                 </div>
             </div>

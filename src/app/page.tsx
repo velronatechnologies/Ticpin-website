@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import SportCategoryCard from '@/components/play/SportCategoryCard';
 import VenueCard from '@/components/play/VenueCard';
 import FilterBar from '@/components/play/FilterBar';
@@ -9,6 +10,9 @@ import Footer from '@/components/layout/Footer';
 import ArtistAvatar from '@/components/events/ArtistAvatar';
 import { playApi, artistsApi } from '@/lib/api';
 import { useStore } from '@/store/useStore';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getUserPass } from '@/lib/passUtils';
 
 export default function Home() {
   const { location: storeLocation } = useStore();
@@ -16,6 +20,7 @@ export default function Home() {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [venueList, setVenueList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userHasActivePass, setUserHasActivePass] = useState(false);
 
   const sportsCategories = [
     { name: 'CRICKET', image: '/play/playck.png', href: '/play/cricket' },
@@ -28,6 +33,20 @@ export default function Home() {
   ];
 
   const filters = ['Top Rated', 'Cricket', 'Pickleball', 'Badminton'];
+
+  useEffect(() => {
+    // Check if user has active pass
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userPass = await getUserPass(user.email || undefined, user.phoneNumber || undefined);
+        setUserHasActivePass(userPass?.status === 'active' || false);
+      } else {
+        setUserHasActivePass(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,6 +72,7 @@ export default function Home() {
     };
     fetchData();
   }, [storeLocation]);
+
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -160,7 +180,6 @@ export default function Home() {
         </section>
 
       </main>
-      <BottomBanner />
       <Footer />
     </div>
   );

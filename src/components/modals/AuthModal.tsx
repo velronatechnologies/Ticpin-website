@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
+import { useStore } from '@/store/useStore';
 
 // Import Views
 import PhoneView from './auth/views/PhoneView';
@@ -15,6 +16,8 @@ import EmailVerifyView from './auth/views/EmailVerifyView';
 import EmailLoginView from './auth/views/EmailLoginView';
 import EmailRegisterView from './auth/views/EmailRegisterView';
 import OrganizerOTPView from './auth/views/OrganizerOTPView';
+import ForgotPassView from './auth/views/ForgotPassView';
+import ResetPassView from './auth/views/ResetPassView';
 
 // Firebase
 import { auth as firebaseAuth, googleProvider } from '@/lib/firebase';
@@ -23,7 +26,7 @@ import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWit
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
-    initialView?: 'number' | 'otp' | 'profile' | 'location' | 'profile_edit' | 'email_verify' | 'email_login' | 'email_register' | 'email_otp';
+    initialView?: 'number' | 'otp' | 'profile' | 'location' | 'profile_edit' | 'email_verify' | 'email_login' | 'email_register' | 'email_otp' | 'email_forgot_pass' | 'email_reset_pass';
     onAuthSuccess?: (id: string, token: string) => void;
     isOrganizer?: boolean;
     category?: string | null;
@@ -33,32 +36,69 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     const { login: authLogin, logout, phone: savedPhone, isOrganizer: authIsOrganizer } = useAuth();
     const { addToast } = useToast();
     const router = useRouter();
-    const [view, setView] = useState<'number' | 'otp' | 'profile' | 'location' | 'profile_edit' | 'email_verify' | 'email_login' | 'email_register' | 'email_otp'>(initialView);
-
-    useEffect(() => {
-        if (isOpen) {
-            if (isOrganizer && initialView === 'number') {
-                setView('email_login');
-            } else {
-                setView(initialView);
-            }
-        }
-    }, [isOpen, initialView, isOrganizer]);
-
+    const { authModalState, setAuthModalState } = useStore();
+    const [view, setView] = useState<'number' | 'otp' | 'profile' | 'location' | 'profile_edit' | 'email_verify' | 'email_login' | 'email_register' | 'email_otp' | 'email_forgot_pass' | 'email_reset_pass'>(initialView);
     const [number, setNumber] = useState('');
     const [phone, setPhone] = useState('');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [emailOtp, setEmailOtp] = useState(['', '', '', '', '', '']);
+    const [address, setAddress] = useState('');
+    const [state, setState] = useState('');
+    const [district, setDistrict] = useState('');
+    const [country, setCountry] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [emailOtpTimer, setEmailOtpTimer] = useState(300);
+    const [resendTimer, setResendTimer] = useState(120);
     const [canResendEmailOtp, setCanResendEmailOtp] = useState(false);
+    const [lastOtpSentAt, setLastOtpSentAt] = useState<number>(0);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Priority 1: If there's a pending verification, registration, or reset flow stored, resume it
+            const persistableViews = ['email_otp', 'email_verify', 'email_reset_pass', 'email_register', 'email_forgot_pass'];
+            if (authModalState.view && persistableViews.includes(authModalState.view)) {
+                setView(authModalState.view as any);
+                if (authModalState.email) setEmail(authModalState.email);
+                // Restore timers from store if resuming
+                if (authModalState.emailOtpTimer) setEmailOtpTimer(authModalState.emailOtpTimer);
+                if (authModalState.resendTimer) setResendTimer(authModalState.resendTimer);
+            } else if (isOrganizer && initialView === 'number') {
+                setView('email_login');
+            } else {
+                setView(initialView);
+                // Reset timers for fresh start if not resuming a specific view
+                setEmailOtpTimer(300);
+                setResendTimer(120);
+                setCanResendEmailOtp(false);
+            }
+        }
+    }, [isOpen, initialView, isOrganizer, authModalState.view]);
+
+    // Sync view changes back to store for persistence (only for organizer/email flows)
+    useEffect(() => {
+        if (isOpen && (view.startsWith('email_') || view === 'profile_edit')) {
+            setAuthModalState({ view, email, emailOtpTimer, resendTimer, pendingCategory: category });
+        }
+    }, [view, email, isOpen, emailOtpTimer, resendTimer, category]);
+
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
     const emailOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const isPasting = useRef(false);
+    const isEmailPasting = useRef(false);
+
+    // Auto-reset OTP when contact info changes
+    useEffect(() => {
+        setOtp(['', '', '', '', '', '']);
+    }, [number]);
+
+    useEffect(() => {
+        setEmailOtp(['', '', '', '', '', '']);
+    }, [email]);
 
     // Firebase Phone Auth
     const confirmationResultRef = useRef<ConfirmationResult | null>(null);
@@ -76,21 +116,20 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (view === 'email_otp' && emailOtpTimer > 0) {
+        if (['email_otp', 'email_verify', 'email_reset_pass'].includes(view)) {
             interval = setInterval(() => {
-                setEmailOtpTimer((prev) => prev - 1);
+                setEmailOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
+                setResendTimer((prev) => {
+                    if (prev > 0) {
+                        return prev - 1;
+                    } else {
+                        setCanResendEmailOtp(true);
+                        return 0;
+                    }
+                });
             }, 1000);
-        } else if (emailOtpTimer === 0) {
-            setCanResendEmailOtp(true);
         }
         return () => clearInterval(interval);
-    }, [view, emailOtpTimer]);
-
-    useEffect(() => {
-        if (view === 'email_otp') {
-            setEmailOtpTimer(300);
-            setCanResendEmailOtp(false);
-        }
     }, [view]);
 
     useEffect(() => {
@@ -101,6 +140,11 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                     setUserProfile(response.data);
                     setName(response.data.name || '');
                     setEmail(response.data.email || '');
+                    setAddress(response.data.address || '');
+                    setState(response.data.state || '');
+                    setDistrict(response.data.district || '');
+                    setCountry(response.data.country || '');
+                    if (response.data.phone) setPhone(response.data.phone);
                 }
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
@@ -113,6 +157,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     }, [isOpen, view]);
 
     const handleOtpChange = (index: number, value: string) => {
+        if (isPasting.current) return;
         if (isNaN(Number(value))) return;
         const newOtp = [...otp];
         newOtp[index] = value.substring(value.length - 1);
@@ -124,6 +169,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     };
 
     const handleEmailOtpChange = (index: number, value: string) => {
+        if (isEmailPasting.current) return;
         if (isNaN(Number(value))) return;
         const newOtp = [...emailOtp];
         newOtp[index] = value.substring(value.length - 1);
@@ -159,20 +205,15 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
         const digits = data.replace(/\D/g, '').slice(0, 6).split('');
 
         if (digits.length > 0) {
-            const newOtp = [...otp];
+            isPasting.current = true;
+            const newOtp = ['', '', '', '', '', ''];
             digits.forEach((digit, i) => {
                 newOtp[i] = digit;
             });
             setOtp(newOtp);
-
-            // Focus the appropriate input
             const nextIndex = Math.min(digits.length, 5);
             otpRefs.current[nextIndex]?.focus();
-
-            // If we have all 6 digits, we could potentially auto-submit
-            if (digits.length === 6) {
-                // Optional: trigger login
-            }
+            setTimeout(() => { isPasting.current = false; }, 100);
         }
     };
 
@@ -182,15 +223,15 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
         const digits = data.replace(/\D/g, '').slice(0, 6).split('');
 
         if (digits.length > 0) {
-            const newOtp = [...emailOtp];
+            isEmailPasting.current = true;
+            const newOtp = ['', '', '', '', '', ''];
             digits.forEach((digit, i) => {
                 newOtp[i] = digit;
             });
             setEmailOtp(newOtp);
-
-            // Focus the appropriate input
             const nextIndex = Math.min(digits.length, 5);
             emailOtpRefs.current[nextIndex]?.focus();
+            setTimeout(() => { isEmailPasting.current = false; }, 100);
         }
     };
 
@@ -216,21 +257,35 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     };
 
     const handleSendOtp = async () => {
-        // TESTING: Simplified validation - allow any number
-        if (!number || number.length < 1) {
-            addToast('Please enter a phone number', 'error');
+        if (!number || number.length !== 10) {
+            addToast('Please enter a valid 10-digit phone number', 'error');
             return;
         }
 
         setIsLoading(true);
         try {
-            // TESTING: Skip Firebase - go directly to backend (which now accepts any OTP)
-            // Backend is set to bypass OTP verification for testing
-            addToast('OTP: Use any code for normal users, 123456 for admin (1000000000)', 'success');
+            const verifier = setupRecaptcha();
+            if (!verifier) {
+                addToast('Verification setup failed. Please refresh the page and try again.', 'error');
+                return;
+            }
+            const result = await signInWithPhoneNumber(firebaseAuth, `+91${number}`, verifier);
+            confirmationResultRef.current = result;
+            addToast('OTP sent to your phone!', 'success');
             setView('otp');
         } catch (error: any) {
-            console.error('Error:', error);
-            addToast('Failed to proceed', 'error');
+            console.error('Firebase phone auth error:', error);
+            // Reset reCAPTCHA on failure so user can retry
+            recaptchaVerifierRef.current = null;
+            if (error.code === 'auth/invalid-phone-number') {
+                addToast('Invalid phone number. Please enter a valid 10-digit number.', 'error');
+            } else if (error.code === 'auth/too-many-requests') {
+                addToast('Too many attempts. Please wait a few minutes and try again.', 'error');
+            } else if (error.code === 'auth/captcha-check-failed') {
+                addToast('Verification check failed. Please refresh and try again.', 'error');
+            } else {
+                addToast('Failed to send OTP. Please try again.', 'error');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -239,7 +294,14 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
     const handleUpdateProfile = async () => {
         setIsLoading(true);
         try {
-            const response = await authApi.updateProfile({ name, email });
+            const response = await authApi.updateProfile({
+                name,
+                email,
+                address,
+                state,
+                district,
+                country
+            });
             if (response.success) {
                 setUserProfile(response.data);
                 addToast('Profile updated!', 'success');
@@ -275,6 +337,46 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
         }
     };
 
+    const handleRoleRedirection = (user: any) => {
+        if (user.is_admin) {
+            router.push('/admin');
+            return;
+        }
+
+        // If coming from organizer flows (List Your events/play/dining footer links)
+        if (isOrganizer && category) {
+            // Check if user is verified for this specific category
+            const verifiedCategories = user.organizer_categories || [];
+            const isVerifiedForCategory = verifiedCategories.includes(category) ||
+                (category === 'event' && verifiedCategories.some((c: string) => ['event', 'creator', 'individual', 'company', 'non-profit'].includes(c)));
+
+            if (user.is_organizer && isVerifiedForCategory) {
+                router.push(`/organizer-dashboard?category=${category}`);
+            } else {
+                router.push(`/organizer-onboarding?category=${category}`);
+            }
+            return;
+        }
+
+        // If organizer but no specific category from footer click
+        if (user.is_organizer) {
+            const categories = user.organizer_categories || [];
+            const primaryCategory = user.organizer_category || (categories.length > 0 ? categories[0] : null);
+
+            if (primaryCategory) {
+                router.push(`/organizer-dashboard?category=${primaryCategory}`);
+            } else {
+                router.push('/list-your-events');
+            }
+            return;
+        }
+
+        // Regular user - redirect to play page
+        if (!onAuthSuccess) {
+            router.push('/play');
+        }
+    };
+
     const completeLogin = async () => {
         setIsLoading(true);
         try {
@@ -286,29 +388,50 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 return;
             }
 
-            // TESTING: Direct backend login with OTP (backend accepts any OTP now)
-            // Admin: 1000000000 requires 123456
-            // Others: any number with any OTP
-            const response = await authApi.login(number, otpCode, '');
+            // Confirm OTP with Firebase and get ID token for secure backend verification
+            let firebaseToken = '';
+            if (confirmationResultRef.current) {
+                try {
+                    const userCredential = await confirmationResultRef.current.confirm(otpCode);
+                    firebaseToken = await userCredential.user.getIdToken();
+                } catch (fbError: any) {
+                    console.error('Firebase OTP confirmation error:', fbError);
+                    if (fbError.code === 'auth/invalid-verification-code') {
+                        addToast('Invalid OTP. Please check the code and try again.', 'error');
+                    } else if (fbError.code === 'auth/code-expired') {
+                        addToast('OTP expired. Please go back and request a new one.', 'error');
+                    } else {
+                        addToast('OTP verification failed. Please try again.', 'error');
+                    }
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            const response = await authApi.login(number, otpCode, firebaseToken);
 
             if (response.success && response.data) {
-                authLogin(number, response.data.token, { userId: response.data.user.id });
+                const user = response.data.user;
+                authLogin(number, response.data.token, {
+                    userId: user.id,
+                    isOrganizer: user.is_organizer,
+                    isAdmin: user.is_admin,
+                    organizerCategory: user.organizer_category
+                });
                 addToast('Login successful!', 'success');
-                setIsLoading(false);
-
                 if (onAuthSuccess) {
                     onAuthSuccess(number, response.data.token);
                 } else {
-                    onClose();
+                    handleRoleRedirection(user);
                 }
                 return;
             } else {
                 addToast(response.message || 'Login failed', 'error');
+                setIsLoading(false);
             }
         } catch (error: any) {
             console.error('Login error:', error);
             addToast(error.message || 'Login failed', 'error');
-        } finally {
             setIsLoading(false);
         }
     };
@@ -322,12 +445,22 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 authLogin(email, response.data.token, {
                     email,
                     isEmailVerified: response.data.user.is_email_verified,
-                    userId: response.data.user.id
+                    userId: response.data.user.id,
+                    isOrganizer: response.data.user.is_organizer,
+                    isAdmin: response.data.user.is_admin,
+                    organizerCategory: response.data.user.organizer_category || category,
+                    organizerCategories: response.data.organizer_categories || response.data.user.organizer_categories || []
                 });
                 addToast('Login successful!', 'success');
-                router.push(`/list-your-events/dashboard${category ? `?category=${category}` : ''}`);
-                onClose();
-                if (onAuthSuccess) onAuthSuccess(email, response.data.token);
+                if (onAuthSuccess) {
+                    onAuthSuccess(email, response.data.token);
+                    // Don't set loading false, we're navigating
+                    return;
+                } else {
+                    handleRoleRedirection(response.data.user);
+                    // Don't set loading false, we're navigating
+                    return;
+                }
             } else {
                 // UX Improvement: Check specific error cases
                 const msg = response.message?.toLowerCase() || '';
@@ -344,10 +477,10 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 } else {
                     addToast(response.message || 'Login failed. Please check your credentials.', 'error');
                 }
+                setIsLoading(false);
             }
         } catch (error) {
             addToast('Backend connection failed. Please try again later.', 'error');
-        } finally {
             setIsLoading(false);
         }
     };
@@ -390,11 +523,21 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
             const otpCode = emailOtp.join('');
             const response = await authApi.organizerVerifyOtp({ email, otp: otpCode });
             if (response.success && response.data) {
-                authLogin(email, response.data.token, { email, isEmailVerified: true });
+                authLogin(email, response.data.token, {
+                    email,
+                    isEmailVerified: true,
+                    userId: response.data.user.id,
+                    isOrganizer: response.data.user.is_organizer,
+                    isAdmin: response.data.user.is_admin,
+                    organizerCategory: response.data.user.organizer_category || category,
+                    organizerCategories: response.data.organizer_categories || response.data.user.organizer_categories || []
+                });
                 addToast('Verification successful!', 'success');
-                router.push(`/list-your-events/dashboard${category ? `?category=${category}` : ''}`);
-                onClose();
-                if (onAuthSuccess) onAuthSuccess(email, response.data.token);
+                if (onAuthSuccess) {
+                    onAuthSuccess(email, response.data.token);
+                } else {
+                    handleRoleRedirection(response.data.user);
+                }
             } else {
                 addToast(response.message || 'Verification failed', 'error');
             }
@@ -427,12 +570,18 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                 authLogin(user.email || '', response.data.token, {
                     email: user.email || '',
                     isEmailVerified: true,
-                    userId: response.data.user.id
+                    userId: response.data.user.id,
+                    isOrganizer: response.data.user.is_organizer,
+                    isAdmin: response.data.user.is_admin,
+                    organizerCategory: response.data.user.organizer_category || category,
+                    organizerCategories: response.data.organizer_categories || response.data.user.organizer_categories || []
                 });
                 addToast('Google Login successful!', 'success');
-                router.push(`/list-your-events/dashboard${category ? `?category=${category}` : ''}`);
-                onClose();
-                if (onAuthSuccess) onAuthSuccess(user.email || '', response.data.token);
+                if (onAuthSuccess) {
+                    onAuthSuccess(user.email || '', response.data.token);
+                } else {
+                    handleRoleRedirection(response.data.user);
+                }
             } else {
                 addToast(response.message || 'Google login failed on backend', 'error');
             }
@@ -456,6 +605,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
             if (response.success) {
                 addToast('A new code has been sent to your email!', 'success');
                 setEmailOtpTimer(300);
+                setResendTimer(120);
                 setCanResendEmailOtp(false);
                 setEmailOtp(['', '', '', '', '', '']);
                 emailOtpRefs.current[0]?.focus();
@@ -487,32 +637,30 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
         }
     };
 
-    if (!isOpen) return null;
-
     const isCompact = view === 'profile' && authIsOrganizer;
     const isSidebarView = (['profile_edit', 'email_verify'].includes(view) || (view === 'profile' && !authIsOrganizer));
 
     return (
         <div
-            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${isSidebarView ? 'justify-end pointer-events-none' : 'items-center justify-center p-4'
+            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                } ${isSidebarView ? 'justify-end' : 'items-center justify-center p-4'
                 }`}
             style={{ fontFamily: 'var(--font-anek-latin)' }}
         >
             <div
                 onClick={onClose}
-                className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-500 pointer-events-auto ${isOpen ? 'opacity-100' : 'opacity-0'
+                className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-500 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                     }`}
             />
 
             <div
-                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${isSidebarView
+                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'} z-10 overflow-hidden ${isSidebarView
                     ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
                     : 'rounded-[35px] animate-in zoom-in duration-300'
                     }`}
                 style={isCompact ? { width: '500px', height: 'auto' } : (!isSidebarView ? { width: '850px', height: '700px' } : {})}
             >
-                {/* TESTING: Recaptcha disabled */}
-                {/* <div id="recaptcha-container"></div> */}
+                <div id="recaptcha-container"></div>
 
                 {view === 'number' && (
                     <PhoneView
@@ -565,6 +713,15 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                         setName={setName}
                         email={email}
                         setEmail={setEmail}
+                        address={address}
+                        setAddress={setAddress}
+                        state={state}
+                        setState={setState}
+                        district={district}
+                        setDistrict={setDistrict}
+                        country={country}
+                        setCountry={setCountry}
+                        phone={userProfile?.phone || savedPhone || number || ''}
                         handleUpdateProfile={handleUpdateProfile}
                         isLoading={isLoading}
                     />
@@ -625,11 +782,40 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number', onA
                         handleEmailOtpKeyDown={handleEmailOtpKeyDown}
                         handleEmailPaste={handleEmailPaste}
                         emailOtpTimer={emailOtpTimer}
+                        resendTimer={resendTimer}
                         canResendEmailOtp={canResendEmailOtp}
                         handleResendOrganizerOtp={handleResendOrganizerOtp}
                         handleOrganizerVerifyOtp={handleOrganizerVerifyOtp}
                         setView={setView}
                         isLoading={isLoading}
+                    />
+                )}
+
+                {view === 'email_forgot_pass' && (
+                    <ForgotPassView
+                        setView={setView}
+                        email={email}
+                        setEmail={setEmail}
+                        isLoading={isLoading}
+                        setIsLoading={setIsLoading}
+                    />
+                )}
+
+                {view === 'email_reset_pass' && (
+                    <ResetPassView
+                        email={email}
+                        emailOtp={emailOtp}
+                        emailOtpRefs={emailOtpRefs}
+                        handleEmailOtpChange={handleEmailOtpChange}
+                        handleEmailOtpKeyDown={handleEmailOtpKeyDown}
+                        handleEmailPaste={handleEmailPaste}
+                        emailOtpTimer={emailOtpTimer}
+                        resendTimer={resendTimer}
+                        canResendEmailOtp={canResendEmailOtp}
+                        handleResendOrganizerOtp={handleResendOrganizerOtp}
+                        setView={setView}
+                        isLoading={isLoading}
+                        setIsLoading={setIsLoading}
                     />
                 )}
             </div>

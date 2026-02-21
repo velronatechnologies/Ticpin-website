@@ -1,12 +1,13 @@
-import { X, MapPin, Search } from 'lucide-react';
+import { X, MapPin, Search, Loader2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { commonApi } from '@/lib/api';
 
 interface LocationModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-// d
+
 const popularCities = [
     'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad',
     'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur'
@@ -15,6 +16,37 @@ const popularCities = [
 export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
     const { setLocation } = useStore();
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    // Fetch search results from API
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+        debounceTimer.current = setTimeout(async () => {
+            setIsLoading(true);
+            try {
+                const response = await commonApi.searchLocations(searchQuery);
+                if (response.success && response.data?.results) {
+                    setSearchResults(response.data.results);
+                }
+            } catch (error) {
+                console.error('Error searching locations:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        }, 300);
+
+        return () => {
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        };
+    }, [searchQuery]);
 
     if (!isOpen) return null;
 
@@ -86,8 +118,14 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="w-full max-w-[970px] bg-white rounded-[43px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 p-10 font-[family-name:var(--font-anek-latin)] relative">
+        <div
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-[970px] bg-white rounded-[43px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 p-10 font-[family-name:var(--font-anek-latin)] relative"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button
                     onClick={onClose}
                     className="absolute right-8 top-8 p-2 hover:bg-zinc-100 rounded-full transition-colors text-[#686868]"
@@ -109,12 +147,39 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search city or area"
                             className="w-full h-[77px] px-8 bg-white border border-[#686868] rounded-[15px] text-[28px] font-medium text-black placeholder-[#A8A8A8] focus:outline-none focus:ring-2 focus:ring-[#5331EA]/20 transition-all"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && searchQuery.trim()) {
-                                    handleCityClick(searchQuery);
-                                }
-                            }}
                         />
+                        {isLoading && (
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                                <Loader2 className="animate-spin text-[#5331EA]" size={24} />
+                            </div>
+                        )}
+
+                        {/* Search Results Dropdown */}
+                        {searchQuery.trim() !== '' && (searchResults.length > 0 || isLoading) && (
+                            <div className="absolute top-full left-0 right-0 mt-4 bg-white border border-[#686868]/20 rounded-[20px] shadow-xl max-h-[400px] overflow-y-auto z-50">
+                                {isLoading ? (
+                                    <div className="p-8 text-center text-[#686868] text-xl font-medium">Searching...</div>
+                                ) : (
+                                    <div className="divide-y divide-zinc-100">
+                                        {searchResults.map((result, idx) => (
+                                            <button
+                                                key={`${result.name}-${idx}`}
+                                                onClick={() => handleCityClick(result.name)}
+                                                className="w-full px-8 py-6 flex items-center gap-4 hover:bg-[#5331EA]/5 transition-all text-left group"
+                                            >
+                                                <MapPin size={24} className="text-[#5331EA] group-hover:scale-110 transition-transform" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-[22px] font-semibold text-black">{result.name}</span>
+                                                    {result.state && result.name !== result.state && (
+                                                        <span className="text-[16px] font-medium text-[#686868]">{result.state}</span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Use Current Location */}
@@ -137,7 +202,7 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     <div className="space-y-6 pt-2">
                         <h3 className="text-[30px] font-medium text-[#686868]">Popular Cities</h3>
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
-                            {(searchQuery ? popularCities.filter(c => c.toLowerCase().includes(searchQuery.toLowerCase())) : popularCities).map((city) => (
+                            {popularCities.map((city) => (
                                 <button
                                     key={city}
                                     onClick={() => handleCityClick(city)}
@@ -149,6 +214,16 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Skip button */}
+                    <div className="flex justify-center pt-2">
+                        <button
+                            onClick={onClose}
+                            className="text-[16px] font-medium text-[#A8A8A8] hover:text-[#686868] transition-colors underline underline-offset-2"
+                        >
+                            Skip for now
+                        </button>
                     </div>
                 </div>
             </div>

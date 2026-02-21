@@ -1,17 +1,19 @@
+
 'use client';
 
-export const revalidate = 300;
 
 import { useRouter, useParams } from 'next/navigation';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
-import { ArrowLeft, MapPin, Star, ChevronDown, ChevronRight, CheckCircle2, Navigation, PhoneCall } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, ChevronDown, ChevronRight, CheckCircle2, Navigation, PhoneCall, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import BookingCard from '@/components/dining/venue/BookingCard';
 import CouponCard from '@/components/dining/CouponCard';
 import AppBanner from '@/components/layout/AppBanner';
 import Image from 'next/image';
 import { diningApi } from '@/lib/api';
+import { useStore } from '@/store/useStore';
+import AIChatPanel from '@/components/shared/AIChatPanel';
 
 export default function DiningVenueDetail() {
     const router = useRouter();
@@ -20,6 +22,13 @@ export default function DiningVenueDetail() {
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
     const [venue, setVenue] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [userOffers, setUserOffers] = useState<any[]>([]);
+    const [isAiOpen, setIsAiOpen] = useState(false);
+    const { isLoggedIn, userId, token } = useStore();
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     useEffect(() => {
         const fetchVenue = async () => {
@@ -38,6 +47,37 @@ export default function DiningVenueDetail() {
         };
         if (venueId) fetchVenue();
     }, [venueId]);
+
+    // Fetch user-specific offers
+    useEffect(() => {
+        const fetchUserOffers = async () => {
+            if (!isLoggedIn || !userId || !token) return;
+
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/offers/user/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success && Array.isArray(data.data)) {
+                    // Filter for active, non-expired dining offers
+                    const now = new Date();
+                    const activeOffers = data.data.filter((offer: any) =>
+                        offer.is_active &&
+                        offer.offer_type === 'dining' &&
+                        new Date(offer.valid_until) > now
+                    );
+                    setUserOffers(activeOffers);
+                }
+            } catch (error) {
+                console.error('Failed to fetch user offers:', error);
+            }
+        };
+
+        fetchUserOffers();
+    }, [isLoggedIn, userId, token]);
 
     if (isLoading) {
         return <div className="min-h-screen flex justify-center items-center">
@@ -114,19 +154,71 @@ export default function DiningVenueDetail() {
                                 >
                                     <PhoneCall size={18} /> Call
                                 </a>
+                                <button
+                                    onClick={() => setIsAiOpen(true)}
+                                    className="flex items-center gap-2.5 px-6 py-2.5 border border-purple-200 rounded-full bg-purple-50 text-[16px] font-semibold text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
+                                >
+                                    <Sparkles size={18} className="text-purple-600" /> Ask AI
+                                </button>
                             </div>
                             <hr className="mt-8 border-zinc-400" />
                         </div>
 
                         {/* Offers Section */}
-                        {venue.offers && venue.offers.length > 0 && (
+                        {((venue.offers && venue.offers.length > 0) || userOffers.length > 0) && (
                             <section className="space-y-6">
                                 <h2 className="text-[32px] font-semibold text-black">Offers</h2>
-                                <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-                                    {venue.offers.map((offer: any, i: number) => (
-                                        <CouponCard key={i} discount={offer.title} code={offer.description || "T&C Apply"} />
-                                    ))}
-                                </div>
+
+                                {/* User-specific offers */}
+                                {userOffers.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h3 className="text-[18px] font-semibold text-purple-600 flex items-center gap-2">
+                                            <span className="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-sm">For You</span>
+                                            Exclusive Offers Available
+                                        </h3>
+                                        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+                                            {userOffers.map((offer: any) => (
+                                                <div key={offer.id} className="min-w-[300px] bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-4 shadow-md">
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div className="flex-1">
+                                                            <div className="text-lg font-bold text-purple-900">{offer.discount_value}{offer.discount_type === 'percentage' ? '%' : '₹'} OFF</div>
+                                                            <div className="text-sm text-purple-600 font-medium">{offer.offer_name}</div>
+                                                        </div>
+                                                        <div className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">
+                                                            {offer.discount_type === 'percentage' ? 'PERCENTAGE' : 'FLAT'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-xs text-zinc-500 space-y-1">
+                                                        {offer.min_order_value > 0 && (
+                                                            <p>Min. order: ₹{offer.min_order_value}</p>
+                                                        )}
+                                                        {offer.max_discount_amount > 0 && (
+                                                            <p>Max discount: ₹{offer.max_discount_amount}</p>
+                                                        )}
+                                                        <p className="text-purple-600 font-medium">Valid till: {new Date(offer.valid_until).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <div className="mt-3 pt-3 border-t border-purple-200">
+                                                        <code className="bg-white px-3 py-1 rounded text-sm font-mono font-bold text-purple-900 border border-purple-300">
+                                                            {offer.offer_code}
+                                                        </code>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Venue offers */}
+                                {venue.offers && venue.offers.length > 0 && (
+                                    <div className="space-y-3">
+                                        {userOffers.length > 0 && <h3 className="text-[18px] font-semibold text-zinc-600">Venue Offers</h3>}
+                                        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+                                            {venue.offers.map((offer: any, i: number) => (
+                                                <CouponCard key={i} discount={offer.title} code={offer.description || "T&C Apply"} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         )}
 
@@ -217,7 +309,7 @@ export default function DiningVenueDetail() {
 
                         {/* Sticky Booking Card */}
                         <div className="sticky top-24 z-10">
-                            <BookingCard />
+                            <BookingCard venue={venue} />
                         </div>
                     </div>
                 </div>
@@ -226,6 +318,12 @@ export default function DiningVenueDetail() {
             </main>
             <BottomBanner />
             <Footer />
+            <AIChatPanel
+                isOpen={isAiOpen}
+                onClose={() => setIsAiOpen(false)}
+                venueData={venue}
+                venueType="dining"
+            />
         </div>
     );
 }

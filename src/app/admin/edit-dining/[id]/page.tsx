@@ -348,15 +348,38 @@ function ImageUploadBox({ label, value, onUpload, isUploading }: { label?: strin
     return (
         <div className="space-y-2">
             {label && <label className="text-[12px] font-bold text-[#686868] uppercase tracking-wider">{label}</label>}
-            <div className="relative aspect-video rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden flex flex-col items-center justify-center bg-zinc-50">
-                {value ? <img src={value} className="w-full h-full object-cover" alt="" /> : (
-                    <label className="cursor-pointer p-6 flex flex-col items-center">
-                        <Upload size={24} className="text-zinc-400 mb-2" />
-                        <span className="text-sm font-bold text-zinc-500">Upload</span>
-                        <input type="file" className="hidden" onChange={onUpload} accept="image/*" />
+            <div className="relative group aspect-video rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden flex flex-col items-center justify-center bg-zinc-50 hover:bg-zinc-100 transition-all">
+                {value ? (
+                    <>
+                        <img src={value} className="w-full h-full object-cover" alt="" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <label className="cursor-pointer bg-white text-zinc-900 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 hover:scale-105 transition-transform shadow-lg">
+                                <Upload size={16} /> Change Image
+                                <input type="file" className="hidden" onChange={onUpload} accept="image/*" disabled={isUploading} />
+                            </label>
+                        </div>
+                    </>
+                ) : (
+                    <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full p-6">
+                        {isUploading ? (
+                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-400 border-t-transparent" />
+                        ) : (
+                            <>
+                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md mb-3 text-zinc-400">
+                                    <Upload size={24} />
+                                </div>
+                                <span className="text-sm font-bold text-zinc-500">Click to upload</span>
+                                <span className="text-[10px] text-zinc-400 mt-1 uppercase tracking-widest font-bold">Max 5MB</span>
+                            </>
+                        )}
+                        <input type="file" className="hidden" onChange={onUpload} accept="image/*" disabled={isUploading} />
                     </label>
                 )}
-                {isUploading && <div className="absolute inset-0 bg-white/50 flex items-center justify-center">Uploading...</div>}
+                {isUploading && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-600 border-t-transparent" />
+                    </div>
+                )}
             </div>
         </div>
     );

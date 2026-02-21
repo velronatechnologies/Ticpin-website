@@ -8,57 +8,93 @@ import { useStore } from '@/store/useStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/context/ToastContext';
 
-const stateCityMap: { [key: string]: string[] } = {
-    'TAMIL NADU': ['Chennai', 'Coimbatore', 'Madurai', 'Trichy', 'Salem', 'Tiruppur', 'Erode'],
-    'KARNATAKA': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore', 'Belgaum'],
-    'MAHARASHTRA': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad'],
-    'DELHI': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'],
-    'TELANGANA': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar'],
-    'ANDHRA PRADESH': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore'],
-    'WEST BENGAL': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri'],
-    'GUJARAT': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar'],
-    'KERALA': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur'],
-    'UTTAR PRADESH': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi'],
-};
+const stateCityMap: { [key: string]: string[] } = {}; // Removed hardcoded map
 
 function BankDetailsContent() {
-    const { setupData, updateSetupData } = useStore();
+    const { setupData, updateSetupData, isLoggedIn, token } = useStore();
     const searchParams = useSearchParams();
     const categoryQuery = searchParams.get('category');
     const isPlay = categoryQuery === 'play';
-    const [bankDetails, setBankDetails] = useState(setupData.bank_details || {
-        account_holder_name: '',
-        account_number: '',
-        ifsc_code: '',
-        bank_name: '',
-        branch_name: '',
-        city: ''
+
+    const [bankDetails, setBankDetails] = useState({
+        account_holder_name: setupData.bank_details?.account_holder_name || setupData.pan_name || '',
+        account_number: setupData.bank_details?.account_number || '',
+        ifsc_code: setupData.bank_details?.ifsc_code || '',
+        bank_name: setupData.bank_details?.bank_name || '',
+        branch_name: setupData.bank_details?.branch_name || '',
+        city: setupData.bank_details?.city || setupData.pan_verification?.address?.city || ''
     });
+
+    // Check if bank details were pre-filled from a previous category registration
+    const hasPreviousBankDetails = Boolean(
+        setupData.bank_details?.account_number &&
+        setupData.bank_details?.ifsc_code &&
+        setupData.bank_details?.account_holder_name
+    );
+
+    const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
+    const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+    const [isCertified, setIsCertified] = useState(hasPreviousBankDetails); // Auto-certify if prefilled
     const router = useRouter();
     const { addToast } = useToast();
 
-    // Derived values from PAN/GST
-    const panAddress = setupData.pan_verification?.address || {};
-    const panState = panAddress.state?.toUpperCase();
-    const panCity = panAddress.city;
+    // Derived values from PAN
+    const panState = setupData.pan_verification?.address?.state;
+    const panCity = setupData.pan_verification?.address?.city;
 
-    // Get cities based on state
-    const stateCities = panState ? (stateCityMap[panState] || []) : [];
+    // Fetch districts based on PAN state
+    React.useEffect(() => {
+        const fetchDistricts = async () => {
+            if (!panState) return;
 
-    // Available cities: Detected city + State cities + some defaults if needed
-    const availableCities = Array.from(new Set([
-        panCity,
-        ...stateCities,
-        'Chennai', 'Bangalore', 'Mumbai', 'Delhi', 'Kolkata'
-    ].filter(Boolean)));
+            setIsLoadingDistricts(true);
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000'}/api/v1/states/${encodeURIComponent(panState)}/districts`);
+                const res = await response.json();
+                if (res.status === 200) {
+                    setAvailableDistricts(res.data.districts);
+
+                    // If current city is not in districts but matches something, maybe try to match
+                    if (!bankDetails.city && panCity) {
+                        const match = res.data.districts.find((d: string) => d.toLowerCase() === panCity.toLowerCase());
+                        if (match) {
+                            setBankDetails(prev => ({ ...prev, city: match }));
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching districts:', err);
+            } finally {
+                setIsLoadingDistricts(false);
+            }
+        };
+
+        fetchDistricts();
+    }, [panState, panCity]);
+
+    // Auth & Flow guard
+    React.useEffect(() => {
+        if (!isLoggedIn || !token) {
+            router.replace('/list-your-events/setup');
+            return;
+        }
+        if (!setupData.category && !categoryQuery) {
+            router.replace('/list-your-events/setup');
+        }
+    }, [isLoggedIn, token, router, categoryQuery, setupData.category]);
 
     const handleContinue = () => {
         if (!bankDetails.account_holder_name || !bankDetails.account_number || !bankDetails.ifsc_code || !bankDetails.city) {
-            addToast('Please fill all bank details including city', 'warning');
+            addToast('Please fill all bank details including district', 'warning');
+            return;
+        }
+        if (!isCertified) {
+            addToast('Please certify that the details are accurate', 'warning');
             return;
         }
         updateSetupData({ bank_details: bankDetails });
-        router.push(`/list-your-events/setup/backup${categoryQuery ? `?category=${categoryQuery}` : ''}`);
+        const effectiveCategory = setupData.category || categoryQuery;
+        router.push(`/list-your-events/setup/backup?category=${effectiveCategory}`);
     };
 
     return (
@@ -93,6 +129,18 @@ function BankDetailsContent() {
                                 Bank details
                             </h1>
 
+                            {hasPreviousBankDetails && (
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3 max-w-4xl">
+                                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span className="text-emerald-600 text-sm">✓</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-emerald-800">Bank details carried forward</p>
+                                        <p className="text-xs text-emerald-600 mt-1">These details are from your previous verification. Bank details must remain consistent across all categories. Review and continue.</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8 max-w-4xl">
                                 {/* Bank Account Name */}
                                 <div className="space-y-3 mt-[-15px]">
@@ -104,7 +152,8 @@ function BankDetailsContent() {
                                         value={bankDetails.account_holder_name}
                                         onChange={(e) => setBankDetails({ ...bankDetails, account_holder_name: e.target.value })}
                                         placeholder="Velrona Technologies Pvt Ltd."
-                                        className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3"
+                                        disabled={hasPreviousBankDetails}
+                                        className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3 ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
                                     />
                                 </div>
 
@@ -118,7 +167,8 @@ function BankDetailsContent() {
                                         value={bankDetails.account_number}
                                         onChange={(e) => setBankDetails({ ...bankDetails, account_number: e.target.value })}
                                         placeholder="eg. 012345678910"
-                                        className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3"
+                                        disabled={hasPreviousBankDetails}
+                                        className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3 ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
                                     />
                                 </div>
 
@@ -130,9 +180,11 @@ function BankDetailsContent() {
                                     <input
                                         type="text"
                                         value={bankDetails.ifsc_code}
-                                        onChange={(e) => setBankDetails({ ...bankDetails, ifsc_code: e.target.value })}
+                                        onChange={(e) => setBankDetails({ ...bankDetails, ifsc_code: e.target.value.toUpperCase() })}
                                         placeholder="eg. IDFB0000001"
-                                        className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3"
+                                        maxLength={11}
+                                        disabled={hasPreviousBankDetails}
+                                        className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3 uppercase ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
                                     />
                                 </div>
 
@@ -148,27 +200,31 @@ function BankDetailsContent() {
                                         value={bankDetails.bank_name}
                                         onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
                                         placeholder="eg. IDFC FIRST Bank"
-                                        className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3"
+                                        disabled={hasPreviousBankDetails}
+                                        className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 mt-3 ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
                                     />
                                 </div>
 
                                 {/* City Dropdown */}
                                 <div className="space-y-3">
                                     <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
-                                        Select City
+                                        Select District
                                     </label>
                                     <div className="relative">
                                         <select
                                             value={bankDetails.city}
                                             onChange={(e) => setBankDetails({ ...bankDetails, city: e.target.value })}
-                                            className="w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3"
+                                            disabled={hasPreviousBankDetails}
+                                            className={`w-full h-12 px-4 bg-transparent border border-[#AEAEAE] rounded-[14px] text-[15px] text-zinc-800 font-medium appearance-none cursor-pointer focus:outline-none focus:border-zinc-500 transition-colors mt-3 ${hasPreviousBankDetails ? 'bg-zinc-50 opacity-70 cursor-not-allowed' : ''}`}
                                         >
-                                            <option value="" className="text-zinc-400">Select city</option>
-                                            {availableCities.length > 0 ? (
-                                                availableCities.map((city, idx) => (
-                                                    <option key={idx} value={city}>{city}</option>
+                                            <option value="" className="text-zinc-400">
+                                                {isLoadingDistricts ? 'Loading districts...' : 'Select district'}
+                                            </option>
+                                            {availableDistricts.length > 0 ? (
+                                                availableDistricts.map((district: string, idx: number) => (
+                                                    <option key={idx} value={district}>{district}</option>
                                                 ))
-                                            ) : (
+                                            ) : !isLoadingDistricts && (
                                                 <>
                                                     <option>Chennai</option>
                                                     <option>Bangalore</option>
@@ -183,12 +239,14 @@ function BankDetailsContent() {
                             </div>
 
                             {/* Certification Checkbox */}
-                            <div className="flex gap-4 items-start pt-4 max-w-2xl">
+                            <div className="flex gap-4 items-start pt-4 max-w-2xl cursor-pointer" onClick={() => setIsCertified(!isCertified)}>
                                 <input
                                     type="checkbox"
+                                    checked={isCertified}
+                                    onChange={(e) => setIsCertified(e.target.checked)}
                                     className="w-6 h-6 mt-1 rounded-[8px] border border-zinc-300 accent-black focus:ring-0 cursor-pointer flex-shrink-0"
                                 />
-                                <p className="text-[13px] text-[#686868] font-medium leading-normal" style={{ fontFamily: 'Anek Latin' }}>
+                                <p className="text-[13px] text-[#686868] font-medium leading-normal select-none" style={{ fontFamily: 'Anek Latin' }}>
                                     I hereby certify that the above details are accurate, the bank account mentioned above is maintained by me or my organisation, and I take full responsibility if any information is found false under applicable laws.
                                 </p>
                             </div>
@@ -197,9 +255,13 @@ function BankDetailsContent() {
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button
                                     onClick={handleContinue}
-                                    className="bg-black text-white w-full md:w-[124px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95"
+                                    disabled={!isCertified}
+                                    className={`w-full md:w-[150px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 ${!isCertified
+                                        ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                        : 'bg-black text-white hover:bg-zinc-800'
+                                        }`}
                                 >
-                                    Continue<ChevronRight size={18} className="transition-transform" />
+                                    Continue<ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
                                 </button>
                             </div>
                         </div>

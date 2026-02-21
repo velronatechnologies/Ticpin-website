@@ -5,25 +5,44 @@ interface Booking {
     id: string;
     venue_name?: string;
     restaurant_name?: string;
+    event_title?: string;
     sport?: string;
     date: string;
     time_slot: string;
     price?: number;
     guest_count?: number;
+    ticket_type?: string;
+    quantity?: number;
+    unit_price?: number;
+    total_price?: number;
     status: string;
-    type: 'play' | 'dining';
-    created_at?: string;
+    type: 'play' | 'dining' | 'event';
+    created_at: string;
+    updated_at: string;
 }
 
+// Ticket used for checkout (generic across play/dining/event)
 interface Ticket {
     id: string;
+    // display name — maps to ticket_type for events, sport for play, etc.
     name: string;
+    // seat_type label if applicable
+    seat_type?: string;
     price: number;
+    // extra info lines
     description: string[];
+    // how many the user selected
     quantity: number;
+    // available stock from API (available_quantity)
+    available?: number;
 }
 
 interface CheckoutData {
+    id: string; // ID of the venue/event/restaurant
+    name: string; // Name of the venue/event/restaurant
+    sport?: string; // Optional sport or category
+    date?: string; // Selected booking date (YYYY-MM-DD) for play/dining
+    timeSlot?: string; // Selected time slot for play/dining
     tickets: Ticket[];
     bookingType: string;
 }
@@ -37,6 +56,10 @@ interface SetupData {
     gstin_mapping: any;
     has_gst: boolean;
     gstin: string;
+    gst_details?: {
+        has_gst: boolean;
+        gstin: string;
+    };
     bank_details: {
         account_holder_name: string;
         account_number: string;
@@ -64,12 +87,24 @@ interface UserState {
     searchQuery: string;
     setupData: Partial<SetupData>;
     organizerCategory: string | null;
+    organizerCategories: string[];
     isAdmin: boolean;
     userId: string;
     location: string;
     hasSetLocation: boolean;
-    setAuth: (phoneOrEmail: string, token: string, extra?: { email?: string; isEmailVerified?: boolean; organizerCategory?: string | null; isAdmin?: boolean; userId?: string }) => void;
+    pendingOrganizerCategory: string | null;
+    authModalState: {
+        view: string | null;
+        email: string;
+        pendingCategory: string | null;
+        emailOtpTimer: number;
+        resendTimer: number;
+    };
+    setAuth: (phoneOrEmail: string, token: string, extra?: { email?: string; isEmailVerified?: boolean; isOrganizer?: boolean; organizerCategory?: string | null; organizerCategories?: string[]; isAdmin?: boolean; userId?: string }) => void;
     setOrganizerCategory: (category: string | null) => void;
+    setOrganizerCategories: (categories: string[]) => void;
+    setPendingOrganizerCategory: (category: string | null) => void;
+    setAuthModalState: (state: Partial<UserState['authModalState']>) => void;
     clearAuth: () => void;
     setBookings: (bookings: Booking[]) => void;
     addBooking: (booking: Booking) => void;
@@ -96,21 +131,37 @@ export const useStore = create<UserState>()(
             searchQuery: '',
             setupData: {},
             organizerCategory: null,
+            organizerCategories: [],
             userId: '',
             location: '',
             hasSetLocation: false,
-            setAuth: (phoneOrEmail, token, extra) => set({
+            pendingOrganizerCategory: null,
+            authModalState: {
+                view: null,
+                email: '',
+                pendingCategory: null,
+                emailOtpTimer: 300,
+                resendTimer: 120,
+            },
+            setAuth: (phoneOrEmail, token, extra) => set((state) => ({
                 isLoggedIn: true,
                 phone: phoneOrEmail.includes('@') ? '' : phoneOrEmail,
                 email: extra?.email || (phoneOrEmail.includes('@') ? phoneOrEmail : ''),
                 token,
                 isEmailVerified: extra?.isEmailVerified ?? false,
-                isOrganizer: phoneOrEmail.includes('@'),
-                isAdmin: extra?.isAdmin ?? (phoneOrEmail === '0000000000' || phoneOrEmail === '+910000000000'),
-                organizerCategory: extra?.organizerCategory ?? null,
-                userId: extra?.userId ?? ''
-            }),
+                isOrganizer: extra?.isOrganizer ?? false,
+                isAdmin: extra?.isAdmin ?? false,
+                organizerCategory: extra?.organizerCategory !== undefined ? extra.organizerCategory : state.organizerCategory,
+                organizerCategories: extra?.organizerCategories ?? state.organizerCategories,
+                userId: extra?.userId ?? state.userId,
+                authModalState: { view: null, email: '', pendingCategory: null, emailOtpTimer: 300, resendTimer: 120 }
+            })),
             setOrganizerCategory: (category) => set({ organizerCategory: category }),
+            setOrganizerCategories: (categories) => set({ organizerCategories: categories }),
+            setPendingOrganizerCategory: (category) => set({ pendingOrganizerCategory: category }),
+            setAuthModalState: (state) => set((prev) => ({
+                authModalState: { ...prev.authModalState, ...state }
+            })),
             clearAuth: () => set({
                 isLoggedIn: false,
                 phone: '',
@@ -122,7 +173,12 @@ export const useStore = create<UserState>()(
                 bookings: [],
                 checkoutData: null,
                 organizerCategory: null,
-                userId: ''
+                organizerCategories: [],
+                pendingOrganizerCategory: null,
+                userId: '',
+                setupData: {},
+                searchQuery: '',
+                authModalState: { view: null, email: '', pendingCategory: null, emailOtpTimer: 300, resendTimer: 120 }
             }),
             setBookings: (bookings) => set({ bookings }),
             addBooking: (booking) => set((state) => ({ bookings: [booking, ...state.bookings] })),
@@ -134,20 +190,22 @@ export const useStore = create<UserState>()(
             setLocation: (location) => set({ location, hasSetLocation: true }),
         }),
         {
-            name: 'ticpin-storage',
+            name: 'ticpin-auth-store',
+            // Only persist auth-related fields, not transient UI state
             partialize: (state) => ({
                 isLoggedIn: state.isLoggedIn,
                 phone: state.phone,
                 email: state.email,
                 isEmailVerified: state.isEmailVerified,
                 isOrganizer: state.isOrganizer,
+                isAdmin: state.isAdmin,
                 token: state.token,
-                bookings: state.bookings,
-                setupData: state.setupData,
                 organizerCategory: state.organizerCategory,
+                organizerCategories: state.organizerCategories,
                 userId: state.userId,
                 location: state.location,
-                hasSetLocation: state.hasSetLocation
+                hasSetLocation: state.hasSetLocation,
+                setupData: state.setupData,
             }),
         }
     )
