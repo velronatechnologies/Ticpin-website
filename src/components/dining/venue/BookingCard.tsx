@@ -1,8 +1,13 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
 export default function BookingCard() {
+    const params = useParams();
+    const id = params?.id ?? '';
+
     return (
         <div className="w-full md:w-[392px] h-auto bg-white border border-[#d9d9d9] rounded-[24px] shadow-sm p-[24px] flex flex-col overflow-visible">
             {/* Title */}
@@ -35,11 +40,13 @@ export default function BookingCard() {
 
             {/* Submit Button */}
             <div className="mt-6">
-                <button
-                    className="w-full h-[48px] bg-black text-white rounded-[12px] text-[18px] font-semibold flex items-center justify-center active:scale-[0.98]"
-                >
-                    Book a table
-                </button>
+                <Link href={`/dining/venue/${id}/book`} className="block w-full">
+                    <button
+                        className="w-full h-[48px] bg-black text-white rounded-[12px] text-[18px] font-semibold flex items-center justify-center active:scale-[0.98]"
+                    >
+                        Book a table
+                    </button>
+                </Link>
             </div>
         </div>
     );

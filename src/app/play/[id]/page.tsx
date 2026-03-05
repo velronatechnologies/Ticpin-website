@@ -1,12 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AppBanner from '@/components/layout/AppBanner';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import { ChevronDown, MapPin, Clock, Share2 } from 'lucide-react';
 
 export default function PlayDetailPage() {
+    const params = useParams();
+    const id = params?.id ?? '';
     const [isAboutExpanded, setIsAboutExpanded] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
@@ -137,22 +141,24 @@ export default function PlayDetailPage() {
                                         </div>
                                     </div>
                                     <div className="pt-6 border-t border-[#686868]/20">
-                                        <button
-                                            className="w-full h-[54px] bg-black text-white rounded-[12px] flex items-center justify-center active:scale-[0.98]"
-                                        >
-                                            <span
-                                                style={{
-                                                    transform: 'scaleY(2)',
-                                                    display: 'inline-block',
-                                                    fontFamily: "var(--font-anek-tamil)",
-                                                    fontWeight: 600,
-                                                    lineHeight: 1
-                                                }}
-                                                className="text-[18px] tracking-wider uppercase"
+                                        <Link href={`/play/${id}/book`} className="block w-full">
+                                            <button
+                                                className="w-full h-[54px] bg-black text-white rounded-[12px] flex items-center justify-center active:scale-[0.98]"
                                             >
-                                                BOOK SLOTS
-                                            </span>
-                                        </button>
+                                                <span
+                                                    style={{
+                                                        transform: 'scaleY(2)',
+                                                        display: 'inline-block',
+                                                        fontFamily: "var(--font-anek-tamil)",
+                                                        fontWeight: 600,
+                                                        lineHeight: 1
+                                                    }}
+                                                    className="text-[18px] tracking-wider uppercase"
+                                                >
+                                                    BOOK SLOTS
+                                                </span>
+                                            </button>
+                                        </Link>
                                     </div>
                                 </div>
                             </div>

@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '1562-103-168-240-113.ngrok-free.app',
+        hostname: 'triserial-odessa-cosmetically.ngrok-free.dev',
         pathname: '/**',
       }
     ],

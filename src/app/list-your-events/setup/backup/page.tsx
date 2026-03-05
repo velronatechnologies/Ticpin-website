@@ -1,19 +1,15 @@
 'use client';
 
-import React, { Suspense, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 
-function BackupContactContent() {
+export default function BackupContactPage() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [showOtp, setShowOtp] = useState(false);
     const [email, setEmail] = useState('');
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-    const searchParams = useSearchParams();
-    const categoryQuery = searchParams.get('category');
-    const isPlay = categoryQuery === 'play';
 
     const handleOtpChange = (index: number, value: string) => {
         if (!/^\d*$/.test(value)) return;
@@ -34,14 +30,14 @@ function BackupContactContent() {
     };
 
     return (
-        <div className={`min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] transition-colors duration-500 ${isPlay ? 'bg-[#FFF1A81A]' : 'bg-[#FBFBFF]'}`}>
+        <div className="overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] h-[calc(100vh-80px)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
             {/* Content Area */}
-            <main className="flex-1 px-4 md:px-14 lg:px-32 py-12 md:py-20">
+            <main className="flex-1 overflow-y-auto scrollbar-hide px-4 md:px-14 lg:px-32 py-10 md:py-16">
                 <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} category={categoryQuery} />
+                        <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} />
                     </aside>
 
                     {/* Content Column */}
@@ -56,7 +52,7 @@ function BackupContactContent() {
 
                         {/* Mobile Sidebar */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} category={categoryQuery} />
+                            <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} />
                         </div>
 
                         {/* Form Area */}
@@ -83,7 +79,7 @@ function BackupContactContent() {
                                         {showOtp && (
                                             <button
                                                 onClick={() => setShowOtp(false)}
-                                                className={`mt-2 text-[14px] font-medium ${isPlay ? 'text-[#E7C200]' : 'text-[#5331EA]'} `}
+                                                className="mt-2 text-[14px] font-medium text-[#5331EA]"
                                             >
                                                 Change email
                                             </button>
@@ -119,16 +115,16 @@ function BackupContactContent() {
                                                         value={digit}
                                                         onChange={(e) => handleOtpChange(index, e.target.value)}
                                                         onKeyDown={(e) => handleKeyDown(index, e)}
-                                                        className={`w-10 h-10 md:w-12 md:h-12 border ${digit ? (isPlay ? 'border-[#E7C200]' : 'border-[#5331EA]') : 'border-black/30'} rounded-[12px] text-center text-xl font-bold focus:outline-none ${isPlay ? 'focus:border-[#E7C200]' : 'focus:border-[#5331EA]'} bg-white transition-colors mt-3`}
+                                                        className={`w-10 h-10 md:w-12 md:h-12 border ${digit ? 'border-[#5331EA]' : 'border-black/30'} rounded-[12px] text-center text-xl font-bold focus:outline-none focus:border-[#5331EA] bg-white transition-colors mt-3`}
                                                     />
                                                 ))}
                                             </div>
-                                            <button className={`text-[14px] font-medium ${isPlay ? 'text-[#E7C200]' : 'text-[#5331EA]'} `}>
+                                            <button className="text-[14px] font-medium text-[#5331EA]">
                                                 Resend OTP
                                             </button>
                                         </div>
 
-                                        <Link href={`/list-your-events/setup/agreement${categoryQuery ? `?category=${categoryQuery}` : ''}`}>
+                                        <Link href="/list-your-events/setup/agreement">
                                             <button className="bg-black text-white h-[48px] px-8 rounded-[15px] text-[15px] font-medium flex items-center justify-center gap-2 transition-all active:scale-95 mt-4">
                                                 Verify & Continue <ChevronRight size={18} />
                                             </button>
@@ -141,13 +137,5 @@ function BackupContactContent() {
                 </div>
             </main>
         </div>
-    );
-}
-
-export default function BackupContactPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen animate-pulse bg-zinc-50" />}>
-            <BackupContactContent />
-        </Suspense>
     );
 }

@@ -1,10 +1,9 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 
 const categories = [
     { id: 'individual', label: 'Individual' },
@@ -13,22 +12,19 @@ const categories = [
     { id: 'non-profit', label: 'Non-profit Organization' },
 ];
 
-function AccountSetupContent() {
+export default function AccountSetupPage() {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-    const searchParams = useSearchParams();
-    const categoryQuery = searchParams.get('category');
-    const isPlay = categoryQuery === 'play';
 
     return (
-        <div className={`min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] transition-colors duration-500 ${isPlay ? 'bg-[#FFF1A81A]' : ''}`}>
+        <div className="overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] h-[calc(100vh-80px)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
             {/* Content Area */}
-            <main className="flex-1 px-4 md:px-14 lg:px-32 py-12 md:py-20">
+            <main className="flex-1 overflow-y-auto scrollbar-hide px-4 md:px-14 lg:px-32 py-10 md:py-16">
                 <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-36 hidden lg:block">
-                        <SetupSidebar currentStep="01" category={categoryQuery} />
+                        <SetupSidebar currentStep="01" />
                     </aside>
 
                     {/* Content Column */}
@@ -42,7 +38,7 @@ function AccountSetupContent() {
                         </div>
                         {/* Mobile Sidebar - visible only on small screens */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="01" category={categoryQuery} />
+                            <SetupSidebar currentStep="01" />
                         </div>
 
                         {/* Form Section */}
@@ -57,7 +53,7 @@ function AccountSetupContent() {
                                     <label className="text-[16px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
                                         Category
                                     </label>
-                                    <div className="relative max-w-sm ml-[-3px]">
+                                    <div className="relative w-[348px] ml-[-3px]">
                                         <div
                                             onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                                             className="w-full h-12 px-4 border border-zinc-200 rounded-[15px] flex items-center justify-between cursor-pointer hover:border-zinc-500 transition-colors"
@@ -136,7 +132,7 @@ function AccountSetupContent() {
 
                             {/* Continue Button */}
                             <div className="pt-2 flex justify-center md:justify-start">
-                                <Link href={`/list-your-events/setup/gst${categoryQuery ? `?category=${categoryQuery}` : ''}`} className="block w-full max-w-[110px]">
+                                <Link href="/list-your-events/setup/gst" className="block w-full max-w-[110px]">
                                     <button className="bg-black text-white w-full h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95">
                                         Continue<ChevronRight size={18} className="transition-transform" />
                                     </button>
@@ -147,13 +143,5 @@ function AccountSetupContent() {
                 </div>
             </main>
         </div>
-    );
-}
-
-export default function AccountSetupPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen animate-pulse bg-zinc-50" />}>
-            <AccountSetupContent />
-        </Suspense>
     );
 }

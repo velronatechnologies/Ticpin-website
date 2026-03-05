@@ -1,24 +1,20 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React from 'react';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
-function AgreementContent() {
-    const searchParams = useSearchParams();
-    const category = searchParams.get('category');
-    const isPlay = category === 'play';
-
+export default function AgreementPage() {
     return (
-        <div className={`min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] transition-colors duration-500 ${isPlay ? 'bg-[#FFF1A81A]' : 'bg-[#FBFBFF]'}`}>
+        <div className="overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] h-[calc(100vh-80px)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
             {/* Content Area */}
-            <main className="flex-1 px-4 md:px-14 lg:px-32 py-12 md:py-20">
+            <main className="flex-1 overflow-y-auto scrollbar-hide px-4 md:px-14 lg:px-32 py-10 md:py-16">
                 <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="05" completedSteps={['01', '02', '03', '04']} category={category} />
+                        <SetupSidebar currentStep="05" completedSteps={['01', '02', '03', '04']} />
                     </aside>
 
                     {/* Content Column */}
@@ -33,7 +29,7 @@ function AgreementContent() {
 
                         {/* Mobile Sidebar */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="05" completedSteps={['01', '02', '03', '04']} category={category} />
+                            <SetupSidebar currentStep="05" completedSteps={['01', '02', '03', '04']} />
                         </div>
 
                         {/* Form Area */}
@@ -42,27 +38,21 @@ function AgreementContent() {
                                 Agreement
                             </h1>
 
-                            <p className="text-[14px] text-[#686868] font-medium leading-relaxed max-w-2xl" style={{ fontFamily: 'Anek Latin' }}>
-                                Almost there! Complete your onboarding by signing your digital agreement with Ticpin.
+                            <p className="text-[16px] text-[#686868] font-medium leading-relaxed max-w-2xl" style={{ fontFamily: 'Anek Latin' }}>
+                                <span className="text-[#5331EA]"> Almost there!</span> Complete your onboarding by signing your digital agreement with Ticpin.
                             </p>
 
                             <div className="pt-2 flex justify-center md:justify-start">
-                                <button className="bg-black text-white w-full max-w-[160px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95">
-                                    Sign agreement<ChevronRight size={18} className="transition-transform" />
-                                </button>
+                                <Link href="/organizer/dashboard?category=events" className="w-full max-w-[160px]">
+                                    <button className="bg-black text-white w-full h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95">
+                                        Sign agreement<ChevronRight size={18} className="transition-transform" />
+                                    </button>
+                                </Link>
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
         </div>
-    );
-}
-
-export default function AgreementPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen animate-pulse bg-zinc-50" />}>
-            <AgreementContent />
-        </Suspense>
     );
 }

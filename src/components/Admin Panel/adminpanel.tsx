@@ -84,8 +84,8 @@ export default function AdminPanel() {
                     <Card title="User Details" iconSrc="/admin panel/user-settingicon.svg" href="/admin/user-details" />
                     <Card title="Events" iconSrc="/admin panel/event-icon.svg" href="/admin/events" />
                     <Card title="Dining" iconSrc="/admin panel/dining-icon.svg" />
-                    <Card title="Play" iconSrc="/admin panel/cricket-icon.svg" />
-                    <Card title="Chat Support" iconSrc="/admin panel/chat-icon.svg" />
+                    <Card title="Play" iconSrc="/admin panel/cricket-icon.svg" href="/admin/play" />
+                    <Card title="Chat Support" iconSrc="/admin panel/chat-icon.svg" href="/admin/ChatSupportPage" />
                     <Card title="Push Notification" iconSrc="/admin panel/notification-icon.svg" href="/admin/push-notification" />
                     <Card title="Offers / Coupons" iconSrc="/admin panel/pricetag-icon.svg" href="/admin/offers" />
                     <Card title="Ticket" iconSrc="/admin panel/ticket-icon.svg" />

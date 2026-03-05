@@ -40,17 +40,18 @@ export default function DiningPage() {
     const [activeFilter, setActiveFilter] = useState('Filters');
 
     return (
-        <div className="min-h-screen bg-[#f8f4ff] font-sans text-sm md:text-base">
+        <div className="min-h-screen bg-gradient-to-br from-purple-100 via-purple-50 to-pink-50">
+
             <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 py-8 md:py-12 space-y-12 md:space-y-20">
                 <section>
                     <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Dining</h2>
                     <div className="flex flex-wrap gap-4 md:gap-6 pb-4">
                         {/* Premium Dining */}
-                        <Link href="/dining/premium-dining" className="block flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity">
+                        <Link href="/dining/premium-dining" className="block flex-shrink-0 cursor-pointer">
                             <div
-                                className="rounded-[30px] border border-[#686868] flex flex-col group overflow-hidden relative"
+                                className="rounded-[30px] border border-transparent flex flex-col group overflow-hidden relative"
                                 style={{
-                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
                                     width: '170px',
                                     height: '252px'
                                 }}
@@ -79,9 +80,9 @@ export default function DiningPage() {
 
                         {/* Club & Chill */}
                         <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            className="flex-shrink-0 rounded-[30px] border border-transparent flex flex-col group cursor-pointer overflow-hidden relative"
                             style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
                                 width: '170px',
                                 height: '252px'
                             }}
@@ -109,9 +110,9 @@ export default function DiningPage() {
 
                         {/* Pure Veg */}
                         <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            className="flex-shrink-0 rounded-[30px] border border-transparent flex flex-col group cursor-pointer overflow-hidden relative"
                             style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
                                 width: '170px',
                                 height: '252px'
                             }}
@@ -139,9 +140,9 @@ export default function DiningPage() {
 
                         {/* Cafe Vibes */}
                         <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            className="flex-shrink-0 rounded-[30px] border border-transparent flex flex-col group cursor-pointer overflow-hidden relative"
                             style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
                                 width: '170px',
                                 height: '252px'
                             }}
@@ -169,9 +170,9 @@ export default function DiningPage() {
 
                         {/* Family Favourites */}
                         <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            className="flex-shrink-0 rounded-[30px] border border-transparent flex flex-col group cursor-pointer overflow-hidden relative"
                             style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
                                 width: '170px',
                                 height: '252px'
                             }}
@@ -199,9 +200,9 @@ export default function DiningPage() {
 
                         {/* Bar & Bites */}
                         <div
-                            className="flex-shrink-0 rounded-[30px] border border-[#686868] flex flex-col group cursor-pointer overflow-hidden relative"
+                            className="flex-shrink-0 rounded-[30px] border border-transparent flex flex-col group cursor-pointer overflow-hidden relative"
                             style={{
-                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%)',
+                                background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
                                 width: '170px',
                                 height: '252px'
                             }}

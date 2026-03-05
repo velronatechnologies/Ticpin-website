@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Anek_Latin, Anek_Tamil, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 
@@ -21,8 +22,24 @@ const anekTamil = Anek_Tamil({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+const anekTamilCondensed = localFont({
+  src: [
+    {
+      path: './fonts/AnekTamil_Condensed-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: './fonts/AnekTamil_Condensed-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  variable: "--font-anek-tamil-condensed",
+});
+
 export const metadata: Metadata = {
-  title: "Ticpin - Dining, Events, Play",
+  title: "Ticpin - Explore Dining, Events, Play",
   description: "Your gateway to world-class sports and entertainment.",
 };
 
@@ -33,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${anekLatin.variable} ${inter.variable} ${anekTamil.variable} font-sans antialiased`}>
+      <body className={`${anekLatin.variable} ${inter.variable} ${anekTamil.variable} ${anekTamilCondensed.variable} font-sans antialiased`}>
         <Navbar />
         {children}
       </body>

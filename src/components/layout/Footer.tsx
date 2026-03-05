@@ -10,17 +10,17 @@ export default function Footer() {
         if (pathname.startsWith('/dining')) {
             return {
                 name: 'List your dining',
-                href: '/list-your-events?category=dining'
+                href: '/list-your-dining'
             };
         } else if (pathname.startsWith('/play')) {
             return {
                 name: 'List your play/courts',
-                href: '/list-your-events?category=play'
+                href: '/list-your-play'
             };
         } else {
             return {
                 name: 'List your events',
-                href: '/list-your-events?category=events'
+                href: '/list-your-events'
             };
         }
     };

@@ -1,25 +1,20 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 
-function GstSelectionContent() {
-    const searchParams = useSearchParams();
-    const category = searchParams.get('category');
-    const isPlay = category === 'play';
-
+export default function GstSelectionPage() {
     return (
-        <div className={`min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] transition-colors duration-500 ${isPlay ? 'bg-[#FFF1A81A]' : 'bg-[#FBFBFF]'}`}>
+        <div className="overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] h-[calc(100vh-80px)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
             {/* Content Area */}
-            <main className="flex-1 px-4 md:px-14 lg:px-32 py-12 md:py-20">
+            <main className="flex-1 overflow-y-auto scrollbar-hide px-4 md:px-14 lg:px-32 py-10 md:py-16">
                 <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="02" completedSteps={['01']} category={category} />
+                        <SetupSidebar currentStep="02" completedSteps={['01']} />
                     </aside>
 
                     {/* Content Column */}
@@ -34,7 +29,7 @@ function GstSelectionContent() {
 
                         {/* Mobile Sidebar */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="02" completedSteps={['01']} category={category} />
+                            <SetupSidebar currentStep="02" completedSteps={['01']} />
                         </div>
 
                         {/* Form Section */}
@@ -80,7 +75,7 @@ function GstSelectionContent() {
 
                             {/* Continue Button */}
                             <div className="pt-2 flex justify-center md:justify-start">
-                                <Link href={`/list-your-events/setup/bank${category ? `?category=${category}` : ''}`} className="block w-full max-w-[110px]">
+                                <Link href="/list-your-events/setup/bank" className="block w-full max-w-[110px]">
                                     <button className="bg-black text-white w-full h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95">
                                         Continue<ChevronRight size={18} className="transition-transform" />
                                     </button>
@@ -91,13 +86,5 @@ function GstSelectionContent() {
                 </div>
             </main>
         </div>
-    );
-}
-
-export default function GstSelectionPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen animate-pulse bg-zinc-50" />}>
-            <GstSelectionContent />
-        </Suspense>
     );
 }
