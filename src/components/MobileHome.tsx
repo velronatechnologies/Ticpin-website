@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, MapPin, ChevronRight, PlayCircle, Star, Bell, Volume2, Flame } from 'lucide-react';
+import { Search, MapPin, ChevronRight, PlayCircle, Star, Bell } from 'lucide-react';
 import { artists, events } from '@/data/mockData';
 
 // --- Custom Components & Styles ---
@@ -14,11 +14,19 @@ export default function MobileHome() {
     const placeholders = ["events", "dining", "play"];
     const carouselRef = useRef<HTMLDivElement>(null);
     const limelightRef = useRef<HTMLDivElement>(null);
+    const playRef = useRef<HTMLDivElement>(null);
     const [scrollX, setScrollX] = useState(0);
     const [limelightScrollX, setLimelightScrollX] = useState(0);
+    const [playScrollX, setPlayScrollX] = useState(0);
     const scrollEvents = [...events.slice(0, 5), ...events.slice(0, 5), ...events.slice(0, 5)];
     const limelightItems = [1, 2, 3];
+    const playItems = [
+        { id: 1, name: "Champions Turf", location: "HADAPSAR, PUNE" },
+        { id: 2, name: "Winner's Arena", location: "KOTHRUD, PUNE" },
+        { id: 3, name: "Pro Turf", location: "BANER, PUNE" }
+    ];
     const scrollLimelight = [...limelightItems, ...limelightItems, ...limelightItems];
+    const scrollPlay = [...playItems, ...playItems, ...playItems];
 
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
@@ -50,6 +58,14 @@ export default function MobileHome() {
             const initialScroll = cardWidth * itemCount;
             container.scrollLeft = initialScroll;
             setLimelightScrollX(initialScroll);
+        }
+        if (playRef.current) {
+            const container = playRef.current;
+            const cardWidth = 326 + 24; // w-[326px] + gap-6 (24px)
+            const itemCount = playItems.length;
+            const initialScroll = cardWidth * itemCount;
+            container.scrollLeft = initialScroll;
+            setPlayScrollX(initialScroll);
         }
     }, []);
 
@@ -85,9 +101,25 @@ export default function MobileHome() {
         }
     };
 
+    const handlePlayScroll = () => {
+        if (!playRef.current) return;
+        const container = playRef.current;
+        const cardWidth = 326 + 24;
+        const itemCount = playItems.length;
+        const thirdWidth = cardWidth * itemCount;
+
+        setPlayScrollX(container.scrollLeft);
+
+        if (container.scrollLeft <= 0) {
+            container.scrollLeft = thirdWidth;
+        } else if (container.scrollLeft >= thirdWidth * 2) {
+            container.scrollLeft = thirdWidth;
+        }
+    };
+
     return (
         <div
-            className="md:hidden min-h-screen pb-24 w-full overflow-x-hidden font-sans selection:bg-[#866BFF]/20"
+            className="md:hidden min-h-screen w-full overflow-x-hidden font-sans selection:bg-[#866BFF]/20"
             style={{ background: 'white' }}
         >
             {/* 1. Header Section */}
@@ -97,7 +129,7 @@ export default function MobileHome() {
                         <MapPin size={17} className="text-zinc-800" />
                         <span className="text-[15px] font-medium text-black leading-none">Location Name</span>
                     </div>
-                    <div className="w-[31px] h-[31px] rounded-full bg-white flex items-center justify-center overflow-hidden">
+                    <div className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden">
                         <img src="/profile icon.svg" alt="Profile" className="w-5 h-5" />
                     </div>
                 </div>
@@ -131,15 +163,15 @@ export default function MobileHome() {
                 </div>
 
                 {/* 3. Horizontal Divider Line 60 */}
-                <div className="w-full h-[2px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
+                <div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
 
                 {/* 4. Categories Section - Rectangle 23, 254, 255 */}
                 <div className="grid grid-cols-3 gap-4 px-1">
                     {/* Dining */}
                     <div className="flex flex-col items-center">
                         <div
-                            className="w-full aspect-[106/125] rounded-[25px] flex flex-col items-center justify-center gap-2"
-                            style={{ background: 'linear-gradient(360deg, #866BFF -49.4%, #EDEDED 50%)' }}
+                            className="w-full aspect-[106/125] rounded-[25px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2 "
+                            style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
                         >
                             <img src="/mobile_icons/Dining 1.svg" alt="Dining" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">DINING</span>
@@ -149,10 +181,10 @@ export default function MobileHome() {
                     {/* Events */}
                     <div className="flex flex-col items-center">
                         <div
-                            className="w-full aspect-[106/125] rounded-[30px] flex flex-col items-center justify-center gap-2"
-                            style={{ background: 'linear-gradient(360deg, #866BFF -49.4%, #EDEDED 50%)' }}
+                            className="w-full aspect-[106/125] rounded-[30px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
                         >
-                            <img src="/mobile_icons/Events 1.svg" alt="Events" className="w-[50%] h-[50%] object-contain" />
+                            <img src="/mobile_icons/Events 1.svg" alt="Events" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">EVENTS</span>
                         </div>
                     </div>
@@ -160,10 +192,10 @@ export default function MobileHome() {
                     {/* Play */}
                     <div className="flex flex-col items-center">
                         <div
-                            className="w-full aspect-[106/125] rounded-[30px] flex flex-col items-center justify-center gap-2"
-                            style={{ background: 'linear-gradient(360deg, #E7C200 -49.4%, #EDEDED 50%)' }}
+                            className="w-full aspect-[106/125] rounded-[30px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #FFF4C1 100%)' }}
                         >
-                            <img src="/mobile_icons/Pickelball 1.svg" alt="Play" className="w-[50%] h-[50%] object-contain" />
+                            <img src="/mobile_icons/Pickelball 1.svg" alt="Play" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">PLAY</span>
                         </div>
                     </div>
@@ -270,8 +302,8 @@ export default function MobileHome() {
                                         )}
 
                                         {/* Overlay Icons */}
-                                        <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/10 z-20">
-                                            <Volume2 size={16} className="text-white" />
+                                        <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white flex items-center justify-center border border-white">
+                                            <img src="/mobile_icons/fluent_speaker-2-28-regular.svg" alt="Mute/Unmute" className="w-[20px] h-[20px]" />
                                         </div>
                                     </div>
 
@@ -280,7 +312,7 @@ export default function MobileHome() {
                                         <p className="text-[12px] font-medium text-[#5331EA] mb-1.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                             {event.date ? `${event.date.toUpperCase()}, ${event.time}` : "{DAY}, {DATE}, {TIME}"}
                                         </p>
-                                        <h3 className="text-[20px] font-medium text-black uppercase leading-[1.1] tracking-tight truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                        <h3 className="text-[20px] font-medium text-black uppercase leading-[1.1] tracking-tight line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                             {event.name || "{EVENT NAME}"}
                                         </h3>
                                         <p className="text-[12px] font-regular text-[#8E8E8E] mt-2 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
@@ -292,7 +324,7 @@ export default function MobileHome() {
 
                                         {/* Fire/Hot Icon */}
                                         <div className="absolute top-5 right-5 w-10 h-10 rounded-[12px] bg-[#EFEFEF] flex items-center justify-center mt-[-10px]">
-                                            <Flame size={20} className="text-black" />
+                                            <img src="/mobile_icons/Vector 2.svg" alt="Hot" className="w-[20px] h-[20px] object-contain" />
                                         </div>
                                     </div>
                                 </div>
@@ -303,7 +335,7 @@ export default function MobileHome() {
 
                 {/* Artist Section */}
                 <section>
-                    <h2 className="text-[25px] font-medium text-black text-center mb-8 uppercase tracking-normal mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>ARTIST</h2>
+                    <h2 className="text-[22px] font-medium text-black text-center mb-8 uppercase tracking-normal mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>ARTIST</h2>
                     <div className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x ml-[20px]">
                         {artists.map((artist) => (
                             <div key={artist.id} className="flex-shrink-0 w-[138px] snap-start">
@@ -319,7 +351,7 @@ export default function MobileHome() {
 
                 {/* In Limelight Section */}
                 <section>
-                    <h2 className="text-[25px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>IN LIMELIGHT</h2>
+                    <h2 className="text-[22px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>IN LIMELIGHT</h2>
                     <div
                         ref={limelightRef}
                         onScroll={handleLimelightScroll}
@@ -361,7 +393,7 @@ export default function MobileHome() {
                                     </div>
                                     <div className="p-5 flex justify-between items-end">
                                         <div>
-                                            <h3 className="text-[17px] font-bold text-black uppercase" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Grand Dining Space</h3>
+                                            <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Grand Dining Space</h3>
                                             <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>KOREGAON PARK</p>
                                         </div>
                                         <div className="w-8 h-8 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-400">
@@ -375,56 +407,116 @@ export default function MobileHome() {
                 </section>
 
                 {/* Offers Section */}
-                <section className="px-6">
+                <section className="px-6 mt-[-50px]">
                     <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>OFFERS</h2>
-                    <div className="w-full h-[109px] bg-white rounded-[15px] border border-[#AEAEAE] relative overflow-hidden flex items-center px-8">
-                        <div className="absolute left-0 top-0 w-2 h-full bg-[#AC9BF7]" />
-                        <div>
-                            <p className="text-[17px] font-bold text-black uppercase" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Weekend Special</p>
-                            <p className="text-[12px] font-medium text-zinc-400 uppercase tracking-widest mt-1 underline" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Claim your badge</p>
-                        </div>
-                        <ChevronRight className="ml-auto text-zinc-300" />
+                    <div className="w-full h-[109px] bg-[#AC9BF7] rounded-[15px] border border-[#AC9BF7] relative overflow-hidden flex items-center px-8 mt-[-10px]">
                     </div>
                 </section>
 
                 {/* Play Near You Section */}
                 <section>
-                    <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>PLAY NEAR YOU</h2>
-                    <div className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x">
-                        {[1, 2].map((i) => (
-                            <div key={i} className="flex-shrink-0 w-[326px] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center p-0.5">
-                                <div className="h-[182px] bg-zinc-200 rounded-t-[13px] flex items-center justify-center text-zinc-400 font-bold uppercase tracking-widest text-xs">TURF IMAGE</div>
-                                <div className="p-5 flex justify-between items-end">
-                                    <div>
-                                        <h3 className="text-[17px] font-bold text-black uppercase" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Champions Turf</h3>
-                                        <p className="text-[12px] font-medium text-zinc-500 uppercase" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>HADAPSAR, PUNE</p>
+                    <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>PLAY NEAR YOU</h2>
+                    <div
+                        ref={playRef}
+                        onScroll={handlePlayScroll}
+                        className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-4"
+                    >
+                        {scrollPlay.map((item, idx) => {
+                            // Calculate scale and opacity based on distance from center
+                            const cardWidth = 326;
+                            const gap = 24;
+                            const totalCardWidth = cardWidth + gap;
+                            const containerWidth = windowWidth;
+                            const scrollCenter = playScrollX + containerWidth / 2;
+                            const cardCenter = (idx * totalCardWidth) + (cardWidth / 2) + 24; // 24 for px-6
+
+                            const distance = Math.abs(scrollCenter - cardCenter);
+                            const threshold = totalCardWidth;
+                            const t = Math.min(distance / threshold, 1);
+
+                            const scale = 1.05 - t * 0.05; // Active 1.05, Side 1.0
+                            const opacity = 1 - t * 0.2; // Active 1, Side 0.8
+
+                            return (
+                                <div
+                                    key={`play-${idx}`}
+                                    className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden p-[1px]"
+                                    style={{
+                                        transform: `scale(${scale})`,
+                                        opacity: opacity
+                                    }}
+                                >
+                                    {/* Top Image Section */}
+                                    <div className="w-full aspect-[326/182] rounded-t-[19px] flex items-center justify-center text-zinc-400 font-bold uppercase tracking-widest text-xs relative">
+                                        TURF IMAGE
                                     </div>
-                                    <button
-                                        className="h-[37px] px-6 bg-black text-white text-[20px] font-medium rounded-[7px] uppercase transition-transform active:scale-95 shadow-lg shadow-black/10"
-                                        style={{ fontFamily: "'Anek Tamil Condensed', sans-serif" }}
-                                    >
-                                        BOOK SLOTS
-                                    </button>
+
+                                    {/* Horizontal Divider */}
+                                    <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
+
+                                    {/* Bottom Details Section */}
+                                    <div className="p-5 flex justify-between items-center bg-white rounded-b-[19px]">
+                                        <div className="flex flex-col gap-1">
+                                            <h3 className="text-[19px] font-medium text-black uppercase leading-none" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {item.name}
+                                            </h3>
+                                            <div className="flex items-center gap-1.5 -ml-0.5">
+                                                <span className="text-[14px] font-medium text-[#866BFF] tracking-tighter">--</span>
+                                                <Star size={12} className="text-[#866BFF] fill-[#866BFF]" />
+                                            </div>
+                                            <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {item.location}
+                                            </p>
+                                        </div>
+                                        <button
+                                            className="h-[42px] px-3 bg-black text-white text-[24px] font-medium rounded-[10px] uppercase transition-transform active:scale-95 leading-none flex items-center justify-center mb-5"
+                                            style={{ fontFamily: "var(--font-anek-tamil-condensed), sans-serif" }}
+                                        >
+                                            BOOK SLOTS
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
 
                 {/* 6. Footer Banner (Ticpin Pass) */}
-                <div className="px-6">
-                    <div className="rounded-[15px] overflow-hidden shadow-xl border border-[#AEAEAE] group relative h-[109px]">
-                        <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-                        <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px] flex items-center justify-center px-8">
-                            <div className="text-center">
-                                <h2 className="text-white font-medium text-[20px] uppercase tracking-tighter shadow-sm">TICPIN PASS</h2>
-                                <p className="text-white/80 text-[10px] font-medium uppercase tracking-widest mt-1 underline">Unlock Exclusive Access</p>
-                            </div>
-                        </div>
+                <div className="px-6 ">
+                    <div className="rounded-[15px] overflow-hidden group relative h-[120px] mt-[-25px]">
+                        <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full" />
                     </div>
                 </div>
 
             </main>
-        </div >
+
+            {/* 7. Footer Section */}
+            <footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center">
+                <div className="mb-6">
+                    <img src="/ticpin-logo-white1.svg" alt="TICPIN" className="h-[32px] w-auto" />
+                </div>
+
+                <div className="flex flex-col gap-4 mb-8 font-medium">
+                    <Link href="/terms" className="text-white text-[15px] hover:opacity-70 transition-opacity">Terms & Conditions</Link>
+                    <Link href="/privacy" className="text-white text-[15px] hover:opacity-70 transition-opacity">Privacy Policy</Link>
+                    <Link href="/contact" className="text-white text-[15px] hover:opacity-70 transition-opacity">Contact Us</Link>
+                    <Link href="/list-your-events" className="text-white text-[15px] hover:opacity-70 transition-opacity">List your events</Link>
+                </div>
+
+                <div className="w-full h-[0.5px] bg-[#686868] mb-8" />
+
+                <p className="text-[#686868] text-[11px] leading-[1.5] mb-8 px-2 font-medium">
+                    By accessing this page, you confirm that you have read, understood, and agreed to our Terms of Service, Cookie Policy, Privacy Policy, and Content Guidelines. All rights reserved.
+                </p>
+
+                <div className="flex gap-2 items-center">
+                    <Link href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412"><img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8" /></Link>
+                    <Link href="https://www.facebook.com/profile.php?id=61579518933930#"><img src="/social icons/facebook.svg" alt="Facebook" className="w-8 h-8" /></Link>
+                    <Link href="https://www.instagram.com/ticpinindia/"><img src="/social icons/instagram.svg" alt="Instagram" className="w-8 h-8" /></Link>
+                    <Link href="https://x.com/ticpin"><img src="/social icons/x.svg" alt="X" className="w-8 h-8" /></Link>
+                    <Link href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw"><img src="/social icons/youtube.svg" alt="YouTube" className="w-8 h-8" /></Link>
+                </div>
+            </footer>
+        </div>
     );
 }
