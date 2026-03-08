@@ -42,11 +42,15 @@ function fmtDate(iso: string) {
 export default function PlayReviewPage() {
     const router = useRouter();
     const params = useParams();
-    const id = params?.id as string;
+    const venueName = params?.name as string;
     const session = useUserSession();
 
     const [cart, setCart] = useState<CartData | null>(null);
     const [step, setStep] = useState<'review' | 'billing' | 'success'>('review');
+
+    // Locked grand total: set from persisted pending data after a Cashfree redirect,
+    // so the success screen always shows the exact amount the user was charged.
+    const [lockedGrandTotal, setLockedGrandTotal] = useState<number | null>(null);
 
     // Offers
     const [offers, setOffers] = useState<OfferItem[]>([]);
@@ -109,6 +113,9 @@ export default function PlayReviewPage() {
                         setCart(p.cart);
                         setStep('billing');
                         setBookingLoading(true);
+                        // Restore the exact grand total that was charged so the success
+                        // screen shows the correct amount even after a Cashfree redirect.
+                        if (typeof p.grandTotal === 'number') setLockedGrandTotal(p.grandTotal);
                         window.history.replaceState(null, '', window.location.pathname);
                         setTimeout(() => {
                             completeBooking(p.orderID, 'cashfree', p.cart, p.email, p.sessionId,
@@ -141,12 +148,12 @@ export default function PlayReviewPage() {
 
     // Fetch offers + coupons
     useEffect(() => {
-        if (!id) return;
-        bookingApi.getPlayOffers(id).then(setOffers).catch(() => setOffers([]));
+        if (!venueName) return;
+        bookingApi.getPlayOffers(venueName).then(setOffers).catch(() => setOffers([]));
         bookingApi.getCouponsByCategory('play', session?.id).then(res => {
             setAvailableCoupons(Array.isArray(res) ? res : []);
         }).catch(() => setAvailableCoupons([]));
-    }, [id, session?.id]);
+    }, [venueName, session?.id]);
 
     const orderAmount = cart?.totalPrice ?? 0;
     const bookingFee = Math.round(orderAmount * 0.1);
@@ -178,7 +185,7 @@ export default function PlayReviewPage() {
         setCouponError('');
         setCouponSuccess('');
         try {
-            const result = await bookingApi.validateCoupon(c, id, orderAmount, session?.id);
+            const result = await bookingApi.validateCoupon(c, venueName, orderAmount, session?.id);
             setCouponDiscount(Math.round(result.discount_amount));
             setAppliedCoupon(c.toUpperCase());
             setCouponSuccess(`✓ Coupon applied! You save ₹${Math.round(result.discount_amount)}`);
@@ -254,6 +261,55 @@ export default function PlayReviewPage() {
         if (!billing.pincode.trim() || billing.pincode.length < 6) { setBookingError('Please enter a valid PIN code'); return; }
         if (!acceptedTerms) { setBookingError('Please accept the terms and conditions'); return; }
         if (!cart) return;
+
+        // ── Re-check slot availability before charging the user ──────────────
+        // Fetch the latest booked slots so we catch any booking made since the
+        // user landed on the booking page.
+        try {
+            const freshRes = await fetch(`/backend/api/play/${encodeURIComponent(venueName)}/booked-slots?date=${cart.date}`, { credentials: 'include' });
+            if (freshRes.ok) {
+                const freshData = await freshRes.json();
+                const freshBooked: string[] = Array.isArray(freshData.booked_slots) ? freshData.booked_slots : [];
+
+                // Parse all 30-min slot labels the cart spans
+                const parseStartMin = (label: string) => {
+                    const part = label.split(/\s*-\s*/)[0].trim();
+                    const m = part.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                    if (!m) return NaN;
+                    let h = parseInt(m[1], 10);
+                    const min = parseInt(m[2], 10);
+                    if (m[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+                    if (m[3].toUpperCase() === 'AM' && h === 12) h = 0;
+                    return h * 60 + min;
+                };
+                const fmtMin = (mins: number) => {
+                    let h = Math.floor(mins / 60); const m = mins % 60;
+                    const p = h < 12 || h === 24 ? 'AM' : 'PM';
+                    let dh = h % 12; if (dh === 0) dh = 12;
+                    return `${String(dh).padStart(2, '0')}:${String(m).padStart(2, '0')} ${p}`;
+                };
+
+                const startMin = parseStartMin(cart.slot);
+                if (!isNaN(startMin)) {
+                    for (const ticket of cart.tickets) {
+                        const courtName = ticket.category ?? ticket.name;
+                        for (let i = 0; i < cart.duration; i++) {
+                            const slotLabel = `${fmtMin(startMin + i * 30)} - ${fmtMin(startMin + (i + 1) * 30)}`;
+                            if (freshBooked.includes(`${slotLabel}|${courtName}`)) {
+                                setBookingError(
+                                    `"${courtName}" at ${slotLabel} was just booked by someone else. Please go back and select a different slot.`
+                                );
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Network error during re-check — let the backend be the final guard.
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         setBookingLoading(true);
         setBookingError('');
 
@@ -348,7 +404,7 @@ export default function PlayReviewPage() {
                             ))}
                         </div>
                     )}
-                    <p className="text-[22px] font-bold text-black mb-6">₹{grandTotal.toLocaleString('en-IN')} paid</p>
+                    <p className="text-[22px] font-bold text-black mb-6">₹{(lockedGrandTotal ?? grandTotal).toLocaleString('en-IN')} paid</p>
                     <button
                         onClick={() => router.push('/')}
                         className="w-full h-[50px] bg-black text-white rounded-[12px] font-semibold text-[16px] hover:opacity-90 transition-all"

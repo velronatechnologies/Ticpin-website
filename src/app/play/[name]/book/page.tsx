@@ -97,7 +97,7 @@ const PERIOD_ICONS: Record<string, React.FC<{ size?: number; strokeWidth?: numbe
 export default function PlayBookPage() {
     const router = useRouter();
     const params = useParams();
-    const id = params?.id as string;
+    const venueName = params?.name as string;
     const session = useUserSession();
 
     const [venue, setVenue] = useState<RealPlay | null>(null);
@@ -134,31 +134,32 @@ export default function PlayBookPage() {
 
     // Fetch venue
     useEffect(() => {
-        if (!id) return;
-        fetch(`/backend/api/play/${id}`, { credentials: 'include' })
+        if (!venueName) return;
+        fetch(`/backend/api/play/${encodeURIComponent(venueName)}`, { credentials: 'include' })
             .then(r => r.json())
             .then((data: RealPlay) => {
                 setVenue(data);
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    }, [id]);
+    }, [venueName]);
 
     // Fetch booked slots whenever venue or date changes
     useEffect(() => {
-        if (!id || !selectedDate) return;
+        if (!venueName || !selectedDate) return;
         setLoadingSlots(true);
-        // Clear both slot AND court selection when date changes
+        // Clear slot, court, and period tab when date changes
         setSelectedSlot(null);
         setSelectedCourtIds([]);
-        fetch(`/backend/api/play/${id}/booked-slots?date=${selectedDate}`, { credentials: 'include' })
+        setActivePeriod('morning');
+        fetch(`/backend/api/play/${encodeURIComponent(venueName)}/booked-slots?date=${selectedDate}`, { credentials: 'include' })
             .then(r => r.json())
             .then(data => {
                 setBookedSlots(Array.isArray(data.booked_slots) ? data.booked_slots : []);
             })
             .catch(() => setBookedSlots([]))
             .finally(() => setLoadingSlots(false));
-    }, [id, selectedDate]);
+    }, [venueName, selectedDate]);
 
     const toggleCourt = (uniqueId: string) => {
         setSelectedCourtIds([uniqueId]);
@@ -171,10 +172,12 @@ export default function PlayBookPage() {
         setSelectedCourtIds([]);
     }, [duration]);
 
+    // Converts minutes-since-midnight → "HH:MM AM/PM" — identical rule to backend formatTimeMins.
+    // h >= 12 → PM  (so 12:00 noon = PM, 00:00 midnight = AM)
     const formatTime = (mins: number) => {
-        let h = Math.floor(mins / 60);
+        const h = Math.floor(mins / 60);
         const m = mins % 60;
-        const period = h < 12 || h === 24 ? 'AM' : 'PM';
+        const period = h >= 12 ? 'PM' : 'AM';
         let displayH = h % 12;
         if (displayH === 0) displayH = 12;
         return `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
@@ -183,7 +186,7 @@ export default function PlayBookPage() {
     // Derive opening/closing minutes robustly — try every possible source,
     // fall back to 06:00 AM – 11:00 PM so slots ALWAYS render.
     const resolveVenueTimes = (): { start: number; end: number } => {
-        const FALLBACK = { start: 6 * 60, end: 23 * 60 }; // 06:00 AM – 11:00 PM
+        const FALLBACK = { start: 6 * 60, end: 22 * 60 }; // 06:00 AM – 10:00 PM (matches backend venueHours fallback)
         // 1. Dedicated fields
         const s1 = parseTime(venue?.opening_time ?? '');
         const e1 = parseTime(venue?.closing_time ?? '');
@@ -231,9 +234,9 @@ export default function PlayBookPage() {
 
     const blockSlots = generateBlockSlots();
 
-    // ── Hour label helper (e.g. "9 AM", "12 PM") ────────────────────────────
+    // ── Hour label helper (e.g. "9 AM", "12 PM") — same h >= 12 → PM rule as formatTime ──
     const hourLabel = (h: number) => {
-        const period = h < 12 ? 'AM' : 'PM';
+        const period = h >= 12 ? 'PM' : 'AM';
         const display = h % 12 || 12;
         return `${display} ${period}`;
     };
@@ -288,7 +291,7 @@ export default function PlayBookPage() {
             totalPrice,
         };
         sessionStorage.setItem('ticpin_cart', JSON.stringify(cartItem));
-        router.push(`/play/${id}/book/review`);
+        router.push(`/play/${encodeURIComponent(venueName)}/book/review`);
     };
 
     const handleBooking = () => {
@@ -375,7 +378,7 @@ export default function PlayBookPage() {
                                 <div className="px-6 h-[52px] flex items-center justify-center border-x border-zinc-300">
                                     <span className="text-[18px] font-semibold text-black whitespace-nowrap">{durationLabel}</span>
                                 </div>
-                                <button onClick={() => setDuration(d => d + 1)}
+                                <button onClick={() => setDuration(d => Math.min(16, d + 1))}
                                     className="w-[44px] h-[52px] text-[22px] font-medium text-black hover:bg-zinc-100 transition-colors flex items-center justify-center">
                                     +
                                 </button>
@@ -415,8 +418,8 @@ export default function PlayBookPage() {
                                             key={p.id}
                                             onClick={() => setActivePeriod(p.id)}
                                             className={`inline-flex items-center gap-1.5 px-4 h-[34px] rounded-full text-[13px] font-semibold border transition-all ${activePeriod === p.id
-                                                    ? 'bg-black text-white border-black'
-                                                    : 'bg-white text-black border-zinc-300 hover:border-zinc-500'
+                                                ? 'bg-black text-white border-black'
+                                                : 'bg-white text-black border-zinc-300 hover:border-zinc-500'
                                                 }`}
                                         >
                                             <Icon size={13} strokeWidth={2} />

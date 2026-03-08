@@ -30,10 +30,10 @@ interface RealPlay {
     price_starts_from?: number;
 }
 
-async function getVenueData(id: string): Promise<RealPlay | null> {
+async function getVenueData(name: string): Promise<RealPlay | null> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/play/${id}`, {
+        const res = await fetch(`${base}/api/play/${encodeURIComponent(name)}`, {
             next: { revalidate: 60 }, // ISR: revalidate every 60s
         });
         if (!res.ok) return null;
@@ -44,9 +44,9 @@ async function getVenueData(id: string): Promise<RealPlay | null> {
     }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-    const { id } = await params;
-    const venue = await getVenueData(id);
+export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
+    const { name } = await params;
+    const venue = await getVenueData(name);
     if (!venue) return { title: 'Not Found | Ticpin' };
     return {
         title: `${venue.name} | Play | Ticpin`,
@@ -59,13 +59,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
 }
 
-export default async function PlayDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    const venue = await getVenueData(id);
+export default async function PlayDetailPage({ params }: { params: Promise<{ name: string }> }) {
+    const { name } = await params;
+    const decodedName = decodeURIComponent(name);
+    const venue = await getVenueData(decodedName);
 
     if (!venue) {
         return <div className="min-h-screen flex items-center justify-center">Venue not found</div>;
     }
 
-    return <PlayDetailClient venue={venue} id={id} />;
+    return <PlayDetailClient venue={venue} id={venue.id} />;
 }

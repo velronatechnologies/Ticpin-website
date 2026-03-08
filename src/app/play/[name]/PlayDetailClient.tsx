@@ -11,6 +11,38 @@ import Image from 'next/image';
 
 const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 
+/**
+ * Converts any stored time string to 12-hr AM/PM display format.
+ * Handles: "09:00" (24-hr), "9:00" (24-hr), "09:00 AM" (already 12-hr).
+ * For composite "HH:MM - HH:MM" strings, converts both halves.
+ */
+function toDisplayTime(t: string): string {
+    if (!t) return t;
+    const s = t.trim();
+
+    // Composite "open - close" — convert both sides
+    if (s.includes(' - ')) {
+        const [a, b] = s.split(' - ');
+        return `${toDisplayTime(a.trim())} - ${toDisplayTime(b.trim())}`;
+    }
+
+    // Already has AM/PM — return as-is
+    if (/AM|PM/i.test(s)) return s;
+
+    // Pure 24-hr "HH:MM" or "H:MM"
+    const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (m24) {
+        let h = parseInt(m24[1], 10);
+        const min = m24[2];
+        const period = h >= 12 ? 'PM' : 'AM';
+        if (h === 0) h = 12;
+        else if (h > 12) h -= 12;
+        return `${String(h).padStart(2, '0')}:${min} ${period}`;
+    }
+
+    return s; // unrecognised — show as-is
+}
+
 interface RealPlay {
     id: string;
     name: string;
@@ -57,7 +89,7 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
             setIsLoginModalOpen(true);
             return;
         }
-        router.push(`/play/${id}/book`);
+        router.push(`/play/${encodeURIComponent(venue.name)}/book`);
     };
 
     const toggleAccordion = (section: string) => {
@@ -107,8 +139,8 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
                                             <p className="text-xs text-[#686868] font-medium uppercase tracking-wider">TIMINGS</p>
                                             <p className="text-base font-medium text-black">
                                                 {(venue.opening_time && venue.closing_time)
-                                                    ? `${venue.opening_time} - ${venue.closing_time}`
-                                                    : (venue.time || 'N/A')}
+                                                    ? `${toDisplayTime(venue.opening_time)} - ${toDisplayTime(venue.closing_time)}`
+                                                    : (venue.time ? toDisplayTime(venue.time) : 'N/A')}
                                             </p>
                                         </div>
                                     </div>
@@ -300,7 +332,7 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
             <AuthModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/play/${id}/book`)}
+                onSuccess={() => router.push(`/play/${encodeURIComponent(venue.name)}/book`)}
             />
         </div>
     );
