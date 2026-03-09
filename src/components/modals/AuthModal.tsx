@@ -10,6 +10,8 @@ interface AuthModalProps {
     initialView?: 'number' | 'otp' | 'profile' | 'location';
 }
 
+import MobileProfile from '@/components/MobileProfile';
+
 export default function AuthModal({ isOpen, onClose, initialView = 'number' }: AuthModalProps) {
     const router = useRouter();
     const [view, setView] = useState<'number' | 'otp' | 'profile' | 'location'>(initialView);
@@ -68,7 +70,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number' }: A
 
             <div
                 className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${view === 'profile'
-                    ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
+                    ? 'h-full w-full max-w-[750px] md:rounded-l-[60px] translate-x-0'
                     : 'rounded-[35px] animate-in zoom-in duration-300'
                     }`}
                 style={view !== 'profile' ? { width: '850px', height: '700px' } : {}}
@@ -187,85 +189,93 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number' }: A
                     </div>
                 )}
 
-                {/* VIEW: PROFILE PANEL (Sidebar format) */}
+                {/* VIEW: PROFILE PANEL */}
                 {view === 'profile' && (
-                    <div className="h-full flex flex-col bg-[#F6F6F6] animate-in slide-in-from-right duration-500">
-                        {/* Logout Confirmation Overlay */}
-                        {showLogoutConfirm && (
-                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-6 animate-in fade-in duration-200">
-                                <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl flex flex-col items-center text-center space-y-8 animate-in zoom-in duration-300">
-                                    <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500">
-                                        <LogOut size={40} />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <h3 className="text-2xl text-zinc-900 font-bold">Log Out?</h3>
-                                        <p className="text-zinc-500 font-medium">Are you sure you want to log out of your account?</p>
-                                    </div>
-                                    <div className="flex gap-4 w-full">
-                                        <button
-                                            onClick={() => setShowLogoutConfirm(false)}
-                                            className="flex-1 py-4 bg-zinc-100 text-zinc-900 rounded-2xl hover:bg-zinc-200 transition-colors font-bold"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowLogoutConfirm(false);
-                                                setView('number');
-                                                setNumber('');
-                                                setOtp(['', '', '', '', '', '']);
-                                            }}
-                                            className="flex-1 py-4 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 font-bold"
-                                        >
-                                            Log Out
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Header */}
-                        <div className="flex items-center gap-6 px-8 pt-10 pb-6 bg-white shrink-0">
-                            <button onClick={onClose} className="p-2 -ml-2 text-zinc-900 hover:bg-zinc-100 rounded-full transition-colors">
-                                <ChevronLeft size={32} strokeWidth={2.5} />
-                            </button>
-                            <h3 className="text-[32px] text-zinc-900 font-bold tracking-tight">Profile</h3>
+                    <>
+                        {/* Mobile Profile View */}
+                        <div className="md:hidden h-full w-full bg-[#F1F1F1]">
+                            <MobileProfile onBack={onClose} />
                         </div>
 
-                        <div className="flex-1 px-8 py-8 space-y-6 overflow-y-auto overflow-x-hidden scrollbar-hide">
-                            {/* Profile Info Section (No Card Background) */}
-                            <div className="flex items-center gap-6 px-2 py-4">
-                                <div className="w-24 h-24 bg-zinc-200 rounded-full flex items-center justify-center text-zinc-400 shrink-0">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        {/* Desktop Profile Sidebar */}
+                        <div className="hidden md:flex h-full flex-col bg-[#F6F6F6] animate-in slide-in-from-right duration-500">
+                            {/* Logout Confirmation Overlay */}
+                            {showLogoutConfirm && (
+                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-6 animate-in fade-in duration-200">
+                                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl flex flex-col items-center text-center space-y-8 animate-in zoom-in duration-300">
+                                        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+                                            <LogOut size={40} />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <h3 className="text-2xl text-zinc-900 font-bold">Log Out?</h3>
+                                            <p className="text-zinc-500 font-medium">Are you sure you want to log out of your account?</p>
+                                        </div>
+                                        <div className="flex gap-4 w-full">
+                                            <button
+                                                onClick={() => setShowLogoutConfirm(false)}
+                                                className="flex-1 py-4 bg-zinc-100 text-zinc-900 rounded-2xl hover:bg-zinc-200 transition-colors font-bold"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowLogoutConfirm(false);
+                                                    setView('number');
+                                                    setNumber('');
+                                                    setOtp(['', '', '', '', '', '']);
+                                                }}
+                                                className="flex-1 py-4 bg-red-500 text-white rounded-2xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 font-bold"
+                                            >
+                                                Log Out
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <h4 style={{ fontSize: '36px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-900">Name</h4>
-                                    <p className="text-lg text-zinc-500 font-medium tracking-tight uppercase">{number ? `+91 ${number}` : '{ NUMBER }'}</p>
-                                </div>
+                            )}
+
+                            {/* Header */}
+                            <div className="flex items-center gap-6 px-8 pt-10 pb-6 bg-white shrink-0">
+                                <button onClick={onClose} className="p-2 -ml-2 text-zinc-900 hover:bg-zinc-100 rounded-full transition-colors">
+                                    <ChevronLeft size={32} strokeWidth={2.5} />
+                                </button>
+                                <h3 className="text-[32px] text-zinc-900 font-bold tracking-tight">Profile</h3>
                             </div>
 
-                            {/* Menu Items Section */}
-                            <div className="space-y-4 pt-4">
-                                {[
-                                    { label: 'Admin Panel', action: () => { router.push('/admin'); onClose(); } },
-                                    { label: 'View all bookings', action: () => { } },
-                                    { label: 'Chat with us', action: () => { } },
-                                    { label: 'Terms & Conditions', action: () => { } },
-                                    { label: 'Privacy Policy', action: () => { } },
-                                    { label: 'Logout', action: () => setShowLogoutConfirm(true) }
-                                ].map((item, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={item.action}
-                                        className="w-full flex items-center justify-between h-[80px] px-8 bg-white rounded-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.99] group border border-zinc-100/50"
-                                    >
-                                        <span style={{ fontSize: '20px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-500 group-hover:text-zinc-900 transition-colors">{item.label}</span>
-                                        <ChevronLeft size={20} className="rotate-180 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
-                                    </button>
-                                ))}
+                            <div className="flex-1 px-8 py-8 space-y-6 overflow-y-auto overflow-x-hidden scrollbar-hide">
+                                {/* Profile Info Section (No Card Background) */}
+                                <div className="flex items-center gap-6 px-2 py-4">
+                                    <div className="w-24 h-24 bg-zinc-200 rounded-full flex items-center justify-center text-zinc-400 shrink-0">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 style={{ fontSize: '36px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-900">Name</h4>
+                                        <p className="text-lg text-zinc-500 font-medium tracking-tight uppercase">{number ? `+91 ${number}` : '{ NUMBER }'}</p>
+                                    </div>
+                                </div>
+
+                                {/* Menu Items Section */}
+                                <div className="space-y-4 pt-4">
+                                    {[
+                                        { label: 'Admin Panel', action: () => { router.push('/admin'); onClose(); } },
+                                        { label: 'View all bookings', action: () => { } },
+                                        { label: 'Chat with us', action: () => { } },
+                                        { label: 'Terms & Conditions', action: () => { } },
+                                        { label: 'Privacy Policy', action: () => { } },
+                                        { label: 'Logout', action: () => setShowLogoutConfirm(true) }
+                                    ].map((item, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={item.action}
+                                            className="w-full flex items-center justify-between h-[80px] px-8 bg-white rounded-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.99] group border border-zinc-100/50"
+                                        >
+                                            <span style={{ fontSize: '20px', fontWeight: 500, lineHeight: '100%', fontFamily: 'var(--font-anek-latin)' }} className="text-zinc-500 group-hover:text-zinc-900 transition-colors">{item.label}</span>
+                                            <ChevronLeft size={20} className="rotate-180 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
         </div >

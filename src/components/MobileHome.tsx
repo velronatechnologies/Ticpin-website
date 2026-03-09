@@ -7,11 +7,15 @@ import { artists, events } from '@/data/mockData';
 
 // --- Custom Components & Styles ---
 
+import MobileProfile from './MobileProfile';
+
 export default function MobileHome() {
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 390);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showProfile, setShowProfile] = useState(false);
     const placeholders = ["events", "dining", "play"];
+    // ... existing refs ...
     const carouselRef = useRef<HTMLDivElement>(null);
     const limelightRef = useRef<HTMLDivElement>(null);
     const playRef = useRef<HTMLDivElement>(null);
@@ -67,7 +71,7 @@ export default function MobileHome() {
             container.scrollLeft = initialScroll;
             setPlayScrollX(initialScroll);
         }
-    }, []);
+    }, [showProfile]); // Re-initialize scroll when coming back from profile
 
     const handleScroll = () => {
         if (!carouselRef.current) return;
@@ -117,6 +121,10 @@ export default function MobileHome() {
         }
     };
 
+    if (showProfile) {
+        return <MobileProfile onBack={() => setShowProfile(false)} />;
+    }
+
     return (
         <div
             className="md:hidden min-h-screen w-full overflow-x-hidden font-sans selection:bg-[#866BFF]/20"
@@ -129,7 +137,10 @@ export default function MobileHome() {
                         <MapPin size={17} className="text-zinc-800" />
                         <span className="text-[15px] font-medium text-black leading-none">Location Name</span>
                     </div>
-                    <div className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden">
+                    <div
+                        className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
+                        onClick={() => setShowProfile(true)}
+                    >
                         <img src="/profile icon.svg" alt="Profile" className="w-5 h-5" />
                     </div>
                 </div>
