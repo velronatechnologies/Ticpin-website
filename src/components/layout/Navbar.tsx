@@ -19,6 +19,7 @@ export default function Navbar() {
     const isListYourDining = pathname.startsWith('/list-your-dining');
     const isOrganizerDashboard = pathname === '/organizer/dashboard';
     const isHome = pathname === '/';
+    const isEventDetail = pathname.match(/^\/events\/[^/]+$/);
 
     if (pathname === '/contact') return null;
     if (pathname === '/terms') return null;
@@ -38,7 +39,7 @@ export default function Navbar() {
 
 
     return (
-        <header className={`${isHome ? 'hidden md:flex' : 'flex'} sticky top-0 z-50 w-full border-b border-zinc-200 bg-white h-16 md:h-20 items-center`}>
+        <header className={`${(isHome || isEventDetail) ? 'hidden md:flex' : 'flex'} sticky top-0 z-50 w-full border-b border-zinc-200 bg-white h-16 md:h-20 items-center`}>
             <div className="w-full h-full flex items-center justify-between px-3 md:px-4 lg:px-6">
                 {/* Left: Logo, Explore and Tabs */}
                 <div className="flex items-center gap-3 md:gap-8 min-w-max">

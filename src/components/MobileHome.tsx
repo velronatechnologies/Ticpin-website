@@ -244,7 +244,8 @@ export default function MobileHome() {
                             return (
                                 <div
                                     key={`${event.id}-${idx}`}
-                                    className="flex-shrink-0 w-[280px] max-w-[85vw] bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden snap-center snap-always transition-all duration-150 ease-out origin-center"
+                                    onClick={() => router.push(`/events/${event.id}`)}
+                                    className="flex-shrink-0 w-[280px] max-w-[85vw] bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden snap-center snap-always transition-all duration-150 ease-out origin-center cursor-pointer active:scale-95"
                                     style={{
                                         transform: `scale(${scale})`,
                                         opacity: opacity

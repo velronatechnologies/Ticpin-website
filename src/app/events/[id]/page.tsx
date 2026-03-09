@@ -1,15 +1,29 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Footer from '@/components/layout/Footer';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Share2, MapPin, Calendar, Clock, Star, HelpCircle, ChevronDown, ChevronRight, CheckCircle2, Search, Timer, Ticket } from 'lucide-react';
-import { useState } from 'react';
+import MobileEventDetails from '@/components/MobileEventDetails';
+import { events } from '@/data/mockData';
 
 export default function EventDetailPage() {
     const router = useRouter();
     const params = useParams();
     const id = params?.id;
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const event = events.find(e => String(e.id) === id) || events[0];
 
     const galleryImages = [
         '/events/events-1/ticpinbanner.jpg',
@@ -17,6 +31,10 @@ export default function EventDetailPage() {
         '/events/events-1/ticpinbanner.jpg',
         '/events/events-1/ticpinbanner.jpg',
     ];
+
+    if (isMobile) {
+        return <MobileEventDetails event={event} />;
+    }
 
     return (
         <div className="min-h-screen font-[family-name:var(--font-anek-latin)]" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 100%)' }}>
