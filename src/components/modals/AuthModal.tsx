@@ -194,7 +194,14 @@ export default function AuthModal({ isOpen, onClose, initialView = 'number' }: A
                     <>
                         {/* Mobile Profile View */}
                         <div className="md:hidden h-full w-full bg-[#F1F1F1]">
-                            <MobileProfile onBack={onClose} />
+                            {/* Instead of rendering MobileProfile, we navigate to /profile */}
+                            {(() => {
+                                if (typeof window !== 'undefined') {
+                                    router.push('/profile');
+                                    onClose();
+                                }
+                                return null;
+                            })()}
                         </div>
 
                         {/* Desktop Profile Sidebar */}

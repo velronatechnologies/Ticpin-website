@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, MapPin, ChevronRight, PlayCircle, Star, Bell } from 'lucide-react';
 import { artists, events } from '@/data/mockData';
 
@@ -121,9 +122,7 @@ export default function MobileHome() {
         }
     };
 
-    if (showProfile) {
-        return <MobileProfile onBack={() => setShowProfile(false)} />;
-    }
+    const router = useRouter();
 
     return (
         <div
@@ -139,7 +138,7 @@ export default function MobileHome() {
                     </div>
                     <div
                         className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
-                        onClick={() => setShowProfile(true)}
+                        onClick={() => router.push('/profile')}
                     >
                         <img src="/profile icon.svg" alt="Profile" className="w-5 h-5" />
                     </div>
@@ -155,31 +154,33 @@ export default function MobileHome() {
                         className="ml-3 w-full bg-transparent border-none outline-none text-[15px] font-medium text-black placeholder:text-[#AEAEAE]"
                         placeholder=""
                     />
-                    {!searchQuery && (
-                        <div className="absolute left-[54px] top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1">
-                            <span className="text-[15px] font-medium text-[#AEAEAE]">Search for</span>
-                            <div className="relative h-5 w-20 overflow-hidden">
-                                {placeholders.map((text, i) => (
-                                    <span
-                                        key={i}
-                                        className={`absolute left-0 top-0 text-[15px] font-medium text-[#AEAEAE] h-5 flex items-center transition-all duration-700 ease-in-out ${i === placeholderIndex ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
-                                            }`}
-                                    >
-                                        {text}
-                                    </span>
-                                ))}
+                    {
+                        !searchQuery && (
+                            <div className="absolute left-[54px] top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1">
+                                <span className="text-[15px] font-medium text-[#AEAEAE]">Search for</span>
+                                <div className="relative h-5 w-20 overflow-hidden">
+                                    {placeholders.map((text, i) => (
+                                        <span
+                                            key={i}
+                                            className={`absolute left-0 top-0 text-[15px] font-medium text-[#AEAEAE] h-5 flex items-center transition-all duration-700 ease-in-out ${i === placeholderIndex ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
+                                                }`}
+                                        >
+                                            {text}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )
+                    }
+                </div >
 
                 {/* 3. Horizontal Divider Line 60 */}
-                <div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
+                < div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
 
                 {/* 4. Categories Section - Rectangle 23, 254, 255 */}
-                <div className="grid grid-cols-3 gap-4 px-1">
+                < div className="grid grid-cols-3 gap-4 px-1" >
                     {/* Dining */}
-                    <div className="flex flex-col items-center">
+                    < div className="flex flex-col items-center" >
                         <div
                             className="w-full aspect-[106/125] rounded-[25px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2 "
                             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
@@ -187,10 +188,10 @@ export default function MobileHome() {
                             <img src="/mobile_icons/Dining 1.svg" alt="Dining" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">DINING</span>
                         </div>
-                    </div>
+                    </div >
 
                     {/* Events */}
-                    <div className="flex flex-col items-center">
+                    < div className="flex flex-col items-center" >
                         <div
                             className="w-full aspect-[106/125] rounded-[30px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2"
                             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
@@ -198,10 +199,10 @@ export default function MobileHome() {
                             <img src="/mobile_icons/Events 1.svg" alt="Events" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">EVENTS</span>
                         </div>
-                    </div>
+                    </div >
 
                     {/* Play */}
-                    <div className="flex flex-col items-center">
+                    < div className="flex flex-col items-center" >
                         <div
                             className="w-full aspect-[106/125] rounded-[30px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2"
                             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #FFF4C1 100%)' }}
@@ -209,15 +210,15 @@ export default function MobileHome() {
                             <img src="/mobile_icons/Pickelball 1.svg" alt="Play" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">PLAY</span>
                         </div>
-                    </div>
-                </div>
-            </header>
+                    </div >
+                </div >
+            </header >
 
             {/* 5. Sections Container */}
-            <main className="mt-12 space-y-16 pb-12">
+            < main className="mt-12 space-y-16 pb-12" >
 
                 {/* Hot Right Now Section */}
-                <section>
+                < section >
                     <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-35px]">HOT RIGHT NOW</h2>
                     <div
                         ref={carouselRef}
@@ -342,10 +343,10 @@ export default function MobileHome() {
                             );
                         })}
                     </div>
-                </section>
+                </section >
 
                 {/* Artist Section */}
-                <section>
+                < section >
                     <h2 className="text-[22px] font-medium text-black text-center mb-8 uppercase tracking-normal mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>ARTIST</h2>
                     <div className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x ml-[20px]">
                         {artists.map((artist) => (
@@ -358,10 +359,10 @@ export default function MobileHome() {
                             </div>
                         ))}
                     </div>
-                </section>
+                </section >
 
                 {/* In Limelight Section */}
-                <section>
+                < section >
                     <h2 className="text-[22px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>IN LIMELIGHT</h2>
                     <div
                         ref={limelightRef}
@@ -415,17 +416,17 @@ export default function MobileHome() {
                             );
                         })}
                     </div>
-                </section>
+                </section >
 
                 {/* Offers Section */}
-                <section className="px-6 mt-[-50px]">
+                < section className="px-6 mt-[-50px]" >
                     <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>OFFERS</h2>
                     <div className="w-full h-[109px] bg-[#AC9BF7] rounded-[15px] border border-[#AC9BF7] relative overflow-hidden flex items-center px-8 mt-[-10px]">
                     </div>
-                </section>
+                </section >
 
                 {/* Play Near You Section */}
-                <section>
+                < section >
                     <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>PLAY NEAR YOU</h2>
                     <div
                         ref={playRef}
@@ -490,19 +491,19 @@ export default function MobileHome() {
                             );
                         })}
                     </div>
-                </section>
+                </section >
 
                 {/* 6. Footer Banner (Ticpin Pass) */}
-                <div className="px-6 ">
+                < div className="px-6 " >
                     <div className="rounded-[15px] overflow-hidden group relative h-[120px] mt-[-25px]">
                         <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full" />
                     </div>
-                </div>
+                </div >
 
-            </main>
+            </main >
 
             {/* 7. Footer Section */}
-            <footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center">
+            < footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center" >
                 <div className="mb-6">
                     <img src="/ticpin-logo-white1.svg" alt="TICPIN" className="h-[32px] w-auto" />
                 </div>
@@ -527,7 +528,7 @@ export default function MobileHome() {
                     <Link href="https://x.com/ticpin"><img src="/social icons/x.svg" alt="X" className="w-8 h-8" /></Link>
                     <Link href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw"><img src="/social icons/youtube.svg" alt="YouTube" className="w-8 h-8" /></Link>
                 </div>
-            </footer>
-        </div>
+            </footer >
+        </div >
     );
 }

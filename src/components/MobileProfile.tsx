@@ -13,27 +13,27 @@ export default function MobileProfile({ onBack }: MobileProfileProps) {
     const menuGroups = [
         {
             items: [
-                { icon: <img src="/mobile_icons/profile page/vector 1.svg" alt="ticklist" className="w-6 h-6 object-contain" />, label: "Ticlists" },
-                { icon: <img src="/mobile_icons/profile page/dining-table.svg" alt="Dining" className="w-6 h-6 object-contain" />, label: "Dining reminders" },
-                { icon: <img src="/mobile_icons/profile page/guitar.svg" alt="Dining" className="w-6 h-6 object-contain" />, label: "Event reminders" },
+                { icon: <img src="/mobile_icons/profile_page/Vector 1.svg" alt="ticklist" className="w-6 h-6 object-contain" />, label: "Ticlists" },
+                { icon: <img src="/mobile_icons/profile_page/dining-table.svg" alt="Dining" className="w-6 h-6 object-contain" />, label: "Dining reminders" },
+                { icon: <img src="/mobile_icons/profile_page/guitar.svg" alt="Dining" className="w-6 h-6 object-contain" />, label: "Event reminders" },
                 { icon: <PlayCircle size={22} className="text-[#686868]" />, label: "Play reminders" },
             ]
         },
         {
             items: [
-                { icon: <img src="/mobile_icons/profile page/support.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Frequently asked questions" },
-                { icon: <img src="/mobile_icons/profile page/chat.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Chat with us" },
+                { icon: <img src="/mobile_icons/profile_page/support.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Frequently asked questions" },
+                { icon: <img src="/mobile_icons/profile_page/chat.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Chat with us" },
             ]
         },
         {
             items: [
-                { icon: <img src="/mobile_icons/profile page/profile.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Account settings" },
-                { icon: <img src="/mobile_icons/profile page/info.svg" alt="support" className="w-6 h-6 object-contain" />, label: "About us" },
+                { icon: <img src="/mobile_icons/profile_page/profile.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Account settings" },
+                { icon: <img src="/mobile_icons/profile_page/info.svg" alt="support" className="w-6 h-6 object-contain" />, label: "About us" },
             ]
         },
         {
             items: [
-                { icon: <img src="/mobile_icons/profile page/logout.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Logout" },
+                { icon: <img src="/mobile_icons/profile_page/logout.svg" alt="support" className="w-6 h-6 object-contain" />, label: "Logout" },
             ]
         }
     ];
@@ -85,8 +85,8 @@ export default function MobileProfile({ onBack }: MobileProfileProps) {
                 </h3>
                 <div className="flex gap-[15px] overflow-x-auto pb-2 scrollbar-hide">
                     {[
-                        { icon: <img src="/mobile_icons/profile page/dining-table.svg" alt="Dining" className="w-8 h-8 object-contain" />, label: "Dining bookings" },
-                        { icon: <img src="/mobile_icons/profile page/guitar.svg" alt="Events" className="w-8 h-8 object-contain" />, label: "Event tickets" },
+                        { icon: <img src="/mobile_icons/profile_page/dining-table.svg" alt="Dining" className="w-8 h-8 object-contain" />, label: "Dining bookings" },
+                        { icon: <img src="/mobile_icons/profile_page/guitar.svg" alt="Events" className="w-8 h-8 object-contain" />, label: "Event tickets" },
                         { icon: <PlayCircle size={32} className="text-black" />, label: "Play bookings" }
                     ].map((item, i) => (
                         <div key={i} className="flex-shrink-0 w-[134px] h-[92px] bg-white border border-[#D0D0D0] rounded-[25px] flex flex-col items-center justify-center gap-[6px]">
