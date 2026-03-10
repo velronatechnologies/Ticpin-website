@@ -389,7 +389,8 @@ export default function MobileHome() {
                             return (
                                 <div
                                     key={`limelight-${idx}`}
-                                    className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden"
+                                    onClick={() => router.push(`/dining/venue/${i}`)}
+                                    className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden cursor-pointer active:scale-95"
                                     style={{
                                         transform: `scale(${scale})`,
                                         opacity: opacity

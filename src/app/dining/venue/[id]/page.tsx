@@ -4,10 +4,11 @@ import { useRouter, useParams } from 'next/navigation';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import { ArrowLeft, MapPin, Star, ChevronDown, ChevronRight, CheckCircle2, Navigation, PhoneCall } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BookingCard from '@/components/dining/venue/BookingCard';
 import CouponCard from '@/components/dining/CouponCard';
 import AppBanner from '@/components/layout/AppBanner';
+import MobileDiningDetails from '@/components/MobileDiningDetails';
 
 const restaurants = [
     { id: 1, title: 'The Grand Buffet', location: 'Downtown', image: '/login/banner.jpeg', rating: 4.8 },
@@ -22,9 +23,20 @@ export default function DiningVenueDetail() {
     const router = useRouter();
     const params = useParams();
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const venueId = Number(params.id);
     const venue = restaurants.find(r => r.id === venueId) || restaurants[0];
+
+    if (windowWidth < 768) {
+        return <MobileDiningDetails venue={venue} />;
+    }
 
     const smallImages = [
         '/images.png',
