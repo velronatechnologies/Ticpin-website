@@ -1,0 +1,43 @@
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+
+interface SportCategoryCardProps {
+    name: string;
+    image: string;
+    href?: string;
+    priority?: boolean;
+}
+
+const SportCategoryCard: React.FC<SportCategoryCardProps> = ({ name, image, href, priority }) => {
+    const content = (
+        <div
+            className="w-[172px] h-[235px] rounded-[30px] border border-transparent p-4 flex flex-col items-center justify-between cursor-pointer shadow-sm group mx-auto"
+            style={{
+                background: 'linear-gradient(180deg, #FFFFFF 50%, #E7C200 159.52%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box'
+            }}
+        >
+            <span className="text-xl md:text-2xl font-medium text-black text-center pt-1 break-words leading-tight font-[family-name:var(--font-anek-latin)]">
+                {name}
+            </span>
+            <div className="relative w-full aspect-square flex items-center justify-center">
+                <Image
+                    src={image}
+                    alt={name}
+                    width={180}
+                    height={150}
+                    className="object-contain drop-shadow-md scale-150"
+                    priority={priority}
+                />
+            </div>
+        </div>
+    );
+
+    if (href) {
+        return <Link href={href} className="block">{content}</Link>;
+    }
+
+    return content;
+};
+
+export default React.memo(SportCategoryCard);

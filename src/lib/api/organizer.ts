@@ -1,0 +1,130 @@
+const BASE = '/backend/api';
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    ...options,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Something went wrong');
+  return data as T;
+}
+
+export interface CategoryStatusResponse {
+  categoryStatus: Record<string, string>;
+}
+
+export interface ExistingSetup {
+  pan?: string;
+  panName?: string;
+  panDOB?: string;
+  panCardUrl?: string;
+  bankAccountNo?: string;
+  bankIfsc?: string;
+  bankName?: string;
+  accountHolder?: string;
+  gstNumber?: string;
+  backupEmail?: string;
+  backupPhone?: string;
+  panVerified?: boolean;
+  verifiedName?: string;
+}
+
+export interface GPS {
+  lat: number;
+  lng: number;
+}
+
+export interface NotificationPreferences {
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+}
+
+export interface OrganizerProfile {
+  id?: string;
+  organizerId: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  street?: string;
+  city?: string;
+  country: string;
+  state: string;
+  district: string;
+  gps?: GPS;
+  profilePhoto?: string;
+  dob?: string;
+  gender?: string;
+  notificationPreferences?: NotificationPreferences;
+  preferredLanguage?: string;
+}
+
+export const organizerApi = {
+  /** GET /api/organizer/me — refreshes session cookie with latest DB data (categoryStatus) */
+  getMe: () =>
+    request<{ id: string; email: string; categoryStatus: Record<string, string> }>('/organizer/me'),
+
+  /** GET /api/organizer/me/status — returns categoryStatus map for the current auth'd organizer */
+  getStatus: () =>
+    request<CategoryStatusResponse>('/organizer/me/status'),
+
+  /** GET /api/organizer/me/existing-setup — returns PAN+bank from any existing vertical setup */
+  getExistingSetup: (category: 'events' | 'dining' | 'play') =>
+    request<ExistingSetup>(`/organizer/me/existing-setup?category=${category}`),
+
+  /** GET /api/organizer/profile/:id — returns organizer profile */
+  getProfile: (organizerId: string) =>
+    request<OrganizerProfile>(`/organizer/profile/${organizerId}`),
+
+  /** POST /api/organizer/profile — creates a new profile */
+  createProfile: (profile: OrganizerProfile) =>
+    request<OrganizerProfile>(`/organizer/profile`, {
+      method: 'POST',
+      body: JSON.stringify(profile),
+    }),
+
+  /** PUT /api/organizer/profile/:id — updates an existing profile */
+  updateProfile: (organizerId: string, profile: OrganizerProfile) =>
+    request<{ message: string }>(`/organizer/profile/${organizerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(profile),
+    }),
+
+  /** POST /api/organizer/upload-pan — multipart upload, returns { url } */
+  uploadPAN: async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${BASE}/organizer/upload-pan`, { method: 'POST', body: form, credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+    return data.url as string;
+  },
+
+  /** POST /api/organizer/verification/verify-pan — verifies PAN card details */
+  verifyPAN: (pan: string, name: string, dob: string) =>
+    request<{ status: string; message: string; data: any }>('/organizer/verification/verify-pan', {
+      method: 'POST',
+      body: JSON.stringify({ pan, name, dob }),
+    }),
+
+  /** GET /api/organizer/verification/fetch-gst — fetches associated GSTINs for a PAN */
+  fetchGST: (pan: string) =>
+    request<{ status: string; data: { gstin_list: any[] } }>(`/organizer/verification/fetch-gst?pan=${pan}`),
+
+  /** POST /api/organizer/send-backup-otp — sends OTP to the backup email */
+  sendBackupOTP: (organizerId: string, email: string, category: string) =>
+    request<{ message: string }>('/organizer/send-backup-otp', {
+      method: 'POST',
+      body: JSON.stringify({ organizerId, email, category }),
+    }),
+
+  /** POST /api/organizer/verify-backup-otp — verifies the backup email OTP */
+  verifyBackupOTP: (organizerId: string, otp: string) =>
+    request<{ message: string }>('/organizer/verify-backup-otp', {
+      method: 'POST',
+      body: JSON.stringify({ organizerId, otp }),
+    }),
+};
