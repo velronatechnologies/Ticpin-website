@@ -3,10 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function BookingRedirect() {
+export default function ProfileBookingsRedirect() {
     const router = useRouter();
     useEffect(() => {
-        router.replace('/bookings?type=dining');
+        router.replace('/bookings');
     }, [router]);
     
     return null;
