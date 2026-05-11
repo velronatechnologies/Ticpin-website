@@ -198,7 +198,6 @@ const FormatPage = () => {
                             </div>
                         </div>
                     </section>
-                    )}
 
                     {/* Multiple Pricing Plans Card - Fixed Schedule */}
                     {selectedFormat === 'fixed' && (
@@ -430,6 +429,7 @@ const FormatPage = () => {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
                             )}
 
                             <div className="flex justify-center pt-4">
@@ -443,7 +443,6 @@ const FormatPage = () => {
                             </div>
                         </div>
                     </section>
-                    )}
 
                     {/* Footer Submit Button */}
                     <div className="pt-6 pb-12">
