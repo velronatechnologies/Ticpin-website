@@ -63,27 +63,32 @@ export default function OrganizerLoginForm({ vertical, api, setupPath, otpPath, 
         }
 
         setError('');
+        setLoading(true);
 
-        const { getRemainingCooldown, setOTPSentAt } = await import('@/lib/utils/otp-state');
-        const remaining = getRemainingCooldown(email, vertical);
+        try {
+            const { getRemainingCooldown, setOTPSentAt } = await import('@/lib/utils/otp-state');
+            const remaining = getRemainingCooldown(email, vertical);
 
-        if (remaining === 0) {
-            // Send in background, don't await to block the UI
-            api.login(email, password).catch(e => {
-                const msg = e instanceof Error ? e.message : 'Login failed';
-                console.error("Background login failed:", msg);
-                if (msg === 'user_not_found') {
-                    // Redirect them from OTP page to Signin page by manipulating URL or sessionStorage
-                    // For now, it will just fail OTP verification since they are on OTP page but login failed.
-                    // A proper robust way would be using context/store, but we'll fulfill the instant transition request here.
-                }
-            });
-            setOTPSentAt(email, vertical);
+            if (remaining === 0) {
+                await api.login(email, password);
+                setOTPSentAt(email, vertical);
+            }
+
+            sessionStorage.setItem('otp_pending_email', email);
+            if (rememberMe) setRememberedEmail(email);
+            router.push(otpPath);
+        } catch (e: any) {
+            const msg = e instanceof Error ? e.message : 'Login failed';
+            if (msg === 'user_not_found') {
+                setError('Account not found. Please sign up first.');
+            } else if (msg.includes('password') || msg.includes('credentials') || msg === 'Unauthorized') {
+                setError('Incorrect password. Please try again.');
+            } else {
+                setError(msg);
+            }
+        } finally {
+            setLoading(false);
         }
-
-        sessionStorage.setItem('otp_pending_email', email);
-        if (rememberMe) setRememberedEmail(email);
-        router.push(otpPath);
     };
 
     const handleGoogleLogin = async () => {

@@ -67,15 +67,18 @@ export default function OrganizerSigninForm({ vertical, api, setupPath, otpPath,
         }
 
         setError('');
-        // No loading state needed if we transition instantly
-        api.signin(email, password).catch(e => {
+        setLoading(true);
+        try {
+            await api.signin(email, password);
+            sessionStorage.setItem('otp_pending_email', email);
+            if (rememberMe) setRememberedEmail(email);
+            router.push(otpPath);
+        } catch (e: any) {
             const msg = e instanceof Error ? e.message : 'Signup failed';
-            console.error("Background signin failed:", msg);
-        });
-
-        sessionStorage.setItem('otp_pending_email', email);
-        if (rememberMe) setRememberedEmail(email);
-        router.push(otpPath);
+            setError(msg === 'email_exists' ? 'An account with this email already exists' : msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleGoogleSignup = async () => {
