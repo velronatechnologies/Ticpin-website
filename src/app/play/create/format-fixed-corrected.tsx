@@ -443,6 +443,7 @@ const FormatPage = () => {
                             </div>
                         </div>
                     </section>
+                    )}
 
                     {/* Footer Submit Button */}
                     <div className="pt-6 pb-12">
