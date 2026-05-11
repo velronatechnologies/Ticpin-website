@@ -1,0 +1,312 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { MapPin, Utensils, Ticket, RefreshCw, CheckCircle2, XCircle, Clock, ArrowLeft, Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/Toast';
+import Footer from '@/components/layout/Footer';
+import { bookingApi } from '@/lib/api/booking';
+
+function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(s);
+    });
+}
+
+function formatDate(d: string) {
+    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function daysLeft(endDate: string) {
+    const diff = new Date(endDate).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+interface MyPassClientProps {
+    initialPass: any;
+    session: any;
+}
+
+export default function MyPassClient({ initialPass, session }: MyPassClientProps) {
+    const router = useRouter();
+    const [pass, setPass] = useState(initialPass);
+    const [renewLoading, setRenewLoading] = useState(false);
+    const [renewSuccess, setRenewSuccess] = useState(false);
+
+    // Handle Cashfree redirect return for renewal
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const cfOrderId = urlParams.get('orderId');
+        if (cfOrderId && cfOrderId.startsWith('TICPIN_')) {
+            const pending = sessionStorage.getItem('ticpin_pending_renew');
+            if (pending) {
+                try {
+                    const p = JSON.parse(pending);
+                    window.history.replaceState(null, '', window.location.pathname);
+                    sessionStorage.removeItem('ticpin_pending_renew');
+                    setRenewLoading(true);
+                    confirmRenew(p.passId, cfOrderId);
+                } catch (e) {
+                    console.error('Cashfree renew return error', e);
+                }
+            }
+        }
+    }, []);
+
+    const confirmRenew = async (passId: string, paymentId: string) => {
+        try {
+            const res = await fetch(`/backend/api/pass/${passId}/renew`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ payment_id: paymentId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            setPass(data);
+            setRenewSuccess(true);
+            setTimeout(() => setRenewSuccess(false), 3000);
+        } catch {
+            toast.error('Renewal failed. Please try again.');
+        } finally {
+            setRenewLoading(false);
+        }
+    };
+
+    const handleRenew = async () => {
+        if (!pass || !session) return;
+        
+        // Check if user's email exists before allowing renewal
+        if (session.email) {
+            try {
+                const emailCheckRes = await fetch(`/backend/api/pass/check-email?email=${encodeURIComponent(session.email)}`);
+                const emailCheckData = await emailCheckRes.json();
+                
+                if (emailCheckData.exists) {
+                    toast.error('This email is already registered with another profile. Please contact support.');
+                    return;
+                }
+            } catch (err) {
+                console.error('Email validation check failed:', err);
+                toast.error('Failed to validate email. Please try again.');
+                return;
+            }
+        }
+        
+        setRenewLoading(true);
+        try {
+            const orderRes = await bookingApi.createPaymentOrder({
+                amount: pass.price || 1,
+                customer_phone: session.phone,
+                customer_email: `user_${session.phone}@ticpin.in`,
+                customer_id: session.id,
+            });
+
+            if (orderRes.gateway === 'cashfree') {
+                await loadScript('https://sdk.cashfree.com/js/v3/cashfree.js');
+                sessionStorage.setItem('ticpin_pending_renew', JSON.stringify({ passId: pass.id, orderId: orderRes.order_id }));
+                const cashfree = (window as any).Cashfree({
+                    mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'production' ? 'production' : 'sandbox',
+                });
+                cashfree.checkout({ paymentSessionId: orderRes.payment_session_id, redirectTarget: '_self' });
+            } else {
+                await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+                new (window as any).Razorpay({
+                    key: orderRes.razorpay_key,
+                    amount: (pass.price || 1) * 100,
+                    currency: 'INR',
+                    orderId: orderRes.order_id,
+                    name: 'Ticpin',
+                    description: 'Pass Renewal',
+                    theme: { color: '#7B2FF7' },
+                    handler: async (response: { razorpay_payment_id: string }) => {
+                        await confirmRenew(pass.id, response.razorpay_payment_id);
+                    },
+                    modal: {
+                        ondismiss: () => {
+                            setRenewLoading(false);
+                            toast.warning('Payment was cancelled.');
+                        },
+                    },
+                }).open();
+            }
+        } catch {
+            setRenewLoading(false);
+            toast.error('Payment initiation failed. Please try again.');
+        }
+    };
+
+    if (!pass) {
+        return (
+            <div className="min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)]" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 50%)' }}>
+                <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4 text-center">
+                    <XCircle size={64} className="text-zinc-300" />
+                    <h2 className="text-2xl font-black text-zinc-800 uppercase">No Active Pass</h2>
+                    <p className="text-zinc-500 max-w-sm uppercase font-medium">You don't have an active Ticpin Pass. Get one to enjoy turf bookings, dining vouchers, and event discounts.</p>
+                    <button
+                        onClick={() => router.push('/pass')}
+                        className="px-8 py-3 rounded-full text-white font-bold uppercase tracking-wider"
+                        style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #5B1FD4 100%)' }}
+                    >
+                        Get Ticpin Pass — ₹1
+                    </button>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    const days = daysLeft(pass.endDate);
+    const isExpired = pass.status === 'expired';
+    const isExpiringSoon = !isExpired && days <= 15;
+
+    return (
+        <div className="min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)]" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 40%)' }}>
+            <main className="flex-1 px-4 py-10 max-w-[900px] mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-800 text-sm mb-8 transition uppercase font-bold">
+                    <ArrowLeft size={16} /> Back
+                </button>
+
+                <div className="flex items-center justify-between mb-2">
+                    <h1 className="text-3xl font-black text-zinc-900 uppercase">My Pass</h1>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${isExpired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                        {isExpired ? 'Expired' : 'Active'}
+                    </span>
+                </div>
+                <p className="text-zinc-500 text-sm mb-10 font-bold uppercase">Ticpin Pass — ₹{pass.price} / 3 months</p>
+
+                {/* Pass Card */}
+                <div
+                    className="rounded-3xl p-6 md:p-8 text-white mb-8 shadow-xl relative overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #3A1A8C 100%)' }}
+                >
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Ticket size={120} strokeWidth={1} />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-6">
+                            <div>
+                                <p className="text-white/60 text-xs uppercase tracking-widest mb-1 font-bold">Pass Holder</p>
+                                <p className="text-xl font-black uppercase">{pass.name || 'Member'}</p>
+                                {pass.phone && <p className="text-white/60 text-sm font-medium">{pass.phone}</p>}
+                            </div>
+                            <div className="text-right">
+                                <p className="text-white/60 text-xs uppercase tracking-widest mb-1 font-bold">Valid Until</p>
+                                <p className="font-bold uppercase">{formatDate(pass.endDate)}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-white/80 text-sm font-bold uppercase">
+                            {isExpired ? (
+                                <><XCircle size={16} className="text-red-300" /> Expired on {formatDate(pass.endDate)}</>
+                            ) : isExpiringSoon ? (
+                                <><Clock size={16} className="text-yellow-300" /> Expiring in {days} day{days !== 1 ? 's' : ''}</>
+                            ) : (
+                                <><CheckCircle2 size={16} className="text-green-300" /> {days} days remaining</>
+                            )}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-white/20 text-xs text-white/50 font-bold uppercase">
+                            Active from {formatDate(pass.startDate)} — Valid until {formatDate(pass.endDate)}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Benefits */}
+                <h2 className="text-xl font-black text-zinc-900 mb-4 uppercase">Your Benefits</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                    {/* Turf */}
+                    <div className="bg-white rounded-2xl p-5 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-10 h-10 rounded-full bg-[#7B2FF7]/10 flex items-center justify-center mb-3">
+                            <MapPin size={20} className="text-[#7B2FF7]" />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800 mb-1 uppercase">Turf Bookings</p>
+                        <div className="flex items-end gap-1">
+                            <span className="text-3xl font-black text-zinc-900">{pass.benefits.turfBookings.remaining}</span>
+                            <span className="text-zinc-400 text-sm mb-1 uppercase font-bold">/ {pass.benefits.turfBookings.total} left</span>
+                        </div>
+                        <div className="mt-2 h-2 rounded-full bg-zinc-100 overflow-hidden">
+                            <div
+                                className="h-2 rounded-full bg-[#7B2FF7] transition-all duration-1000"
+                                style={{ width: `${(pass.benefits.turfBookings.remaining / pass.benefits.turfBookings.total) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Dining */}
+                    <div className="bg-white rounded-2xl p-5 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-10 h-10 rounded-full bg-[#7B2FF7]/10 flex items-center justify-center mb-3">
+                            <Utensils size={20} className="text-[#7B2FF7]" />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800 mb-1 uppercase">Dining Vouchers</p>
+                        <div className="flex items-end gap-1">
+                            <span className="text-3xl font-black text-zinc-900">{pass.benefits.diningVouchers.remaining}</span>
+                            <span className="text-zinc-400 text-sm mb-1 uppercase font-bold">/ {pass.benefits.diningVouchers.total} left</span>
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-1 uppercase font-bold">₹{pass.benefits.diningVouchers.valueEach} each</p>
+                        <div className="mt-2 h-2 rounded-full bg-zinc-100 overflow-hidden">
+                            <div
+                                className="h-2 rounded-full bg-[#7B2FF7] transition-all duration-1000"
+                                style={{ width: `${(pass.benefits.diningVouchers.remaining / pass.benefits.diningVouchers.total) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Events */}
+                    <div className="bg-white rounded-2xl p-5 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="w-10 h-10 rounded-full bg-[#7B2FF7]/10 flex items-center justify-center mb-3">
+                            <Ticket size={20} className="text-[#7B2FF7]" />
+                        </div>
+                        <p className="text-sm font-bold text-zinc-800 mb-1 uppercase">Events Discount</p>
+                        <div className="flex items-center gap-2 mt-2">
+                            {pass.benefits.eventsDiscountActive ? (
+                                <span className="flex items-center gap-1 text-green-600 font-bold text-sm uppercase">
+                                    <CheckCircle2 size={16} /> Active
+                                </span>
+                            ) : (
+                                <span className="text-zinc-400 text-sm uppercase font-bold">Inactive</span>
+                            )}
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-2 uppercase font-bold">Applied automatically at checkout</p>
+                    </div>
+                </div>
+
+                {/* Renew Section */}
+                {(isExpired || isExpiringSoon) && (
+                    <div className="bg-[#7B2FF7]/5 border border-[#7B2FF7]/20 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                        <div>
+                            <p className="font-bold text-zinc-900 uppercase">
+                                {isExpired ? 'Your pass has expired' : 'Your pass is expiring soon'}
+                            </p>
+                            <p className="text-zinc-500 text-sm mt-1 uppercase font-medium">Renew now to keep your benefits active — ₹1 for another 3 months.</p>
+                        </div>
+                        <button
+                            onClick={handleRenew}
+                            disabled={renewLoading}
+                            className="flex items-center gap-2 px-8 py-4 rounded-full text-white font-bold text-sm disabled:opacity-60 whitespace-nowrap active:scale-95 transition-transform"
+                            style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #5B1FD4 100%)' }}
+                        >
+                            {renewLoading ? (
+                                <><Loader2 size={16} className="animate-spin" /> Renewing...</>
+                            ) : (
+                                <><RefreshCw size={16} /> Renew Pass — ₹1</>
+                            )}
+                        </button>
+                    </div>
+                )}
+
+                {renewSuccess && (
+                    <div className="mt-4 flex items-center gap-2 text-green-600 font-bold uppercase text-sm animate-bounce">
+                        <CheckCircle2 size={18} /> Pass renewed successfully!
+                    </div>
+                )}
+            </main>
+            <Footer />
+        </div>
+    );
+}

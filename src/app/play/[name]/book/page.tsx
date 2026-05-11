@@ -1,0 +1,1021 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Sunrise, Sun, Sunset, Moon } from 'lucide-react';
+import { useUserSession } from '@/lib/auth/user';
+import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
+import AuthModal from '@/components/modals/AuthModal';
+import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
+import { toast } from '@/components/ui/Toast';
+import { passApi, TicpinPass } from '@/lib/api/pass';
+import { Zap, ShieldCheck } from 'lucide-react';
+import { useSlotLock } from '@/hooks/useSlotLock';
+
+interface Court {
+    id: string;
+    name: string;
+    type: string;
+    price: number;
+    image_url?: string;
+}
+
+interface RealPlay {
+    id: string;
+    name: string;
+    city?: string;
+    venue_name?: string;
+    sub_category?: string;
+    time?: string;
+    opening_time?: string;
+    closing_time?: string;
+    price_starts_from?: number;
+    courts?: Court[];
+    pricing_format?: 'fixed' | 'custom';
+    pricing_plans?: Array<{
+        start_time: string;
+        end_time: string;
+        min_duration?: string;
+        price: number;
+        weekend_price?: number;
+        use_weekend_pricing?: boolean;
+    }>;
+    custom_availabilities?: Array<{
+        day: string;
+        date?: string;
+        opening_time: string;
+        closing_time: string;
+        opening_period?: 'AM' | 'PM';
+        closing_period?: 'AM' | 'PM';
+        price: number;
+        min_duration?: string;
+    }>;
+}
+
+// Slots are generated dynamically from venue opening/closing time — no static list needed.
+
+/** Parse "09:00 AM" / "9:00 PM" / "09:00" (24-hr) → minutes since midnight.
+ *  Returns NaN on any failure so callers can fall back safely. */
+const parseTime = (timeStr: string): number => {
+    if (!timeStr) return NaN;
+    const s = timeStr.trim();
+
+    // More flexible regex validation - allows single digit hours
+    if (!/^\d{1,2}:\d{2}(\s*[AP]M)?$/i.test(s)) {
+        return NaN; // Invalid format
+    }
+
+    // "09:00 AM" / "9:00 pm"
+    const ampm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (ampm) {
+        let h = parseInt(ampm[1], 10);
+        const m = parseInt(ampm[2], 10);
+        const p = ampm[3].toUpperCase();
+
+        // Validate hour range (0-23 for input, will be converted)
+        if (h < 0 || h > 23 || m < 0 || m > 59) return NaN;
+
+        if (p === 'PM' && h !== 12) h += 12;
+        if (p === 'AM' && h === 12) h = 0;
+        return h * 60 + m;
+    }
+    // "09:00" (24-hr)
+    const h24 = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (h24) {
+        const h = parseInt(h24[1], 10);
+        const m = parseInt(h24[2], 10);
+
+        // Validate 24-hour range
+        if (h < 0 || h > 23 || m < 0 || m > 59) return NaN;
+
+        return h * 60 + m;
+    }
+    return NaN;
+};
+
+/**
+ * Parse the start time (minutes) of a backend slot string.
+ * Handles "09:00 AM - 09:30 AM" format (both halves have AM/PM).
+ */
+const parseSlotStartMin = (slot: string): number => {
+    const firstPart = slot.split(/\s*-\s*/)[0].trim();
+    return parseTime(firstPart);
+};
+
+const to24HourTime = (time: string, period?: 'AM' | 'PM'): string => {
+    if (!period) return time;
+    const [hRaw, mRaw] = (time || '').split(':');
+    let h = Number(hRaw);
+    const m = mRaw ?? '00';
+    if (Number.isNaN(h)) return time;
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${m}`;
+};
+
+const formatDateSimple = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()}`;
+};
+
+const formatTimeSimple = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const period = h >= 12 ? 'PM' : 'AM';
+    let displayH = h % 12 || 12;
+    return `${displayH}${m > 0 ? `:${String(m).padStart(2, '0')}` : ''}${period}`;
+};
+
+
+
+function getNextDays(count = 7) {
+    const days = [];
+    const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const today = new Date();
+
+    for (let i = 0; i < count; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+
+        // Build date key using local time components to avoid UTC conversion
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const key = `${year}-${month}-${day}`;
+
+        days.push({
+            key: key,
+            label: String(d.getDate()).padStart(2, '0'),
+            day: DAYS[d.getDay()],
+            month: MONTHS[d.getMonth()],
+        });
+    }
+    return days;
+}
+
+// ─── Time-period definitions ─────────────────────────────────────────────────
+const PERIODS = [
+    { id: 'morning', label: 'Morning', min: 6 * 60, max: 12 * 60 },
+    { id: 'noon', label: 'Noon', min: 12 * 60, max: 17 * 60 },
+    { id: 'evening', label: 'Evening', min: 17 * 60, max: 21 * 60 },
+    { id: 'night', label: 'Night', min: 21 * 60, max: 25 * 60 },
+] as const;
+
+const PERIOD_ICONS: Record<string, React.FC<{ size?: string | number; strokeWidth?: string | number }>> = {
+    morning: Sunrise,
+    noon: Sun,
+    evening: Sunset,
+    night: Moon,
+};
+
+export default function PlayBookPage() {
+    const router = useRouter();
+    const params = useParams();
+    const venueName = params?.name as string;
+    const session = useUserSession();
+    const organizerSession = getOrganizerSession();
+
+    const [venue, setVenue] = useState<RealPlay | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const dates = getNextDays(7);
+    const [selectedDate, setSelectedDate] = useState(dates[0].key);
+    const [duration, setDuration] = useState(1);
+    const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+    const [selectedCourtIds, setSelectedCourtIds] = useState<string[]>([]);
+    const { lockSlot, unlockSlot, locks, timeRemaining } = useSlotLock('play');
+    const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [activePeriod, setActivePeriod] = useState<string>('morning');
+    const [pass, setPass] = useState<TicpinPass | null>(null);
+    const [usePass, setUsePass] = useState(false);
+
+
+
+    const isWindowAvailable = (courtName: string, startMin: number, endMin: number): boolean => {
+        for (const booked of bookedSlots) {
+            const pipeIdx = booked.lastIndexOf('|');
+            if (pipeIdx === -1) continue;
+            const slotStr = booked.substring(0, pipeIdx);
+            const bCourtName = booked.substring(pipeIdx + 1);
+            if (bCourtName !== courtName) continue;
+
+            // Parse start minute of booked 30-min slot
+            const bStart = parseSlotStartMin(slotStr);
+            if (isNaN(bStart)) continue;
+
+            // Calculate the end time of the booked slot (assuming 30-min slots as per backend)
+            const bEnd = bStart + 30;
+
+            // Check for any overlap: [startMin, endMin) overlaps [bStart, bEnd)
+            // Overlap condition: startMin < bEnd AND bStart < endMin
+            if (startMin < bEnd && bStart < endMin) return false;
+        }
+        return true;
+    };
+
+    // Fetch venue
+    useEffect(() => {
+        if (!venueName) return;
+        const decodedVenueName = decodeURIComponent(venueName);
+        fetch(`/backend/api/play/${encodeURIComponent(decodedVenueName)}`, { credentials: 'include' })
+            .then(res => {
+                if (!res.ok) throw new Error('Venue not found');
+                return res.json();
+            })
+            .then((data: RealPlay) => {
+                if (!data || !data.id) throw new Error('Invalid venue data');
+                setVenue(data);
+                setLoading(false);
+            })
+            .catch((err) => {
+                console.error("Venue fetch error:", err);
+                setVenue(null);
+                setLoading(false);
+            });
+    }, [venueName]);
+
+    // Fetch pass
+    useEffect(() => {
+        if (session?.id) {
+            passApi.getActivePass(session.id).then(setPass).catch(() => setPass(null));
+        }
+    }, [session?.id]);
+
+    // Fetch booked slots whenever venue or date changes
+    useEffect(() => {
+        if (!venueName || !selectedDate) return;
+        setLoadingSlots(true);
+        // Clear slot, court, and period tab when date changes
+        setSelectedSlot(null);
+        setSelectedCourtIds([]);
+        setActivePeriod('morning');
+        const decodedVenueName = decodeURIComponent(venueName);
+        fetch(`/backend/api/play/${encodeURIComponent(decodedVenueName)}/booked-slots?date=${selectedDate}`, { credentials: 'include' })
+            .then(res => {
+                if (!res.ok) return { booked_slots: [] };
+                return res.json();
+            })
+            .then(data => {
+                setBookedSlots(Array.isArray(data.booked_slots) ? data.booked_slots : []);
+            })
+            .catch(() => setBookedSlots([]))
+            .finally(() => setLoadingSlots(false));
+    }, [venueName, selectedDate]);
+
+    const toggleCourt = async (uniqueId: string) => {
+        if (!selectedSlot || !venue) return;
+
+        const court = courts?.find((c, idx) => `${c.id}-${idx}` === uniqueId);
+        if (!court) return;
+
+        const backendSlot = blockSlots.find(b => b.label === selectedSlot)
+            ? `${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin)} - ${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin + 30)}`
+            : selectedSlot;
+
+        if (selectedCourtIds.includes(uniqueId)) {
+            // Deselect and Unlock
+            const success = await unlockSlot(venue.id, selectedDate, backendSlot, court.name);
+            if (success !== false) {
+                setSelectedCourtIds(prev => prev.filter(id => id !== uniqueId));
+            }
+        } else {
+            // Select and Lock
+            try {
+                // Determine limits: Play allows max 2 courts. If we already have 2, prompt or auto-replace oldest.
+                // The backend will auto-delete the oldest lock if we exceed 2.
+                await lockSlot(venue.id, selectedDate, backendSlot, court.name);
+
+                setSelectedCourtIds(prev => {
+                    if (prev.length >= 2) return [...prev.slice(1), uniqueId];
+                    return [...prev, uniqueId];
+                });
+            } catch (err: any) {
+                toast.error(err.message || 'Failed to lock this court. It might be taken.');
+            }
+        }
+    };
+
+    // When duration changes, reset both selections (availability window changes)
+    useEffect(() => {
+        // Unlock any active locks when clearing selections due to duration change
+        if (venue && selectedSlot && selectedCourtIds.length > 0) {
+            const backendSlot = blockSlots.find(b => b.label === selectedSlot)
+                ? `${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin)} - ${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin + 30)}`
+                : selectedSlot;
+
+            selectedCourtIds.forEach(uid => {
+                const court = courts?.find((c, idx) => `${c.id}-${idx}` === uid);
+                if (court) unlockSlot(venue.id, selectedDate, backendSlot, court.name);
+            });
+        }
+        setSelectedSlot(null);
+        setSelectedCourtIds([]);
+    }, [duration]);
+
+    // Converts minutes-since-midnight → "HH:MM AM/PM" — identical rule to backend formatTimeMins.
+    // h >= 12 → PM  (so 12:00 noon = PM, 00:00 midnight = AM)
+    const formatTime = (mins: number) => {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        const period = h >= 12 ? 'PM' : 'AM';
+        let displayH = h % 12;
+        if (displayH === 0) displayH = 12;
+        return `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+    };
+
+    const getSelectedDateMeta = () => {
+        const d = new Date(selectedDate + 'T00:00:00');
+        const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+        return { dayName, isWeekend };
+    };
+
+    interface TimeRange {
+        start: number;
+        end: number;
+        price?: number;
+    }
+
+    // Derive opening/closing minutes using schedule priority:
+    // custom (selected day) > fixed plans > legacy timings.
+    const resolveVenueTimes = (): TimeRange[] => {
+        const { dayName } = getSelectedDateMeta();
+        const FALLBACK = [{ start: 6 * 60, end: 22 * 60 }];
+
+        if (venue?.pricing_format === 'custom') {
+            const customDates = venue?.custom_availabilities?.filter(ca => ca.date && ca.date === selectedDate) ?? [];
+            const customDays = venue?.custom_availabilities?.filter(ca => !ca.date && ca.day === dayName) ?? [];
+            
+            // Priority: specific date matches first, otherwise day-of-week matches
+            const matchingAvailabilities = customDates.length > 0 ? customDates : customDays;
+            
+            if (matchingAvailabilities.length > 0) {
+                return matchingAvailabilities.map(ca => ({
+                    start: parseTime(to24HourTime(ca.opening_time, ca.opening_period)),
+                    end: parseTime(to24HourTime(ca.closing_time, ca.closing_period)),
+                    price: ca.price > 0 ? ca.price : undefined
+                })).filter(r => !isNaN(r.start) && !isNaN(r.end) && r.end > r.start);
+            }
+        }
+
+        if (venue?.pricing_format === 'fixed' && venue?.pricing_plans && venue.pricing_plans.length > 0) {
+            const { isWeekend } = getSelectedDateMeta();
+            return venue.pricing_plans.map(p => {
+                const price = (isWeekend && p.use_weekend_pricing && (p.weekend_price ?? 0) > 0) 
+                    ? p.weekend_price 
+                    : (p.price > 0 ? p.price : undefined);
+                return {
+                    start: parseTime(p.start_time),
+                    end: parseTime(p.end_time),
+                    price
+                };
+            }).filter(r => !isNaN(r.start) && !isNaN(r.end) && r.end > r.start);
+        }
+
+        // Fallback to legacy fields
+        const s1 = parseTime(venue?.opening_time ?? '');
+        const e1 = parseTime(venue?.closing_time ?? '');
+        if (!isNaN(s1) && !isNaN(e1) && e1 > s1) return [{ start: s1, end: e1 }];
+
+        const t = venue?.time ?? '';
+        if (t) {
+            const sep = t.includes(' - ') ? ' - ' : '-';
+            const parts = t.split(sep);
+            if (parts.length >= 2) {
+                const s2 = parseTime(parts[0].trim());
+                const e2 = parseTime(parts[parts.length - 1].trim());
+                if (!isNaN(s2) && !isNaN(e2) && e2 > s2) return [{ start: s2, end: e2 }];
+            }
+        }
+        return FALLBACK;
+    };
+
+    const resolveEffectiveHourlyPrice = (slotStartMin?: number): number | null => {
+        if (slotStartMin === undefined) {
+            // Fallback for initial UI before slot selection
+            const ranges = resolveVenueTimes();
+            return ranges.find(r => (r.price ?? 0) > 0)?.price ?? null;
+        }
+
+        const ranges = resolveVenueTimes();
+        const matchingRange = ranges.find(r => slotStartMin >= r.start && slotStartMin < r.end);
+        return matchingRange?.price ?? null;
+    };
+
+    // duration is in 30-min units: 1=30min, 2=1hr, 3=1.5hr, etc.
+    const durationMins = duration * 30;
+    const durationLabel = (() => {
+        const total = durationMins;
+        const hrs = Math.floor(total / 60);
+        const mins = total % 60;
+        if (hrs === 0) return `${mins} min`;
+        if (mins === 0) return `${hrs} hr`;
+        return `${hrs} hr ${mins} min`;
+    })();
+
+    const generateBlockSlots = (): { label: string; startMin: number; endMin: number }[] => {
+        const ranges = resolveVenueTimes();
+        const blocks: { label: string; startMin: number; endMin: number }[] = [];
+
+        // Get current time in minutes for filtering past slots
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const isToday = selectedDate === now.toISOString().split('T')[0];
+
+        ranges.forEach(({ start: venueStart, end: venueEnd }) => {
+            const scheduleDuration = venueEnd - venueStart;
+            const hasSingleConfiguredSlot = scheduleDuration > 0 && scheduleDuration <= 240;
+            let current = venueStart;
+
+            if (hasSingleConfiguredSlot) {
+                if (!isToday || venueStart >= currentMinutes) {
+                    blocks.push({
+                        label: `${formatTime(venueStart)} - ${formatTime(venueEnd)}`,
+                        startMin: venueStart,
+                        endMin: venueEnd,
+                    });
+                }
+                return;
+            }
+
+            while (current + durationMins <= venueEnd) {
+                const end = current + durationMins;
+                // Skip past slots if booking for today
+                if (!isToday || current >= currentMinutes) {
+                    blocks.push({
+                        label: `${formatTime(current)} - ${formatTime(end)}`,
+                        startMin: current,
+                        endMin: end,
+                    });
+                }
+                current += 30; // step every 30 min
+            }
+        });
+
+        // Sort by start time in case ranges were added out of order
+        return blocks.sort((a, b) => a.startMin - b.startMin);
+    };
+
+    const blockSlots = generateBlockSlots();
+    const selectedBlock = blockSlots.find(b => b.label === selectedSlot);
+    const effectiveDurationSlots = selectedBlock
+        ? Math.max(1, Math.round((selectedBlock.endMin - selectedBlock.startMin) / 30))
+        : duration;
+    const effectiveDurationMins = effectiveDurationSlots * 30;
+    const effectiveDurationLabel = (() => {
+        const hrs = Math.floor(effectiveDurationMins / 60);
+        const mins = effectiveDurationMins % 60;
+        if (hrs === 0) return `${mins} min`;
+        if (mins === 0) return `${hrs} hr`;
+        return `${hrs} hr ${mins} min`;
+    })();
+
+    // ── Hour label helper (e.g. "9 AM", "12 PM") — same h >= 12 → PM rule as formatTime ──
+    const hourLabel = (h: number) => {
+        const period = h >= 12 ? 'PM' : 'AM';
+        const display = h % 12 || 12;
+        return `${display} ${period}`;
+    };
+
+    // ── Period filtering + hourly grouping ───────────────────────────────────
+    const activePeriodDef = PERIODS.find(p => p.id === activePeriod) ?? PERIODS[0];
+    const periodSlots = blockSlots.filter(
+        b => b.startMin >= activePeriodDef.min && b.startMin < activePeriodDef.max
+    );
+    // Map hour → slots[]
+    const hourGroupMap = new Map<number, typeof blockSlots>();
+    periodSlots.forEach(b => {
+        const h = Math.floor(b.startMin / 60);
+        if (!hourGroupMap.has(h)) hourGroupMap.set(h, []);
+        hourGroupMap.get(h)!.push(b);
+    });
+    const hourGroups = [...hourGroupMap.entries()].sort((a, b) => a[0] - b[0]);
+
+    const courts = venue?.courts ?? [];
+
+    const doBooking = (v: RealPlay) => {
+        const effectiveHourlyPrice = resolveEffectiveHourlyPrice(selectedBlock?.startMin);
+        const tickets = selectedCourtIds.map(uid => {
+            const court = courts.find((c, idx) => `${c.id}-${idx}` === uid);
+            const pricePerHour = effectiveHourlyPrice ?? court?.price ?? v.price_starts_from ?? 500;
+            // price is stored per-hour; duration is in 30-min units → actual cost = price × (duration/2)
+            const actualPrice = Math.round(pricePerHour * effectiveDurationSlots / 2);
+            return {
+                category: court?.name ?? 'Court',
+                name: `${court?.name ?? 'Court'} — ${court?.type ?? ''}`,
+                price: actualPrice,
+                quantity: 1,
+            };
+        });
+        const totalPrice = tickets.reduce((s, t) => s + t.price, 0);
+        // backendSlot = the 30-min start slot sent to and stored by the backend
+        // displaySlot = the full user-selected duration span shown in the review page
+        const backendSlot = selectedBlock
+            ? `${formatTime(selectedBlock.startMin)} - ${formatTime(selectedBlock.startMin + 30)}`
+            : selectedSlot;
+        const displaySlot = selectedSlot ?? backendSlot; // full span e.g. "09:00 AM - 10:00 AM"
+        const cartItem = {
+            eventId: v.id,
+            eventName: v.name,
+            city: v.city ?? '',
+            type: 'play',
+            date: selectedDate,
+            slot: backendSlot,       // used by backend for booking & overlap check
+            display_slot: displaySlot, // shown to user in review / confirmation
+            duration: effectiveDurationSlots,       // in 30-min units; used by backend for index expansion
+            tickets,
+            totalPrice,
+            use_pass: usePass,
+            pass_id: pass?.id
+        };
+
+        // Safely store cart with error handling
+        try {
+            sessionStorage.setItem('ticpin_cart', JSON.stringify(cartItem));
+        } catch (error) {
+            console.error('Failed to store cart data:', error);
+            toast.error('Unable to proceed with booking. Please try again.');
+            return;
+        }
+
+        router.push(`/play/${encodeURIComponent(venueName)}/book/review`);
+    };
+
+    const handleBooking = () => {
+        if (!venue) return;
+
+        // Check if organizer is logged in
+        if (organizerSession) {
+            setShowLogoutModal(true);
+            return;
+        }
+
+        if (!session) { setShowAuthModal(true); return; }
+        if (selectedCourtIds.length === 0) { toast.warning('Please select at least one court.'); return; }
+        if (!selectedSlot) { toast.warning('Please select a time slot.'); return; }
+        doBooking(venue);
+    };
+
+    const handleOrganizerLogout = () => {
+        clearOrganizerSession();
+        // Show user auth modal after organizer logout
+        setShowAuthModal(true);
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="w-10 h-10 border-4 border-[#E7C200] border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+    if (!venue) return <div className="text-center py-20 text-zinc-500">Venue not found</div>;
+
+    const curMonth = dates[0].month;
+
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">
+            <main className="max-w-[900px] mx-auto px-4 md:px-6 py-8">
+
+                <button
+                    onClick={() => router.back()}
+                    className="mb-6 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-zinc-400 hover:text-black transition-colors"
+                >
+                    <ArrowLeft size={16} /> Back
+                </button>
+
+                <div className="bg-white border border-zinc-200 rounded-[24px] overflow-hidden shadow-sm">
+                    {/* Header */}
+                    <div className="px-6 md:px-10 pt-8 pb-6 border-b border-zinc-100">
+                        <h1 className="text-[28px] md:text-[32px] font-semibold text-black leading-tight uppercase tracking-tight">
+                            {venue.name}
+                        </h1>
+                        <p className="text-[16px] text-[#686868] font-medium mt-1 uppercase tracking-wider">
+                            {venue.sub_category ?? 'Multi-sports'}
+                            {venue.city ? <>&nbsp; • &nbsp;{venue.city}</> : null}
+                        </p>
+                    </div>
+
+                    <div className="px-6 md:px-10 py-8 space-y-10">
+
+                        {/* Date */}
+                        <section className="space-y-4">
+                            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black border-b border-zinc-200 pb-3">
+                                SELECT DATE &amp; TIME
+                            </h2>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <div className="w-[52px] h-[64px] bg-[#D9D9D9] rounded-[14px] flex items-center justify-center shrink-0">
+                                    <span className="text-[11px] font-semibold text-black" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.1em' }}>{curMonth}</span>
+                                </div>
+                                {dates.map((d) => (
+                                    <button
+                                        key={d.key}
+                                        onClick={() => setSelectedDate(d.key)}
+                                        className={`w-[52px] h-[64px] rounded-[14px] flex flex-col items-center justify-center transition-all shrink-0 ${selectedDate === d.key
+                                            ? 'bg-black text-white'
+                                            : 'bg-white border border-zinc-300 text-black hover:border-black'
+                                            }`}
+                                    >
+                                        <span className="text-[26px] font-semibold leading-none">{d.label}</span>
+                                        <span className={`text-[13px] font-medium mt-0.5 ${selectedDate === d.key ? 'text-white' : 'text-[#686868]'}`}>
+                                            {d.day}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Duration */}
+                        <section className="space-y-4">
+                            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black border-b border-zinc-200 pb-3">
+                                DURATION
+                            </h2>
+                            <div className="flex items-center border border-zinc-300 rounded-[14px] w-fit overflow-hidden">
+                                <button onClick={() => setDuration(d => Math.max(1, d - 1))}
+                                    className="w-[44px] h-[52px] text-[22px] font-medium text-black hover:bg-zinc-100 transition-colors flex items-center justify-center">
+                                    −
+                                </button>
+                                <div className="px-6 h-[52px] flex items-center justify-center border-x border-zinc-300">
+                                    <span className="text-[18px] font-semibold text-black whitespace-nowrap">{durationLabel}</span>
+                                </div>
+                                <button onClick={() => setDuration(d => Math.min(16, d + 1))}
+                                    className="w-[44px] h-[52px] text-[22px] font-medium text-black hover:bg-zinc-100 transition-colors flex items-center justify-center">
+                                    +
+                                </button>
+                            </div>
+                        </section>
+
+                        {/* ── Step 1: Time Slot Selection ── */}
+                        <section className="space-y-4">
+
+                            {/* Header + total count */}
+                            <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
+                                <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black">
+                                    SELECT TIME SLOT
+                                </h2>
+                                {!loadingSlots && (() => {
+                                    const ranges = resolveVenueTimes();
+                                    const venueEnd = Math.max(...ranges.map(r => r.end), 0);
+                                    const now = new Date();
+                                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                                    const isToday = selectedDate === now.toISOString().split('T')[0];
+                                    const isClosedNow = isToday && currentMinutes >= venueEnd;
+
+                                    const total = blockSlots.length;
+                                    const free = courts.length === 0 ? total : blockSlots.filter(b =>
+                                        courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin))
+                                    ).length;
+
+                                    if (isClosedNow) {
+                                        return <span className="text-[12px] font-bold px-3 py-1 bg-red-600 text-white rounded-full uppercase tracking-widest">Closed for today</span>;
+                                    }
+                                    if (isToday && total === 0) {
+                                        return <span className="text-[12px] font-bold px-3 py-1 bg-zinc-600 text-white rounded-full uppercase tracking-widest">No more slots today</span>;
+                                    }
+                                    if (total > 0 && free === 0) {
+                                        return <span className="text-[12px] font-bold px-3 py-1 bg-red-100 text-red-600 border border-red-200 rounded-full uppercase tracking-widest">Fully Booked</span>;
+                                    }
+
+                                    return (
+                                        <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full ${free === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                                            {free === 0 ? 'Fully Booked' : `${free} / ${total} slots free`}
+                                        </span>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Status Banner for edge cases */}
+                            {!loadingSlots && (() => {
+                                const ranges = resolveVenueTimes();
+                                const venueEnd = Math.max(...ranges.map(r => r.end), 0);
+                                const now = new Date();
+                                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                                const isToday = selectedDate === now.toISOString().split('T')[0];
+                                const isClosedNow = isToday && currentMinutes >= venueEnd;
+                                const total = blockSlots.length;
+                                const free = courts.length === 0 ? total : blockSlots.filter(b =>
+                                    courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin))
+                                ).length;
+
+                                if (isClosedNow) {
+                                    return (
+                                        <div className="bg-red-50 border border-red-100 rounded-[15px] p-4 text-center">
+                                            <p className="text-red-700 font-bold text-[18px] uppercase tracking-wide">Venue is currently closed</p>
+                                            <p className="text-red-600 text-[14px] mt-1">Operating hours have ended for today. Please select another date.</p>
+                                        </div>
+                                    );
+                                }
+                                if (isToday && total === 0) {
+                                    return (
+                                        <div className="bg-zinc-50 border border-zinc-200 rounded-[15px] p-4 text-center">
+                                            <p className="text-zinc-700 font-bold text-[18px] uppercase tracking-wide">No more slots available today</p>
+                                            <p className="text-zinc-500 text-[14px] mt-1">All remaining time slots for today have passed or are booked.</p>
+                                        </div>
+                                    );
+                                }
+                                if (total > 0 && free === 0) {
+                                    return (
+                                        <div className="bg-orange-50 border border-orange-100 rounded-[15px] p-4 text-center">
+                                            <p className="text-orange-700 font-bold text-[18px] uppercase tracking-wide">Fully Booked</p>
+                                            <p className="text-orange-600 text-[14px] mt-1">All courts are already booked for the selected date and time.</p>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
+                            {/* ── Period filter tabs ───────────────────────── */}
+                            <div className="flex gap-2 flex-wrap">
+                                {PERIODS.filter(p =>
+                                    blockSlots.some(b => b.startMin >= p.min && b.startMin < p.max)
+                                ).map(p => {
+                                    const Icon = PERIOD_ICONS[p.id];
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => setActivePeriod(p.id)}
+                                            className={`inline-flex items-center gap-1.5 px-4 h-[34px] rounded-full text-[13px] font-semibold border transition-all ${activePeriod === p.id
+                                                ? 'bg-black text-white border-black'
+                                                : 'bg-white text-black border-zinc-300 hover:border-zinc-500'
+                                                }`}
+                                        >
+                                            <Icon size={13} strokeWidth={2} />
+                                            {p.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* ── New Slots Grid ─────────────────────── */}
+                            {loadingSlots ? (
+                                <div className="flex items-center gap-2 text-[14px] text-zinc-400 py-2">
+                                    <div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                    Checking availability...
+                                </div>
+                            ) : periodSlots.length === 0 ? (
+                                <p className="text-zinc-400 text-[13px] italic py-2">No time slots in this period.</p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                    {periodSlots.map((b, i) => {
+                                        const isSelected = selectedSlot === b.label;
+                                        const hasFreeCourt = courts.length === 0 ? true : courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin));
+                                        const slotAvailable = hasFreeCourt;
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                onClick={() => {
+                                                    if (slotAvailable) {
+                                                        setSelectedSlot(b.label);
+                                                        setSelectedCourtIds([]);
+                                                    }
+                                                }}
+                                                className={`flex items-center justify-between p-4 rounded-[16px] border-2 transition-all cursor-pointer group ${!slotAvailable
+                                                    ? 'border-zinc-100 bg-zinc-50 opacity-60 cursor-not-allowed'
+                                                    : isSelected
+                                                        ? 'border-black bg-zinc-50 shadow-md'
+                                                        : 'border-zinc-200 bg-white hover:border-zinc-400'
+                                                    }`}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <span className={`text-[18px] md:text-[20px] font-bold ${isSelected ? 'text-black' : 'text-zinc-800'}`}>
+                                                        {formatDateSimple(selectedDate)} | {formatTimeSimple(b.startMin)}
+                                                    </span>
+                                                    {!slotAvailable && (
+                                                        <span className="text-[11px] font-bold text-red-500 uppercase tracking-wider">
+                                                            Fully Booked
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    disabled={!slotAvailable}
+                                                    className={`px-5 py-2 rounded-[8px] text-[13px] font-bold uppercase tracking-widest transition-all ${!slotAvailable
+                                                        ? 'bg-zinc-100 text-zinc-400'
+                                                        : isSelected
+                                                            ? 'bg-black text-white'
+                                                            : 'bg-[#F2F2F2] text-black hover:bg-zinc-200'
+                                                        }`}
+                                                >
+                                                    {isSelected ? 'Selected' : slotAvailable ? 'Book' : 'Full'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+
+                            {/* Selected slot display strip */}
+                            {selectedSlot && (
+                                <div className="flex items-center gap-2 text-[13px] pt-1">
+                                    <span className="font-medium text-zinc-500">Selected:</span>
+                                    <span className="font-semibold text-black bg-zinc-100 px-3 py-1 rounded-full">{selectedSlot}</span>
+                                    <button
+                                        onClick={() => { setSelectedSlot(null); setSelectedCourtIds([]); }}
+                                        className="text-zinc-400 hover:text-red-500 text-[11px] font-semibold uppercase tracking-wide transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
+
+                        </section>
+
+                        {/* ── Step 2: Court Selection (based on selected slot) ── */}
+                        <section className="space-y-4">
+                            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black border-b border-zinc-200 pb-3">
+                                SELECT COURT
+                            </h2>
+                            {!selectedSlot ? (
+                                <p className="text-[14px] text-zinc-400 italic">Select a time block above to see available courts</p>
+                            ) : loadingSlots ? (
+                                <div className="flex items-center gap-2 text-[14px] text-zinc-400">
+                                    <div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                    Checking availability...
+                                </div>
+                            ) : courts.length === 0 ? (
+                                <p className="text-[#686868] text-[15px]">No courts configured for this venue.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {courts.map((court, index) => {
+                                        const uniqueId = `${court.id}-${index}`;
+                                        const selectedBlock = blockSlots.find(b => b.label === selectedSlot);
+                                        const isAvailable = selectedBlock ? isWindowAvailable(court.name, selectedBlock.startMin, selectedBlock.endMin) : false;
+                                        const isSelected = selectedCourtIds.includes(uniqueId);
+                                        return (
+                                            <div
+                                                key={uniqueId}
+                                                onClick={() => isAvailable && toggleCourt(uniqueId)}
+                                                className={`flex items-center gap-4 p-3 rounded-[16px] border transition-all ${!isAvailable
+                                                    ? 'border-zinc-100 bg-zinc-50 opacity-50 cursor-not-allowed'
+                                                    : isSelected
+                                                        ? 'border-black bg-zinc-50 cursor-pointer shadow-md'
+                                                        : 'border-zinc-200 bg-white hover:border-zinc-400 cursor-pointer'
+                                                    }`}
+                                            >
+                                                <div className="relative w-[110px] md:w-[150px] h-[80px] rounded-[12px] overflow-hidden shrink-0 bg-[#D9D9D9] flex items-center justify-center">
+                                                    {court.image_url ? (
+                                                        <Image
+                                                            src={court.image_url}
+                                                            alt={court.name}
+                                                            fill
+                                                            sizes="(max-width: 768px) 110px, 150px"
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-zinc-400 font-bold uppercase tracking-widest text-[10px]">
+                                                            {venue.sub_category ?? 'TURF'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 space-y-0.5">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="text-[17px] font-semibold text-black uppercase">{court.name}</p>
+                                                        {!isAvailable && (
+                                                            <span className="text-[11px] font-semibold text-red-500 uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded-full">
+                                                                Unavailable for this slot
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[14px] font-medium text-[#686868]">{court.type}</p>
+                                                    {(() => {
+                                                        const remainingCount = blockSlots.filter(b => isWindowAvailable(court.name, b.startMin, b.endMin)).length;
+                                                        return remainingCount > 0 ? (
+                                                            <span className="text-[11px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full inline-block">
+                                                                {remainingCount} slot{remainingCount !== 1 ? 's' : ''} available
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full inline-block">
+                                                                Fully booked today
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                    <p className="text-[15px] font-bold text-black mt-1">
+                                                        ₹{resolveEffectiveHourlyPrice() ?? court.price}<span className="text-[13px] font-normal text-[#686868]"> / hr</span>
+                                                        <span className="ml-2 text-[13px] text-[#686868] font-medium">
+                                                            = ₹{Math.round((resolveEffectiveHourlyPrice() ?? court.price) * effectiveDurationSlots / 2)} for {effectiveDurationLabel}
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                                <div className={`w-[24px] h-[24px] rounded-[6px] border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'border-black bg-black' : 'border-zinc-300 bg-white'
+                                                    }`}>
+                                                    {isSelected && (
+                                                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                                                            <path d="M2 7L5.5 10.5L12 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </section>
+
+                        {/* Ticpass Apply */}
+                        {pass && pass.benefits.turf_bookings.remaining > 0 && (
+                            <section className="bg-amber-50 rounded-[20px] p-6 border border-amber-200 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+                                        <Zap size={24} fill="currentColor" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-amber-900">Ticpin Pass Active</h3>
+                                        <p className="text-sm text-amber-700 font-medium">Use 1 of your {pass.benefits.turf_bookings.remaining} free bookings</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setUsePass(!usePass)}
+                                    className={`px-6 h-11 rounded-xl font-bold transition-all ${usePass
+                                            ? 'bg-amber-600 text-white shadow-inner'
+                                            : 'bg-white text-amber-600 border border-amber-300 hover:bg-amber-100'
+                                        }`}
+                                >
+                                    {usePass ? 'Pass Applied' : 'Apply Pass'}
+                                </button>
+                            </section>
+                        )}
+
+                        {/* Price summary */}
+                        {selectedCourtIds.length > 0 && (
+                            <section className="bg-zinc-50 rounded-[14px] p-4 border border-zinc-200 space-y-1">
+                                {selectedCourtIds.map(uid => {
+                                    const court = courts.find((c, idx) => `${c.id}-${idx}` === uid);
+                                    if (!court) return null;
+                                    const linePrice = Math.round((resolveEffectiveHourlyPrice() ?? court.price) * effectiveDurationSlots / 2);
+                                    return (
+                                        <div key={uid} className="flex justify-between text-[15px]">
+                                            <span className="text-black font-medium">{court.name} × {effectiveDurationLabel}</span>
+                                            <span className={`font-semibold ${usePass ? 'text-zinc-400 line-through decoration-red-500' : 'text-black'}`}>₹{linePrice}</span>
+                                        </div>
+                                    );
+                                })}
+                                <div className="border-t border-zinc-300 pt-2 mt-2 flex justify-between text-[16px] font-bold">
+                                    <span>Total</span>
+                                    <span className="flex items-center gap-2">
+                                        {usePass && (
+                                            <span className="text-[12px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded tracking-widest uppercase">
+                                                PASS APPLIED
+                                            </span>
+                                        )}
+                                        <span className={usePass ? 'text-green-600' : ''}>
+                                            ₹{usePass ? 0 : selectedCourtIds.reduce((s, uid) => {
+                                                const court = courts.find((c, idx) => `${c.id}-${idx}` === uid);
+                                                return s + Math.round((resolveEffectiveHourlyPrice() ?? court?.price ?? 0) * effectiveDurationSlots / 2);
+                                            }, 0)}
+                                        </span>
+                                    </span>
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Book CTA */}
+                        <div className="pt-2 border-t border-zinc-200">
+                            <button
+                                className="w-full h-[54px] bg-black text-white rounded-[12px] flex items-center justify-center active:scale-[0.98] hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                onClick={handleBooking}
+                                disabled={selectedCourtIds.length === 0 || !selectedSlot}
+                            >
+                                <span style={{ transform: 'scaleY(2)', display: 'inline-block', fontFamily: 'var(--font-anek-tamil)', fontWeight: 600, lineHeight: 1 }}
+                                    className="text-[18px] tracking-wider uppercase">
+                                    BOOK SLOTS
+                                </span>
+                            </button>
+                            {(selectedCourtIds.length === 0 || !selectedSlot) && (
+                                <p className="text-center text-[13px] text-[#686868] mt-2">
+                                    {!selectedSlot
+                                        ? 'Select a time slot to continue'
+                                        : 'Select a court to continue'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                onSuccess={() => {
+                    setShowAuthModal(false);
+                    if (venue) doBooking(venue);
+                }}
+            />
+
+            <OrganizerLogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onConfirm={handleOrganizerLogout}
+                organizerName={organizerSession?.email}
+            />
+        </div>
+    );
+}
