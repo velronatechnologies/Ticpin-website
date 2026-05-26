@@ -58,38 +58,15 @@ export default function OrganizerHeader({ activeTab, firstItemLabel }: Organizer
 
     return (
         <>
-            <header className="w-full h-[114px] bg-white flex items-center justify-between px-10 shadow-[0px_0.5px_5px_rgba(0,0,0,0.15)] z-[10] relative">
+            <header className="w-full h-[70px] bg-white flex items-center justify-between px-4 md:px-10 z-[10] relative border-b border-zinc-200">
                 <div className="flex items-center gap-8">
-                    <button onClick={() => router.push('/')} className="transition-opacity hover:opacity-80">
-                        <img 
-                            src="/ticpin-logo-black.png" 
-                            alt="TICPIN" 
-                            className="h-4 md:h-7 w-auto object-contain"
+                    <button onClick={() => router.push('/')} className="">
+                        <img
+                            src="/ticpin-logo-black.png"
+                            alt="TICPIN"
+                            className="h-5 md:h-7 w-auto object-contain"
                         />
                     </button>
-                    {activeTab && (
-                        <>
-                            <div className="w-[1px] h-8 bg-zinc-300 hidden md:block" />
-                            <div className="flex gap-4 items-center">
-                                {switcherItems.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => router.push(`/organizer/dashboard?category=${item.id}`)}
-                                        className="px-6 py-2 rounded-full font-medium transition-all text-[18px]"
-                                        style={{
-                                            background: activeTab === item.id 
-                                                ? (item.id === 'play' ? 'rgba(231, 194, 0, 0.15)' : 'rgba(83, 49, 234, 0.15)')
-                                                : 'transparent',
-                                            color: activeTab === item.id ? 'black' : '#686868',
-                                            boxShadow: activeTab === item.id ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
-                                        }}
-                                    >
-                                        {item.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </>
-                    )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -102,22 +79,22 @@ export default function OrganizerHeader({ activeTab, firstItemLabel }: Organizer
                                 setIsMenuOpen(false);
                             }
                         }}
-                        className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center transition-all ${isUserOpen ? 'bg-zinc-100' : 'bg-zinc-200 border-2 border-white shadow-sm hover:scale-110'}`}
+                        className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center transition-all ${isUserOpen ? 'bg-zinc-100' : 'bg-zinc-200 border-2 border-white'}`}
                     >
                         {isUserOpen ? (
                             <X className="text-black" size={24} />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-zinc-100">
                                 {profilePhoto ? (
-                                    <img 
-                                        src={profilePhoto} 
-                                        alt="Profile" 
+                                    <img
+                                        src={profilePhoto}
+                                        alt="Profile"
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <img 
-                                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nala" 
-                                        alt="Profile" 
+                                    <img
+                                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nala"
+                                        alt="Profile"
                                         className="w-full h-full object-cover"
                                     />
                                 )}
@@ -126,7 +103,7 @@ export default function OrganizerHeader({ activeTab, firstItemLabel }: Organizer
                     </button>
 
                     {/* Hamburger/Cross Menu -> Opens Main Navigation Sidebar */}
-                    <button 
+                    <button
                         onClick={() => {
                             if (isMenuOpen) setIsMenuOpen(false);
                             else {
@@ -134,14 +111,14 @@ export default function OrganizerHeader({ activeTab, firstItemLabel }: Organizer
                                 setIsUserOpen(false);
                             }
                         }}
-                        className="p-2 text-black hover:bg-zinc-100 rounded-lg transition-colors flex items-center justify-center"
+                        className="p-2 text-black rounded-lg transition-colors flex items-center justify-center"
                     >
                         {isMenuOpen ? (
                             <X size={28} />
                         ) : (
                             <svg width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="8" y="14" width="24" height="3" rx="1.5" fill="black"/>
-                                <rect x="8" y="23" width="24" height="3" rx="1.5" fill="black"/>
+                                <rect x="8" y="14" width="24" height="3" rx="1.5" fill="black" />
+                                <rect x="8" y="23" width="24" height="3" rx="1.5" fill="black" />
                             </svg>
                         )}
                     </button>

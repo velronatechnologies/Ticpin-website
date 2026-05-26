@@ -51,8 +51,8 @@ interface MobilePlayDetailsProps {
         };
         faqs?: { question: string; answer: string }[];
         terms?: string;
-        google_map_link?: string;
         price_starts_from?: number;
+        min_duration?: string;
     };
     offers?: OfferRecord[];
 }
@@ -101,16 +101,7 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
             : []);
 
     // Format time display - check pricing_plans first, then opening/closing, then time
-    const displayTime = (() => {
-        if (venue.pricing_plans && venue.pricing_plans.length > 0) {
-            const plan = venue.pricing_plans[0];
-            return `${plan.start_time} - ${plan.end_time}`;
-        }
-        if (venue.opening_time && venue.closing_time) {
-            return `${venue.opening_time} - ${venue.closing_time}`;
-        }
-        return venue.time || '6:00 AM - 10:00 PM';
-    })();
+    const displayTime = venue.min_duration || venue.pricing_plans?.[0]?.min_duration || '6:00 AM - 10:00 PM';
 
     return (
         <div className="md:hidden min-h-screen w-full bg-white font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>

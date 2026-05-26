@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Sunrise, Sun, Sunset, Moon } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { useUserSession } from '@/lib/auth/user';
 import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import AuthModal from '@/components/modals/AuthModal';
@@ -12,6 +14,16 @@ import { toast } from '@/components/ui/Toast';
 import { passApi, TicpinPass } from '@/lib/api/pass';
 import { Zap, ShieldCheck } from 'lucide-react';
 import { useSlotLock } from '@/hooks/useSlotLock';
+
+// Navbar Components
+import LocationSelector from '@/components/layout/Navbar/LocationSelector';
+import UserMenu from '@/components/layout/Navbar/UserMenu';
+import ProfileDrawer from '@/components/layout/Navbar/ProfileDrawer';
+const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
+
+// Stores
+import { useLocationStore } from '@/store/useLocationStore';
+import { useIdentityStore } from '@/store/useIdentityStore';
 
 interface Court {
     id: string;
@@ -121,12 +133,12 @@ const formatDateSimple = (dateStr: string) => {
     return `${months[d.getMonth()]} ${d.getDate()}`;
 };
 
-const formatTimeSimple = (mins: number) => {
+const formatTimeSimple = (mins: number, showPeriod = true) => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     const period = h >= 12 ? 'PM' : 'AM';
     let displayH = h % 12 || 12;
-    return `${displayH}${m > 0 ? `:${String(m).padStart(2, '0')}` : ''}${period}`;
+    return `${displayH}${m > 0 ? `:${String(m).padStart(2, '0')}` : ''}${showPeriod ? period : ''}`;
 };
 
 
@@ -159,18 +171,11 @@ function getNextDays(count = 7) {
 
 // ─── Time-period definitions ─────────────────────────────────────────────────
 const PERIODS = [
-    { id: 'morning', label: 'Morning', min: 6 * 60, max: 12 * 60 },
-    { id: 'noon', label: 'Noon', min: 12 * 60, max: 17 * 60 },
-    { id: 'evening', label: 'Evening', min: 17 * 60, max: 21 * 60 },
-    { id: 'night', label: 'Night', min: 21 * 60, max: 25 * 60 },
+    { id: 'morning', label: 'Morning', min: 0 * 60, max: 12 * 60 },
+    { id: 'evening', label: 'Evening', min: 12 * 60, max: 24 * 60 },
 ] as const;
 
-const PERIOD_ICONS: Record<string, React.FC<{ size?: string | number; strokeWidth?: string | number }>> = {
-    morning: Sunrise,
-    noon: Sun,
-    evening: Sunset,
-    night: Moon,
-};
+
 
 export default function PlayBookPage() {
     const router = useRouter();
@@ -187,14 +192,53 @@ export default function PlayBookPage() {
     const dates = getNextDays(7);
     const [selectedDate, setSelectedDate] = useState(dates[0].key);
     const [duration, setDuration] = useState(1);
+    const { locks, timeRemaining, lockSlot, unlockSlot, unlockAll, lockKey } = useSlotLock('play');
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+    const [slotOffset, setSlotOffset] = useState(0);
+
     const [selectedCourtIds, setSelectedCourtIds] = useState<string[]>([]);
-    const { lockSlot, unlockSlot, locks, timeRemaining } = useSlotLock('play');
     const [bookedSlots, setBookedSlots] = useState<string[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [activePeriod, setActivePeriod] = useState<string>('morning');
     const [pass, setPass] = useState<TicpinPass | null>(null);
     const [usePass, setUsePass] = useState(false);
+
+    // Navbar State
+    const [isLocationOpen, setIsLocationOpen] = useState(false);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+    const [authView, setAuthView] = useState<'number' | 'otp' | 'profile' | 'location'>('number');
+    const profileRef = useRef<HTMLDivElement>(null);
+    const togglingCourtsRef = useRef<Set<string>>(new Set());
+    const bookingInProgressRef = useRef(false);
+
+    const { currentLocation, setLocation, clearLocation } = useLocationStore();
+    const { userSession, logoutUser, logoutOrganizer, sync: syncAuth } = useIdentityStore();
+
+    useEffect(() => {
+        syncAuth();
+    }, [syncAuth]);
+
+    const handleProfileClick = () => {
+        if (organizerSession || userSession) {
+            setIsProfileDrawerOpen(!isProfileDrawerOpen);
+        } else {
+            setAuthView('number');
+            setShowAuthModal(true);
+        }
+    };
+
+    const handleUserLogout = () => {
+        logoutUser();
+        setIsProfileMenuOpen(false);
+        router.push('/');
+    };
+
+    const handleOrganizerLogoutInternal = () => {
+        logoutOrganizer();
+        setIsProfileMenuOpen(false);
+        router.push('/');
+    };
 
 
 
@@ -256,8 +300,9 @@ export default function PlayBookPage() {
         setSelectedSlot(null);
         setSelectedCourtIds([]);
         setActivePeriod('morning');
+        setSlotOffset(0);
         const decodedVenueName = decodeURIComponent(venueName);
-        fetch(`/backend/api/play/${encodeURIComponent(decodedVenueName)}/booked-slots?date=${selectedDate}`, { credentials: 'include' })
+        fetch(`/backend/api/play/${encodeURIComponent(decodedVenueName)}/booked-slots?date=${selectedDate}${lockKey ? `&lock_key=${lockKey}` : ''}`, { credentials: 'include' })
             .then(res => {
                 if (!res.ok) return { booked_slots: [] };
                 return res.json();
@@ -267,38 +312,49 @@ export default function PlayBookPage() {
             })
             .catch(() => setBookedSlots([]))
             .finally(() => setLoadingSlots(false));
-    }, [venueName, selectedDate]);
+    }, [venueName, selectedDate, lockKey]);
 
     const toggleCourt = async (uniqueId: string) => {
         if (!selectedSlot || !venue) return;
+        if (togglingCourtsRef.current.has(uniqueId)) return;
+        togglingCourtsRef.current.add(uniqueId);
 
-        const court = courts?.find((c, idx) => `${c.id}-${idx}` === uniqueId);
-        if (!court) return;
+        try {
+            const court = courts?.find((c, idx) => `${c.id}-${idx}` === uniqueId);
+            if (!court) return;
 
-        const backendSlot = blockSlots.find(b => b.label === selectedSlot)
-            ? `${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin)} - ${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin + 30)}`
-            : selectedSlot;
+            const backendSlot = blockSlots.find(b => b.label === selectedSlot)
+                ? `${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin)} - ${formatTime(blockSlots.find(b => b.label === selectedSlot)!.startMin + 30)}`
+                : selectedSlot;
 
-        if (selectedCourtIds.includes(uniqueId)) {
-            // Deselect and Unlock
-            const success = await unlockSlot(venue.id, selectedDate, backendSlot, court.name);
-            if (success !== false) {
-                setSelectedCourtIds(prev => prev.filter(id => id !== uniqueId));
-            }
-        } else {
-            // Select and Lock
-            try {
-                // Determine limits: Play allows max 2 courts. If we already have 2, prompt or auto-replace oldest.
-                // The backend will auto-delete the oldest lock if we exceed 2.
+            if (selectedCourtIds.includes(uniqueId)) {
+                // Deselect and Unlock
+                const success = await unlockSlot(venue.id, selectedDate, backendSlot, court.name);
+                if (success !== false) {
+                    setSelectedCourtIds(prev => prev.filter(id => id !== uniqueId));
+                }
+            } else {
+                // Select and Lock
+                // If we are about to exceed 2 courts, explicitly unlock the oldest one first
+                if (selectedCourtIds.length >= 2) {
+                    const oldestId = selectedCourtIds[0];
+                    const oldestCourt = courts?.find((c, idx) => `${c.id}-${idx}` === oldestId);
+                    if (oldestCourt) {
+                        await unlockSlot(venue.id, selectedDate, backendSlot, oldestCourt.name);
+                    }
+                }
+
                 await lockSlot(venue.id, selectedDate, backendSlot, court.name);
 
                 setSelectedCourtIds(prev => {
                     if (prev.length >= 2) return [...prev.slice(1), uniqueId];
                     return [...prev, uniqueId];
                 });
-            } catch (err: any) {
-                toast.error(err.message || 'Failed to lock this court. It might be taken.');
             }
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to lock this court. It might be taken.');
+        } finally {
+            togglingCourtsRef.current.delete(uniqueId);
         }
     };
 
@@ -352,10 +408,10 @@ export default function PlayBookPage() {
         if (venue?.pricing_format === 'custom') {
             const customDates = venue?.custom_availabilities?.filter(ca => ca.date && ca.date === selectedDate) ?? [];
             const customDays = venue?.custom_availabilities?.filter(ca => !ca.date && ca.day === dayName) ?? [];
-            
+
             // Priority: specific date matches first, otherwise day-of-week matches
             const matchingAvailabilities = customDates.length > 0 ? customDates : customDays;
-            
+
             if (matchingAvailabilities.length > 0) {
                 return matchingAvailabilities.map(ca => ({
                     start: parseTime(to24HourTime(ca.opening_time, ca.opening_period)),
@@ -368,8 +424,8 @@ export default function PlayBookPage() {
         if (venue?.pricing_format === 'fixed' && venue?.pricing_plans && venue.pricing_plans.length > 0) {
             const { isWeekend } = getSelectedDateMeta();
             return venue.pricing_plans.map(p => {
-                const price = (isWeekend && p.use_weekend_pricing && (p.weekend_price ?? 0) > 0) 
-                    ? p.weekend_price 
+                const price = (isWeekend && p.use_weekend_pricing && (p.weekend_price ?? 0) > 0)
+                    ? p.weekend_price
                     : (p.price > 0 ? p.price : undefined);
                 return {
                     start: parseTime(p.start_time),
@@ -500,6 +556,46 @@ export default function PlayBookPage() {
 
     const courts = venue?.courts ?? [];
 
+    // 1. Selection Maintenance: Restore selections from active database locks
+    useEffect(() => {
+        if (!venue || locks.length === 0) return;
+
+        // Find locks for this specific venue and date
+        const currentVenueLocks = locks.filter(l =>
+            l.reference_id === venue.id &&
+            l.date === selectedDate
+        );
+
+        if (currentVenueLocks.length > 0) {
+            // All locks for a 'play' session share the same time slot label
+            // The backend stores it like "08:00 AM - 08:30 AM"
+
+            const firstLock = currentVenueLocks[0];
+
+            // Map the backend format "08:00 AM - 08:30 AM" back to our simplified label
+            // by finding the matching block slot. Regenerate blockSlots here to avoid
+            // infinite loop from blockSlots being recreated every render.
+            const currentBlockSlots = generateBlockSlots();
+            const startStr = firstLock.slot.split(' - ')[0]; // "08:00 AM"
+            const matchedBlock = currentBlockSlots.find(b => formatTime(b.startMin) === startStr);
+
+            if (matchedBlock) {
+                setSelectedSlot(matchedBlock.label);
+
+                // Map court names back to our uniqueId format "${court.id}-${idx}"
+                const matchedCourtIds = currentVenueLocks.map(lock => {
+                    const idx = courts?.findIndex(c => c.name === lock.court_name);
+                    if (idx !== undefined && idx !== -1) {
+                        return `${courts[idx].id}-${idx}`;
+                    }
+                    return null;
+                }).filter(id => id !== null) as string[];
+
+                setSelectedCourtIds(matchedCourtIds);
+            }
+        }
+    }, [venue, locks, selectedDate]); // courts is derived from venue, so no need to include it
+
     const doBooking = (v: RealPlay) => {
         const effectiveHourlyPrice = resolveEffectiveHourlyPrice(selectedBlock?.startMin);
         const tickets = selectedCourtIds.map(uid => {
@@ -550,6 +646,7 @@ export default function PlayBookPage() {
 
     const handleBooking = () => {
         if (!venue) return;
+        if (bookingInProgressRef.current) return;
 
         // Check if organizer is logged in
         if (organizerSession) {
@@ -560,7 +657,11 @@ export default function PlayBookPage() {
         if (!session) { setShowAuthModal(true); return; }
         if (selectedCourtIds.length === 0) { toast.warning('Please select at least one court.'); return; }
         if (!selectedSlot) { toast.warning('Please select a time slot.'); return; }
+
+        bookingInProgressRef.current = true;
         doBooking(venue);
+        // Reset after navigation completes (router.push is fire-and-forget)
+        setTimeout(() => { bookingInProgressRef.current = false; }, 2000);
     };
 
     const handleOrganizerLogout = () => {
@@ -581,117 +682,170 @@ export default function PlayBookPage() {
     const curMonth = dates[0].month;
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">
-            <main className="max-w-[900px] mx-auto px-4 md:px-6 py-8">
-
-                <button
-                    onClick={() => router.back()}
-                    className="mb-6 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-zinc-400 hover:text-black transition-colors"
-                >
-                    <ArrowLeft size={16} /> Back
-                </button>
-
-                <div className="bg-white border border-zinc-200 rounded-[24px] overflow-hidden shadow-sm">
-                    {/* Header */}
-                    <div className="px-6 md:px-10 pt-8 pb-6 border-b border-zinc-100">
-                        <h1 className="text-[28px] md:text-[32px] font-semibold text-black leading-tight uppercase tracking-tight">
-                            {venue.name}
-                        </h1>
-                        <p className="text-[16px] text-[#686868] font-medium mt-1 uppercase tracking-wider">
-                            {venue.sub_category ?? 'Multi-sports'}
-                            {venue.city ? <>&nbsp; • &nbsp;{venue.city}</> : null}
-                        </p>
+        <div
+            className="h-screen w-full flex flex-col overflow-hidden"
+            style={{ background: "linear-gradient(180deg, #FFF7CD -50%, #FFFFFF 55%)" }}
+        >
+            <header className="fixed top-0 left-0 z-50 w-full border-b border-zinc-200 h-[80px] bg-white flex items-center">
+                <div className="w-full flex items-center justify-between px-[37px]">
+                    <div className="flex items-center min-w-max">
+                        <Link href="/" className="border-r border-zinc-200 pr-3 md:pr-6 flex items-center">
+                            <Image
+                                src="/ticpin-logo-black.png"
+                                alt="TicPin Logo"
+                                width={159}
+                                height={28}
+                                className="h-4 md:h-7 w-auto object-contain"
+                                priority
+                            />
+                        </Link>
                     </div>
 
-                    <div className="px-6 md:px-10 py-8 space-y-10">
+                    <div className="flex items-center gap-3 md:gap-6 justify-end">
+                        <LocationSelector
+                            location={currentLocation}
+                            onOpenModal={() => setIsLocationOpen(true)}
+                            onClear={clearLocation}
+                        />
+                        <div
+                            onClick={() => router.push('/play')}
+                            className="hidden lg:block w-5 h-5 cursor-pointer"
+                            style={{
+                                backgroundColor: '#E7C200',
+                                maskImage: 'url(/search.svg)', WebkitMaskImage: 'url(/search.svg)',
+                                maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
+                                maskPosition: 'center', WebkitMaskPosition: 'center',
+                                maskSize: 'contain', WebkitMaskSize: 'contain'
+                            }}
+                        />
+                        <div ref={profileRef}>
+                            <UserMenu
+                                session={organizerSession}
+                                userSession={userSession}
+                                isMenuOpen={isProfileMenuOpen}
+                                onToggleMenu={handleProfileClick}
+                                onUserLogout={handleUserLogout}
+                                onOrganizerLogout={handleOrganizerLogoutInternal}
+                                onOpenProfile={() => { }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-                        {/* Date */}
-                        <section className="space-y-4">
-                            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black border-b border-zinc-200 pb-3">
-                                SELECT DATE &amp; TIME
-                            </h2>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <div className="w-[52px] h-[64px] bg-[#D9D9D9] rounded-[14px] flex items-center justify-center shrink-0">
-                                    <span className="text-[11px] font-semibold text-black" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.1em' }}>{curMonth}</span>
+            {/* Spacer for fixed header */}
+            <div className="h-[100px] shrink-0" />
+
+            <div className="flex-1 overflow-y-auto w-full flex flex-col items-center custom-scrollbar">
+                <main className="w-full max-w-[850px] px-4 py-4">
+                    {/* ── Main white card ── */}
+                    <div className="bg-white rounded-[30px] shadow-sm border border-zinc-100 overflow-hidden">
+
+                        {/* ── Venue header ── */}
+                        <div className="px-6 md:px-8 pt-6 pb-3">
+                            <h1
+                                className="text-[24px] md:text-[28px] font-medium text-black leading-tight"
+                                style={{ fontFamily: 'var(--font-anek-latin)' }}
+                            >
+                                {venue.name}
+                            </h1>
+                            <p className="text-[14px] md:text-[16px] font-medium text-[#686868] mt-0.5 leading-[1.6]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                {venue.sub_category ?? 'Multi-sports'}
+                                {venue.city ? <>&nbsp;&nbsp;{venue.city}</> : null}
+                            </p>
+                        </div>
+
+                        <div className="px-6 md:px-8 pb-8 space-y-0">
+
+                            <div className="flex items-center gap-4 pt-1 pb-2">
+                                <h2
+                                    className="text-[20px] md:text-[24px] font-medium text-black leading-[2.0] whitespace-nowrap uppercase"
+                                    style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                >
+                                    SELECT DATE &amp; TIME
+                                </h2>
+                                <div className="flex-1 h-[1px] bg-[#AEAEAE]/30 mt-1" />
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap pb-4">
+                                {/* Month pill */}
+                                <div
+                                    className="flex items-center justify-center bg-[#D9D9D9] rounded-[15px] shrink-0"
+                                    style={{ width: 53, height: 66 }}
+                                >
+                                    <span
+                                        className="text-[24px] font-medium text-black"
+                                        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                    >
+                                        {curMonth}
+                                    </span>
                                 </div>
+
                                 {dates.map((d) => (
                                     <button
                                         key={d.key}
                                         onClick={() => setSelectedDate(d.key)}
-                                        className={`w-[52px] h-[64px] rounded-[14px] flex flex-col items-center justify-center transition-all shrink-0 ${selectedDate === d.key
+                                        className={`flex flex-col items-center justify-center rounded-[15px] shrink-0 transition-all duration-150 ${selectedDate === d.key
                                             ? 'bg-black text-white'
-                                            : 'bg-white border border-zinc-300 text-black hover:border-black'
+                                            : 'text-black'
                                             }`}
+                                        style={{ width: 53, height: 66, border: "0.5px solid #aeaeae" }}
+
                                     >
-                                        <span className="text-[26px] font-semibold leading-none">{d.label}</span>
-                                        <span className={`text-[13px] font-medium mt-0.5 ${selectedDate === d.key ? 'text-white' : 'text-[#686868]'}`}>
+                                        <span
+                                            className="text-[28px] md:text-[33px] font-medium leading-none "
+                                            style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                        >
+                                            {d.label}
+                                        </span>
+                                        <span className={`text-[12px] font-medium mt-[-3px] ${selectedDate === d.key ? 'text-white/80' : 'text-black/60'}`} style={{ fontFamily: 'var(--font-anek-latin)' }}>
                                             {d.day}
                                         </span>
                                     </button>
                                 ))}
                             </div>
-                        </section>
 
-                        {/* Duration */}
-                        <section className="space-y-4">
-                            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black border-b border-zinc-200 pb-3">
-                                DURATION
-                            </h2>
-                            <div className="flex items-center border border-zinc-300 rounded-[14px] w-fit overflow-hidden">
-                                <button onClick={() => setDuration(d => Math.max(1, d - 1))}
-                                    className="w-[44px] h-[52px] text-[22px] font-medium text-black hover:bg-zinc-100 transition-colors flex items-center justify-center">
-                                    −
-                                </button>
-                                <div className="px-6 h-[52px] flex items-center justify-center border-x border-zinc-300">
-                                    <span className="text-[18px] font-semibold text-black whitespace-nowrap">{durationLabel}</span>
-                                </div>
-                                <button onClick={() => setDuration(d => Math.min(16, d + 1))}
-                                    className="w-[44px] h-[52px] text-[22px] font-medium text-black hover:bg-zinc-100 transition-colors flex items-center justify-center">
-                                    +
-                                </button>
-                            </div>
-                        </section>
-
-                        {/* ── Step 1: Time Slot Selection ── */}
-                        <section className="space-y-4">
-
-                            {/* Header + total count */}
-                            <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
-                                <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black">
-                                    SELECT TIME SLOT
+                            <div className="flex items-center gap-4 pt-4 pb-3">
+                                <h2
+                                    className="text-[20px] md:text-[24px] font-medium text-black leading-[2.0] whitespace-nowrap uppercase"
+                                    style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                >
+                                    DURATION
                                 </h2>
-                                {!loadingSlots && (() => {
-                                    const ranges = resolveVenueTimes();
-                                    const venueEnd = Math.max(...ranges.map(r => r.end), 0);
-                                    const now = new Date();
-                                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                                    const isToday = selectedDate === now.toISOString().split('T')[0];
-                                    const isClosedNow = isToday && currentMinutes >= venueEnd;
-
-                                    const total = blockSlots.length;
-                                    const free = courts.length === 0 ? total : blockSlots.filter(b =>
-                                        courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin))
-                                    ).length;
-
-                                    if (isClosedNow) {
-                                        return <span className="text-[12px] font-bold px-3 py-1 bg-red-600 text-white rounded-full uppercase tracking-widest">Closed for today</span>;
-                                    }
-                                    if (isToday && total === 0) {
-                                        return <span className="text-[12px] font-bold px-3 py-1 bg-zinc-600 text-white rounded-full uppercase tracking-widest">No more slots today</span>;
-                                    }
-                                    if (total > 0 && free === 0) {
-                                        return <span className="text-[12px] font-bold px-3 py-1 bg-red-100 text-red-600 border border-red-200 rounded-full uppercase tracking-widest">Fully Booked</span>;
-                                    }
-
-                                    return (
-                                        <span className={`text-[12px] font-semibold px-2 py-0.5 rounded-full ${free === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
-                                            {free === 0 ? 'Fully Booked' : `${free} / ${total} slots free`}
-                                        </span>
-                                    );
-                                })()}
+                                <div className="flex-1 h-[1px] bg-[#AEAEAE]/30 mt-1" />
                             </div>
 
-                            {/* Status Banner for edge cases */}
+                            <div className="pb-4">
+                                <div
+                                    className="inline-flex items-center border-[0.5px] border-[#686868] rounded-[15px] overflow-hidden"
+                                    style={{ width: 132, height: 66 }}
+                                >
+                                    <button
+                                        onClick={() => setDuration(d => Math.max(1, d - 1))}
+                                        className="flex-1 h-full text-[35px] font-medium text-black flex items-center justify-center"
+                                        style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                    >
+                                        −
+                                    </button>
+                                    <div className="flex-[1.5] h-full flex items-center justify-center">
+                                        <span
+                                            className="text-[20px] md:text-[24px] font-medium text-black whitespace-nowrap"
+                                            style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                        >
+                                            {durationLabel}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => setDuration(d => Math.min(16, d + 1))}
+                                        className="flex-1 h-full text-[35px] font-medium text-black flex items-center justify-center"
+                                        style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Status banners */}
                             {!loadingSlots && (() => {
                                 const ranges = resolveVenueTimes();
                                 const venueEnd = Math.max(...ranges.map(r => r.end), 0);
@@ -699,315 +853,341 @@ export default function PlayBookPage() {
                                 const currentMinutes = now.getHours() * 60 + now.getMinutes();
                                 const isToday = selectedDate === now.toISOString().split('T')[0];
                                 const isClosedNow = isToday && currentMinutes >= venueEnd;
-                                const total = blockSlots.length;
-                                const free = courts.length === 0 ? total : blockSlots.filter(b =>
+                                const totalSlots = blockSlots.length;
+                                const freeSlots = courts.length === 0 ? totalSlots : blockSlots.filter(b =>
                                     courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin))
                                 ).length;
 
-                                if (isClosedNow) {
-                                    return (
-                                        <div className="bg-red-50 border border-red-100 rounded-[15px] p-4 text-center">
-                                            <p className="text-red-700 font-bold text-[18px] uppercase tracking-wide">Venue is currently closed</p>
-                                            <p className="text-red-600 text-[14px] mt-1">Operating hours have ended for today. Please select another date.</p>
-                                        </div>
-                                    );
-                                }
-                                if (isToday && total === 0) {
-                                    return (
-                                        <div className="bg-zinc-50 border border-zinc-200 rounded-[15px] p-4 text-center">
-                                            <p className="text-zinc-700 font-bold text-[18px] uppercase tracking-wide">No more slots available today</p>
-                                            <p className="text-zinc-500 text-[14px] mt-1">All remaining time slots for today have passed or are booked.</p>
-                                        </div>
-                                    );
-                                }
-                                if (total > 0 && free === 0) {
-                                    return (
-                                        <div className="bg-orange-50 border border-orange-100 rounded-[15px] p-4 text-center">
-                                            <p className="text-orange-700 font-bold text-[18px] uppercase tracking-wide">Fully Booked</p>
-                                            <p className="text-orange-600 text-[14px] mt-1">All courts are already booked for the selected date and time.</p>
-                                        </div>
-                                    );
-                                }
+                                if (isClosedNow) return (
+                                    <div className="bg-red-50 border border-red-100 rounded-[15px] p-4 text-center mb-4">
+                                        <p className="text-red-700 font-bold text-[18px] uppercase tracking-wide">Venue is currently closed</p>
+                                        <p className="text-red-600 text-[14px] mt-1">Please select another date.</p>
+                                    </div>
+                                );
+                                if (isToday && totalSlots === 0) return (
+                                    <div className="bg-zinc-50 border border-zinc-200 rounded-[15px] p-4 text-center mb-4">
+                                        <p className="text-zinc-700 font-bold text-[18px] uppercase tracking-wide">No more slots today</p>
+                                    </div>
+                                );
+                                if (totalSlots > 0 && freeSlots === 0) return (
+                                    <div className="bg-orange-50 border border-orange-100 rounded-[15px] p-4 text-center mb-4">
+                                        <p className="text-orange-700 font-bold text-[18px] uppercase tracking-wide">Fully Booked</p>
+                                    </div>
+                                );
                                 return null;
                             })()}
 
-                            {/* ── Period filter tabs ───────────────────────── */}
-                            <div className="flex gap-2 flex-wrap">
-                                {PERIODS.filter(p =>
-                                    blockSlots.some(b => b.startMin >= p.min && b.startMin < p.max)
-                                ).map(p => {
-                                    const Icon = PERIOD_ICONS[p.id];
+                            <div className="w-full border border-[#AEAEAE] rounded-full p-1 flex mb-6">
+                                {PERIODS.map((p) => {
+                                    const isActive = activePeriod === p.id;
                                     return (
                                         <button
                                             key={p.id}
-                                            onClick={() => setActivePeriod(p.id)}
-                                            className={`inline-flex items-center gap-1.5 px-4 h-[34px] rounded-full text-[13px] font-semibold border transition-all ${activePeriod === p.id
-                                                ? 'bg-black text-white border-black'
-                                                : 'bg-white text-black border-zinc-300 hover:border-zinc-500'
+                                            onClick={() => {
+                                                setActivePeriod(p.id);
+                                                setSlotOffset(0);
+                                                setSelectedSlot(null);
+                                                setSelectedCourtIds([]);
+                                            }}
+                                            className={`flex-1 py-2 text-[16px] md:text-[20px] font-medium rounded-full transition-all duration-200 ${isActive
+                                                ? 'bg-black text-white shadow-sm'
+                                                : 'text-[#686868] hover:text-black'
                                                 }`}
+                                            style={{ fontFamily: "'Anek Tamil Medium', sans-serif" }}
                                         >
-                                            <Icon size={13} strokeWidth={2} />
                                             {p.label}
                                         </button>
                                     );
                                 })}
                             </div>
 
-                            {/* ── New Slots Grid ─────────────────────── */}
+                            {/* Slot chips header stays padded */}
+                            <div className="flex items-center gap-4 pt-4 pb-1">
+                                <h2
+                                    className="text-[20px] md:text-[24px] font-medium text-black leading-[1.2] whitespace-nowrap uppercase"
+                                    style={{ fontFamily: "'Anek Tamil Medium'" }}
+                                >
+                                    AVAILABLE TIME SLOTS
+                                </h2>
+                                <div className="flex-1 h-[1px] bg-[#AEAEAE]/30 mt-1" />
+                            </div>
+                        </div>
+
+                        {/* Full-width Slots Section with edge-to-edge arrows */}
+                        <div className="pb-2">
                             {loadingSlots ? (
-                                <div className="flex items-center gap-2 text-[14px] text-zinc-400 py-2">
-                                    <div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-                                    Checking availability...
+                                <div className="px-6 md:px-8 flex items-center gap-2 text-[12px] text-zinc-400 py-1">
+                                    <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                                    Checking availability…
                                 </div>
                             ) : periodSlots.length === 0 ? (
-                                <p className="text-zinc-400 text-[13px] italic py-2">No time slots in this period.</p>
+                                <p className="px-6 md:px-8 text-[#686868] text-[13px] py-1">No slots available for this period.</p>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                                    {periodSlots.map((b, i) => {
-                                        const isSelected = selectedSlot === b.label;
-                                        const hasFreeCourt = courts.length === 0 ? true : courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin));
-                                        const slotAvailable = hasFreeCourt;
+                                <div className="relative w-full">
+                                    {/* Left Arrow - Only show when selected */}
+                                    {selectedSlot && periodSlots.length > 5 && (
+                                        <button
+                                            onClick={() => {
+                                                setSlotOffset(prev => Math.max(0, prev - 5));
+                                            }}
+                                            disabled={slotOffset === 0}
+                                            className={`absolute left-0 top-0 z-10 w-10 h-[66px] flex items-center justify-center bg-white/80 backdrop-blur-sm border-r border-y border-zinc-200 rounded-r-[15px] transition-colors ${slotOffset === 0 ? 'opacity-0 pointer-events-none' : 'hover:bg-zinc-100'}`}
+                                        >
+                                            <ChevronLeft size={24} className="text-[#686868]" />
+                                        </button>
+                                    )}
 
-                                        return (
-                                            <div
-                                                key={i}
-                                                onClick={() => {
-                                                    if (slotAvailable) {
-                                                        setSelectedSlot(b.label);
-                                                        setSelectedCourtIds([]);
-                                                    }
-                                                }}
-                                                className={`flex items-center justify-between p-4 rounded-[16px] border-2 transition-all cursor-pointer group ${!slotAvailable
-                                                    ? 'border-zinc-100 bg-zinc-50 opacity-60 cursor-not-allowed'
-                                                    : isSelected
-                                                        ? 'border-black bg-zinc-50 shadow-md'
-                                                        : 'border-zinc-200 bg-white hover:border-zinc-400'
-                                                    }`}
-                                            >
-                                                <div className="flex flex-col">
-                                                    <span className={`text-[18px] md:text-[20px] font-bold ${isSelected ? 'text-black' : 'text-zinc-800'}`}>
-                                                        {formatDateSimple(selectedDate)} | {formatTimeSimple(b.startMin)}
-                                                    </span>
-                                                    {!slotAvailable && (
-                                                        <span className="text-[11px] font-bold text-red-500 uppercase tracking-wider">
-                                                            Fully Booked
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <button
-                                                    disabled={!slotAvailable}
-                                                    className={`px-5 py-2 rounded-[8px] text-[13px] font-bold uppercase tracking-widest transition-all ${!slotAvailable
-                                                        ? 'bg-zinc-100 text-zinc-400'
-                                                        : isSelected
-                                                            ? 'bg-black text-white'
-                                                            : 'bg-[#F2F2F2] text-black hover:bg-zinc-200'
-                                                        }`}
-                                                >
-                                                    {isSelected ? 'Selected' : slotAvailable ? 'Book' : 'Full'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-
-                            {/* Selected slot display strip */}
-                            {selectedSlot && (
-                                <div className="flex items-center gap-2 text-[13px] pt-1">
-                                    <span className="font-medium text-zinc-500">Selected:</span>
-                                    <span className="font-semibold text-black bg-zinc-100 px-3 py-1 rounded-full">{selectedSlot}</span>
-                                    <button
-                                        onClick={() => { setSelectedSlot(null); setSelectedCourtIds([]); }}
-                                        className="text-zinc-400 hover:text-red-500 text-[11px] font-semibold uppercase tracking-wide transition-colors"
+                                    <div
+                                        className={`flex items-center gap-2 ${!selectedSlot ? 'justify-start flex-wrap px-6 md:px-8' : 'justify-center flex-nowrap overflow-x-auto px-6 md:px-8'}`}
+                                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
                                     >
-                                        Clear
-                                    </button>
+                                        <style dangerouslySetInnerHTML={{ __html: `.flex-nowrap::-webkit-scrollbar { display: none; }` }} />
+                                        {(selectedSlot ? periodSlots.slice(slotOffset, slotOffset + 5) : periodSlots).map((b, i) => {
+                                            const isSelected = selectedSlot === b.label;
+                                            const hasFreeCourt = courts.length === 0 ? true : courts.some(c => isWindowAvailable(c.name, b.startMin, b.endMin));
+
+                                            return (
+                                                <div key={i} className="relative shrink-0">
+                                                    <button
+                                                        disabled={!hasFreeCourt}
+                                                        onClick={() => {
+                                                            if (hasFreeCourt) {
+                                                                if (isSelected) {
+                                                                    setSelectedSlot(null);
+                                                                    setSelectedCourtIds([]);
+                                                                    setSlotOffset(0);
+                                                                } else {
+                                                                    // Only change offset if it's the very first selection
+                                                                    if (!selectedSlot) {
+                                                                        const idx = periodSlots.findIndex(s => s.label === b.label);
+                                                                        setSlotOffset(Math.max(0, idx - 2));
+                                                                    }
+                                                                    setSelectedSlot(b.label);
+                                                                    setSelectedCourtIds([]);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className={`relative inline-flex items-center justify-center rounded-[15px] border transition-all duration-150 shrink-0 ${!hasFreeCourt
+                                                            ? 'border-[#aeaeae] cursor-not-allowed'
+                                                            : isSelected
+                                                                ? 'bg-black text-white border-[#686868]'
+                                                                : 'bg-white text-black border-[#aeaeae] hover:border-[#aeaeae]'
+                                                            }`}
+                                                        style={{ width: 132, height: 66, fontFamily: "'Anek Tamil Medium', sans-serif" }}
+                                                    >
+                                                        <span className="text-[20px] md:text-[24px] font-medium uppercase">
+                                                            {formatTimeSimple(b.startMin, false)}-{formatTimeSimple(b.endMin, true)}
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Right Arrow - Only show when selected */}
+                                    {selectedSlot && periodSlots.length > 5 && (
+                                        <button
+                                            onClick={() => {
+                                                setSlotOffset(prev => Math.min(periodSlots.length - 5, prev + 5));
+                                            }}
+                                            disabled={slotOffset >= periodSlots.length - 5}
+                                            className={`absolute right-0 top-0 z-10 w-10 h-[66px] flex items-center justify-center bg-white/80 backdrop-blur-sm border-l border-y border-zinc-200 rounded-l-[15px] transition-colors ${slotOffset >= periodSlots.length - 5 ? 'opacity-0 pointer-events-none' : 'hover:bg-zinc-100'}`}
+                                        >
+                                            <ChevronRight size={24} className="text-[#686868]" />
+                                        </button>
+                                    )}
                                 </div>
                             )}
+                        </div>
 
-                        </section>
+                        <div className="px-6 md:px-8 pb-8 space-y-0">
 
-                        {/* ── Step 2: Court Selection (based on selected slot) ── */}
-                        <section className="space-y-4">
-                            <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-black border-b border-zinc-200 pb-3">
-                                SELECT COURT
-                            </h2>
-                            {!selectedSlot ? (
-                                <p className="text-[14px] text-zinc-400 italic">Select a time block above to see available courts</p>
-                            ) : loadingSlots ? (
-                                <div className="flex items-center gap-2 text-[14px] text-zinc-400">
-                                    <div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-                                    Checking availability...
-                                </div>
-                            ) : courts.length === 0 ? (
-                                <p className="text-[#686868] text-[15px]">No courts configured for this venue.</p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {courts.map((court, index) => {
-                                        const uniqueId = `${court.id}-${index}`;
-                                        const selectedBlock = blockSlots.find(b => b.label === selectedSlot);
-                                        const isAvailable = selectedBlock ? isWindowAvailable(court.name, selectedBlock.startMin, selectedBlock.endMin) : false;
-                                        const isSelected = selectedCourtIds.includes(uniqueId);
-                                        return (
-                                            <div
-                                                key={uniqueId}
-                                                onClick={() => isAvailable && toggleCourt(uniqueId)}
-                                                className={`flex items-center gap-4 p-3 rounded-[16px] border transition-all ${!isAvailable
-                                                    ? 'border-zinc-100 bg-zinc-50 opacity-50 cursor-not-allowed'
-                                                    : isSelected
-                                                        ? 'border-black bg-zinc-50 cursor-pointer shadow-md'
-                                                        : 'border-zinc-200 bg-white hover:border-zinc-400 cursor-pointer'
-                                                    }`}
-                                            >
-                                                <div className="relative w-[110px] md:w-[150px] h-[80px] rounded-[12px] overflow-hidden shrink-0 bg-[#D9D9D9] flex items-center justify-center">
-                                                    {court.image_url ? (
-                                                        <Image
-                                                            src={court.image_url}
-                                                            alt={court.name}
-                                                            fill
-                                                            sizes="(max-width: 768px) 110px, 150px"
-                                                            className="object-cover"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-zinc-400 font-bold uppercase tracking-widest text-[10px]">
-                                                            {venue.sub_category ?? 'TURF'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 space-y-0.5">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <p className="text-[17px] font-semibold text-black uppercase">{court.name}</p>
-                                                        {!isAvailable && (
-                                                            <span className="text-[11px] font-semibold text-red-500 uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded-full">
-                                                                Unavailable for this slot
-                                                            </span>
-                                                        )}
+
+
+                            {selectedSlot && (
+                                <>
+                                    <div className="pt-4 pb-3">
+                                        <h2
+                                            className="text-[20px] md:text-[24px] font-medium text-black leading-[1.5]"
+                                            style={{ fontFamily: "'Anek Tamil Medium'" }}
+                                        >
+                                            AVAILABLE COURTS
+                                        </h2>
+                                    </div>
+
+                                    {loadingSlots ? (
+                                        <div className="flex items-center gap-2 text-[12px] text-zinc-400 pb-4">
+                                            <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" /> Checking availability…
+                                        </div>
+                                    ) : courts.length === 0 ? (
+                                        <p className="text-[#686868] text-[13px] pb-4">No courts configured for this venue.</p>
+                                    ) : (
+                                        <div className="space-y-3 pb-4">
+                                            {courts.map((court, index) => {
+                                                const uniqueId = `${court.id}-${index}`;
+                                                const selBlock = blockSlots.find(b => b.label === selectedSlot);
+                                                const isAvailable = selBlock ? isWindowAvailable(court.name, selBlock.startMin, selBlock.endMin) : false;
+                                                const isSelected = selectedCourtIds.includes(uniqueId);
+                                                const remainingCount = blockSlots.filter(b => isWindowAvailable(court.name, b.startMin, b.endMin)).length;
+                                                const linePrice = Math.round((resolveEffectiveHourlyPrice() ?? court.price) * effectiveDurationSlots / 2);
+
+                                                return (
+                                                    <div
+                                                        key={uniqueId}
+                                                        onClick={() => isAvailable && toggleCourt(uniqueId)}
+                                                        className={`flex items-center gap-4 rounded-[12px] transition-all duration-150 ${!isAvailable ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                    >
+                                                        {/* Court image */}
+                                                        <div className="relative rounded-[12px] overflow-hidden shrink-0 bg-[#D9D9D9] flex items-center justify-center" style={{ width: 145, height: 82 }}>
+                                                            {court.image_url ? (
+                                                                <Image src={court.image_url} alt={court.name} fill sizes="145px" className="object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#3a2fc7,#5b4de8 60%,#7c6ff5)' }}>
+                                                                    <span className="text-white font-black text-xs tracking-tight" style={{ fontFamily: 'var(--font-anek-latin)' }}>TICPIN</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Court info */}
+                                                        <div className="flex-1 space-y-0">
+                                                            <p className="text-[18px] md:text-[20px] font-semibold text-black leading-[1.4] uppercase" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                                {court.name}
+                                                            </p>
+                                                            <p className="text-[14px] md:text-[16px] font-medium text-[#686868] leading-[1.4] uppercase" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                                {court.type}
+                                                            </p>
+                                                            <div className="pt-2">
+                                                                <p className="text-[16px] md:text-[18px] font-semibold text-black leading-[1.4] uppercase inline-block" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                                    ₹{resolveEffectiveHourlyPrice() ?? court.price}
+                                                                    <span className="text-[12px] font-normal text-[#686868]"> / hr</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Checkbox */}
+                                                        <div
+                                                            className={`shrink-0 flex items-center justify-center rounded-[6px] border-2 transition-all duration-150 ${isSelected ? 'bg-black border-black' : 'bg-white border-[#686868]'}`}
+                                                            style={{ width: 28, height: 28 }}
+                                                        >
+                                                            {isSelected && (
+                                                                <svg width="12" height="10" viewBox="0 0 16 13" fill="none">
+                                                                    <path d="M1.5 6.5L5.5 10.5L14.5 1.5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                                                </svg>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <p className="text-[14px] font-medium text-[#686868]">{court.type}</p>
-                                                    {(() => {
-                                                        const remainingCount = blockSlots.filter(b => isWindowAvailable(court.name, b.startMin, b.endMin)).length;
-                                                        return remainingCount > 0 ? (
-                                                            <span className="text-[11px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full inline-block">
-                                                                {remainingCount} slot{remainingCount !== 1 ? 's' : ''} available
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full inline-block">
-                                                                Fully booked today
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                    <p className="text-[15px] font-bold text-black mt-1">
-                                                        ₹{resolveEffectiveHourlyPrice() ?? court.price}<span className="text-[13px] font-normal text-[#686868]"> / hr</span>
-                                                        <span className="ml-2 text-[13px] text-[#686868] font-medium">
-                                                            = ₹{Math.round((resolveEffectiveHourlyPrice() ?? court.price) * effectiveDurationSlots / 2)} for {effectiveDurationLabel}
-                                                        </span>
-                                                    </p>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Ticpass Apply */}
+                                    {pass && pass.benefits.turf_bookings.remaining > 0 && (
+                                        <section className="bg-amber-50 rounded-[20px] p-6 border border-amber-200 flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+                                                    <Zap size={24} fill="currentColor" />
                                                 </div>
-                                                <div className={`w-[24px] h-[24px] rounded-[6px] border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'border-black bg-black' : 'border-zinc-300 bg-white'
-                                                    }`}>
-                                                    {isSelected && (
-                                                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                                                            <path d="M2 7L5.5 10.5L12 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                        </svg>
-                                                    )}
+                                                <div>
+                                                    <h3 className="font-bold text-amber-900">Ticpin Pass Active</h3>
+                                                    <p className="text-sm text-amber-700 font-medium">Use 1 of your {pass.benefits.turf_bookings.remaining} free bookings</p>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </section>
+                                            <button
+                                                onClick={() => setUsePass(!usePass)}
+                                                className={`px-6 h-11 rounded-xl font-bold transition-all ${usePass
+                                                    ? 'bg-amber-600 text-white shadow-inner'
+                                                    : 'bg-white text-amber-600 border border-amber-300 hover:bg-amber-100'
+                                                    }`}
+                                            >
+                                                {usePass ? 'Pass Applied' : 'Apply Pass'}
+                                            </button>
+                                        </section>
+                                    )}
 
-                        {/* Ticpass Apply */}
-                        {pass && pass.benefits.turf_bookings.remaining > 0 && (
-                            <section className="bg-amber-50 rounded-[20px] p-6 border border-amber-200 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-lg">
-                                        <Zap size={24} fill="currentColor" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-amber-900">Ticpin Pass Active</h3>
-                                        <p className="text-sm text-amber-700 font-medium">Use 1 of your {pass.benefits.turf_bookings.remaining} free bookings</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setUsePass(!usePass)}
-                                    className={`px-6 h-11 rounded-xl font-bold transition-all ${usePass
-                                            ? 'bg-amber-600 text-white shadow-inner'
-                                            : 'bg-white text-amber-600 border border-amber-300 hover:bg-amber-100'
-                                        }`}
-                                >
-                                    {usePass ? 'Pass Applied' : 'Apply Pass'}
-                                </button>
-                            </section>
-                        )}
-
-                        {/* Price summary */}
-                        {selectedCourtIds.length > 0 && (
-                            <section className="bg-zinc-50 rounded-[14px] p-4 border border-zinc-200 space-y-1">
-                                {selectedCourtIds.map(uid => {
-                                    const court = courts.find((c, idx) => `${c.id}-${idx}` === uid);
-                                    if (!court) return null;
-                                    const linePrice = Math.round((resolveEffectiveHourlyPrice() ?? court.price) * effectiveDurationSlots / 2);
-                                    return (
-                                        <div key={uid} className="flex justify-between text-[15px]">
-                                            <span className="text-black font-medium">{court.name} × {effectiveDurationLabel}</span>
-                                            <span className={`font-semibold ${usePass ? 'text-zinc-400 line-through decoration-red-500' : 'text-black'}`}>₹{linePrice}</span>
-                                        </div>
-                                    );
-                                })}
-                                <div className="border-t border-zinc-300 pt-2 mt-2 flex justify-between text-[16px] font-bold">
-                                    <span>Total</span>
-                                    <span className="flex items-center gap-2">
-                                        {usePass && (
-                                            <span className="text-[12px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded tracking-widest uppercase">
-                                                PASS APPLIED
-                                            </span>
-                                        )}
-                                        <span className={usePass ? 'text-green-600' : ''}>
-                                            ₹{usePass ? 0 : selectedCourtIds.reduce((s, uid) => {
+                                    {/* Price summary */}
+                                    {selectedCourtIds.length > 0 && (
+                                        <section className="bg-zinc-50 rounded-[14px] p-4 border border-zinc-200 space-y-1">
+                                            {selectedCourtIds.map(uid => {
                                                 const court = courts.find((c, idx) => `${c.id}-${idx}` === uid);
-                                                return s + Math.round((resolveEffectiveHourlyPrice() ?? court?.price ?? 0) * effectiveDurationSlots / 2);
-                                            }, 0)}
-                                        </span>
-                                    </span>
-                                </div>
-                            </section>
-                        )}
+                                                if (!court) return null;
+                                                const linePrice = Math.round((resolveEffectiveHourlyPrice() ?? court.price) * effectiveDurationSlots / 2);
+                                                return (
+                                                    <div key={uid} className="flex justify-between text-[15px]">
+                                                        <span className="text-black font-medium">{court.name} × {effectiveDurationLabel}</span>
+                                                        <span className={`font-semibold ${usePass ? 'text-zinc-400 line-through decoration-red-500' : 'text-black'}`}>₹{linePrice}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="border-t border-zinc-300 pt-2 mt-2 flex justify-between text-[16px] font-bold">
+                                                <span>Total</span>
+                                                <span className="flex items-center gap-2">
+                                                    {usePass && (
+                                                        <span className="text-[12px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded tracking-widest uppercase">
+                                                            PASS APPLIED
+                                                        </span>
+                                                    )}
+                                                    <span className={usePass ? 'text-green-600' : ''}>
+                                                        ₹{usePass ? 0 : selectedCourtIds.reduce((s, uid) => {
+                                                            const court = courts.find((c, idx) => `${c.id}-${idx}` === uid);
+                                                            return s + Math.round((resolveEffectiveHourlyPrice() ?? court?.price ?? 0) * effectiveDurationSlots / 2);
+                                                        }, 0)}
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        </section>
+                                    )}
 
-                        {/* Book CTA */}
-                        <div className="pt-2 border-t border-zinc-200">
-                            <button
-                                className="w-full h-[54px] bg-black text-white rounded-[12px] flex items-center justify-center active:scale-[0.98] hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                onClick={handleBooking}
-                                disabled={selectedCourtIds.length === 0 || !selectedSlot}
-                            >
-                                <span style={{ transform: 'scaleY(2)', display: 'inline-block', fontFamily: 'var(--font-anek-tamil)', fontWeight: 600, lineHeight: 1 }}
-                                    className="text-[18px] tracking-wider uppercase">
-                                    BOOK SLOTS
-                                </span>
-                            </button>
-                            {(selectedCourtIds.length === 0 || !selectedSlot) && (
-                                <p className="text-center text-[13px] text-[#686868] mt-2">
-                                    {!selectedSlot
-                                        ? 'Select a time slot to continue'
-                                        : 'Select a court to continue'}
-                                </p>
+                                    {/* ── BOOK SLOTS CTA ─────────── */}
+                                    <div className="border-t border-[#686868]/30 pt-4">
+                                        <button
+                                            onClick={handleBooking}
+                                            disabled={selectedCourtIds.length === 0}
+                                            className="w-full bg-black text-white rounded-[6px] transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+                                            style={{ height: 40 }}
+                                        >
+                                            <span
+                                                style={{ fontFamily: "'Anek Tamil Medium', sans-serif", fontWeight: 500, fontSize: 25, lineHeight: '1', display: 'inline-block', transform: 'scaleY(1.1)' }}
+                                                className="uppercase text-white"
+                                            >
+                                                BOOK SLOTS
+                                            </span>
+                                        </button>
+                                        {selectedCourtIds.length === 0 && (
+                                            <p className="text-center text-[16px] text-[#686868] mt-2"
+                                                style={{ fontFamily: 'var(--font-anek-tamil)' }}
+                                            >
+                                                Select a court to continue
+                                            </p>
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
-                </div>
-            </main>
+                </main>
+            </div>
+
+            <ProfileDrawer
+                isOpen={isProfileDrawerOpen}
+                onClose={() => setIsProfileDrawerOpen(false)}
+                userSession={userSession}
+                session={organizerSession}
+                onUserLogout={handleUserLogout}
+                onOrganizerLogout={handleOrganizerLogoutInternal}
+                router={router}
+            />
 
             <AuthModal
                 isOpen={showAuthModal}
                 onClose={() => setShowAuthModal(false)}
-                onSuccess={() => {
-                    setShowAuthModal(false);
-                    if (venue) doBooking(venue);
-                }}
+                initialView={authView}
+            />
+
+            <LocationModal
+                isOpen={isLocationOpen}
+                onClose={() => setIsLocationOpen(false)}
+                onSelect={setLocation}
             />
 
             <OrganizerLogoutModal
@@ -1016,6 +1196,44 @@ export default function PlayBookPage() {
                 onConfirm={handleOrganizerLogout}
                 organizerName={organizerSession?.email}
             />
+
+            <style>{`
+                @font-face {
+                    font-family: 'Anek Tamil Bold';
+                    src: url('/AnekTamil_Condensed-Bold.ttf') format('truetype');
+                    font-weight: bold;
+                    font-style: normal;
+                }
+
+                @font-face {
+                    font-family: 'Anek Tamil Medium';
+                    src: url('/AnekTamil_Condensed-Medium.ttf') format('truetype');
+                    font-weight: 500;
+                    font-style: normal;
+                }
+
+                @import url('https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400;500;600;700;800&family=Anek+Tamil+Condensed:wght@400;500;600;700&display=swap');
+                
+                :root {
+                    --font-anek-latin: 'Anek Latin', sans-serif;
+                    --font-anek-tamil: 'Anek Tamil Condensed', sans-serif;
+                }
+
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #d1d1d1;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #a1a1a1;
+                }
+            `}</style>
         </div>
     );
 }

@@ -59,10 +59,10 @@ export default function ListYourPlayPage() {
                         <CreatorSteps type="play" category="play" />
                     </div>
                 </div>
-                <div className="mt-10 md:mt-12">
+                <div className="mt-20 md:mt-22">
                     <button
                         onClick={handleStart}
-                        className="bg-black text-white px-8 h-[65px] rounded-[20px] flex items-center justify-center gap-2 text-[20px] font-medium transition-all group active:scale-95"
+                        className="bg-black text-white px-8 h-[65px] rounded-[20px] flex items-center justify-center gap-2 text-[20px] font-medium "
                         style={{ fontFamily: 'var(--font-anek-latin)' }}
                     >
                         Start your journey

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { Menu } from 'lucide-react';
 
 // Sub-components
 // Sub-components
@@ -77,10 +78,12 @@ export default function Navbar() {
         pathname === '/terms' ||
         pathname === '/privacy' ||
         pathname === '/refund' ||
+        pathname === '/ticpass' ||
         pathname === '/pass/buy' ||
         pathname.endsWith('/book') ||
         pathname.endsWith('/book/tickets') ||
-        pathname.endsWith('/book/review');
+        pathname.endsWith('/book/review') ||
+        pathname.startsWith('/bookings');
 
     const session = organizerSession;
     const profileRef = useRef<HTMLDivElement>(null);
@@ -132,10 +135,21 @@ export default function Navbar() {
         pathname.startsWith('/list-your-play');
     const isOrganizerDashboard = pathname === '/organizer/dashboard';
     const isPlayPage = pathname.startsWith('/play');
+    const isHome = pathname === '/';
+    const isEventDetail = pathname.match(/^\/events\/[^/]+$/);
+    const isDiningDetail = pathname.match(/^\/dining\/venue\/[^/]+$/);
+    const isEvents = pathname === '/events';
+    const isSettingsPage = pathname.endsWith('/settings');
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white h-16 md:h-20 flex items-center">
-            <div className="w-full h-full flex items-center justify-between px-3 md:px-4 lg:px-6">
+        <header
+            className={`${(isHome || isEventDetail || isDiningDetail || isEvents) ? 'hidden md:flex' : 'flex'} sticky top-0 z-50 w-full border-b border-zinc-200 h-[70px] items-center`}
+            style={{
+                zoom: isSettingsPage ? '0.8' : '1.0',
+                background: '#FFFFFF'
+            }}
+        >
+            <div className="w-full h-full flex items-center justify-between px-[37px]">
 
                 {/* Left: Logo & Nav Items */}
                 <div className="flex items-center gap-3 md:gap-8 min-w-max">
@@ -143,27 +157,31 @@ export default function Navbar() {
                         <Image
                             src="/ticpin-logo-black.png"
                             alt="TicPin Logo"
-                            width={120}
+                            width={159}
                             height={28}
                             className="h-4 md:h-7 w-auto object-contain"
                             priority
                         />
                     </Link>
 
-                    {!isListingPage && !isOrganizerDashboard && (
+                    {!isListingPage && !isOrganizerDashboard && !isSettingsPage && (
                         <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide">
                             {navItems.map((item) => {
-                                const isActive = pathname.startsWith(item.href);
+                                const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
                                 return (
                                     <Link
                                         key={item.name}
                                         href={item.href}
                                         className="px-4 py-1 text-[18px] font-medium transition-all duration-300 whitespace-nowrap"
                                         style={isActive ? {
+                                            fontFamily: 'Anek Latin',
                                             background: item.name === 'Play' ? 'rgba(231, 194, 0, 0.15)' : 'rgba(83, 49, 234, 0.15)',
                                             color: 'black',
                                             borderRadius: '30px'
-                                        } : { color: 'black' }}
+                                        } : {
+                                            fontFamily: 'Anek Latin',
+                                            color: 'black'
+                                        }}
                                     >
                                         {item.name}
                                     </Link>
@@ -175,7 +193,13 @@ export default function Navbar() {
 
                 {/* Right: Location, Search & User Menu */}
                 <div className="flex items-center gap-3 md:gap-6 justify-end">
-                    {!isListingPage && !isOrganizerDashboard && !isSearchVisible && (
+                    {isSettingsPage && (
+                        <div className="p-2 cursor-pointer hover:bg-zinc-100 rounded-full transition-colors mr-2">
+                            <Menu size={28} className="text-black" />
+                        </div>
+                    )}
+
+                    {!isListingPage && !isOrganizerDashboard && !isSettingsPage && !isSearchVisible && (
                         <>
                             <LocationSelector
                                 location={currentLocation}
@@ -196,7 +220,7 @@ export default function Navbar() {
                         </>
                     )}
 
-                    {!isListingPage && (
+                    {!isListingPage && !isSettingsPage && (
                         <SearchInput
                             isVisible={isSearchVisible}
                             isPlayPage={isPlayPage}

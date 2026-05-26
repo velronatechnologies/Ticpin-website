@@ -1,49 +1,50 @@
-import React from 'react';
-import Image from 'next/image';
+import Link from 'next/link';
 
 interface VenueCardProps {
     id?: string;
     name: string;
     location: string;
-    image: string;
+    image?: string;
     priceStartsFrom?: number;
     category?: string;
 }
 
-const VenueCard: React.FC<VenueCardProps> = ({ name, location, image, priceStartsFrom, category }) => {
+export default function VenueCard({ id = '1', name, location, image, category }: VenueCardProps) {
     return (
-        <div className="mx-auto w-full max-w-[329px] h-[320px]">
-            <div className="bg-white rounded-[15px] border border-[#686868] overflow-hidden shadow-sm flex flex-col h-full">
-                <div className="relative w-full h-[185px] overflow-hidden">
-                    <Image
-                        src={image}
-                        alt={name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                    />
-                </div>
-                <div className="p-4 h-[135px] bg-white border-t border-[#686868] rounded-b-[15px] flex flex-col items-start justify-between font-[family-name:var(--font-anek-latin)]">
-                    <div className="flex flex-col items-start w-full">
-                        <div className="flex justify-between items-start w-full">
-                            <h3 className="text-[22px] font-semibold text-black leading-tight line-clamp-1 truncate flex-1 uppercase tracking-tight">{name}</h3>
-                            {priceStartsFrom !== undefined && (
-                                <span className="text-[18px] font-bold text-black ml-2 whitespace-nowrap">₹{priceStartsFrom}</span>
-                            )}
-                        </div>
-                        <div className="text-[15px] text-[#686868] font-medium line-clamp-1 mt-0.5 uppercase tracking-wider">
-                            {location}
-                        </div>
+        <Link href={`/play/${id}`} className="block">
+            <div className="group cursor-pointer mx-auto w-full max-w-[329px] h-auto">
+                <div className="bg-white rounded-[15px] border border-[#aeaeae]  overflow-hidden flex flex-col h-full">
+                    <div className="relative w-full aspect-video overflow-hidden">
+                        {image ? (
+                            <img
+                                src={image}
+                                alt={name}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-[#F5F5F5]" aria-label={`${name} image unavailable`} />
+                        )}
                     </div>
-                    <div className="w-full flex justify-between items-center mt-auto">
-                        <span className="flex items-center justify-center bg-[#D9D9D9] text-[13px] font-semibold text-black rounded-full px-4 py-1 uppercase tracking-wider">
-                            {category || 'Play'}
+                    <div className="p-5 h-[115px] bg-white border-t border-[#686868] rounded-b-[15px] flex flex-col items-start justify-between font-[family-name:var(--font-anek-latin)] mt-[-14px]">
+                        <div className="flex flex-col items-start">
+                            <h3 className="text-[24px] font-medium text-black leading-tight">{name}</h3>
+                            <div className="text-base text-[#686868] font-medium">
+                                {location}
+                            </div>
+                        </div>
+                        <span
+                            className="flex items-center justify-center p-2 w-max bg-[#D9D9D9] text-[13px] font-small text-black ml-[-4px] mt-[5px]"
+                            style={{
+
+                                height: '20px',
+                                borderRadius: '10px'
+                            }}
+                        >
+                            {category || 'Play options'}
                         </span>
                     </div>
                 </div>
             </div>
-        </div>
+        </Link>
     );
-};
-
-export default React.memo(VenueCard);
+}

@@ -32,16 +32,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const playApi = {
-  login: (email: string, password: string) =>
+  login: (email: string) =>
     request<LoginResponse>('/organizer/play/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     }),
 
-  signin: (email: string, password: string) =>
+  signin: (email: string) =>
     request<LoginResponse>('/organizer/play/signin', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     }),
 
   googleAuth: (email: string) =>

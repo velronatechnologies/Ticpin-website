@@ -75,7 +75,7 @@ const categories = [
 
 export default function ExploreCard() {
   return (
-    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-4 md:gap-8 justify-center sm:justify-start">
+    <div className="flex flex-wrap gap-4 md:gap-5 px-1 max-w-[1280px]">
       {categories.map((cat, index) => (
         <Link
           key={index}
@@ -83,19 +83,19 @@ export default function ExploreCard() {
           className="group block"
         >
           <div
-            className="w-full sm:w-[180px] h-[220px] sm:h-[240px] rounded-[30px] md:rounded-[40px] border border-[#E1E1E1] relative overflow-hidden flex flex-col items-center pt-6 transition-all duration-300 hover:shadow-lg active:scale-95"
+            className="w-[140px] shrink-0 h-auto aspect-[152/215] rounded-[26px] border border-transparent p-3 flex flex-col items-center justify-between cursor-pointer group"
             style={{
-              background: `linear-gradient(180deg, #FFFFFF 0%, ${cat.color} 100%)`
+              background: `linear-gradient(180deg, #FFFFFF 50%, ${cat.color} 159.52%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box`
             }}
           >
-            <h3 className="text-[16px] sm:text-[18px] md:text-[22px] font-medium text-black text-center z-10 px-2 leading-tight uppercase tracking-tight">
+            <h3 className="text-sm md:text-base font-semibold text-black text-center break-words leading-tight font-[family-name:var(--font-anek-latin)] uppercase">
               {cat.title}
             </h3>
-            <div className={`flex-1 w-full flex items-center justify-center ${cat.padding || 'p-10'}`}>
+            <div className="relative w-full aspect-square flex items-center justify-center mt-1 overflow-hidden">
               <img
                 src={cat.icon}
                 alt={cat.title}
-                className="max-w-full max-h-full object-contain"
+                className="w-full h-full object-contain scale-105"
               />
             </div>
           </div>

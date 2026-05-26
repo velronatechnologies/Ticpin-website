@@ -1,7 +1,7 @@
 // Universal clear all function for complete logout
 export function clearAllData(): void {
     if (typeof window === 'undefined') return;
-    
+
     // Clear ALL cookies (including HttpOnly tokens via backend calls)
     const cookies = document.cookie.split(';');
     cookies.forEach(cookie => {
@@ -13,10 +13,10 @@ export function clearAllData(): void {
             document.cookie = `${name}=; path=/; domain=${window.location.hostname}; Max-Age=-1`;
         }
     });
-    
+
     // Clear sessionStorage (for temporary payment flow data)
     sessionStorage.clear();
-    
+
     // Clear IndexedDB
     if (window.indexedDB) {
         const databases = indexedDB.databases();
@@ -26,7 +26,7 @@ export function clearAllData(): void {
             });
         });
     }
-    
+
     // Clear service workers
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -35,7 +35,7 @@ export function clearAllData(): void {
             });
         });
     }
-    
+
     // Clear cache storage
     if ('caches' in window) {
         caches.keys().then(cacheNames => {
@@ -44,11 +44,11 @@ export function clearAllData(): void {
             });
         });
     }
-    
+
     // Dispatch events to update UI
     window.dispatchEvent(new Event('user-auth-change'));
     window.dispatchEvent(new Event('organizer-auth-change'));
-    
+
     // Force reload to clear any in-memory state
     setTimeout(() => {
         window.location.href = '/';

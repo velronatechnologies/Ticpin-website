@@ -124,7 +124,7 @@ export default function FilterModal({ isOpen, onClose, type = 'play', onApply, i
     const handleClear = () => {
         const reset: Record<string, string[]> = {};
         Object.keys(OPTIONS).forEach(key => {
-            reset[key] = key === 'sort' ? [OPTIONS.sort[0]] : [];
+            reset[key] = key.includes('sort') ? [OPTIONS[key][0]] : [];
         });
         setSelectedOptions(reset);
         if (onApply) onApply(reset);

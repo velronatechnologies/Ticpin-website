@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { organizerApi } from '@/lib/api/organizer';
 import { getOrganizerSession } from '@/lib/auth/organizer';
+import { toast } from '@/components/ui/Toast';
 
 export default function BackupContactPage() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -15,7 +16,6 @@ export default function BackupContactPage() {
     const [prefilled, setPrefilled] = useState(false);
     const [loading, setLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
-    const [error, setError] = useState('');
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
 
@@ -41,7 +41,8 @@ export default function BackupContactPage() {
     };
 
     const handleContinueWithVerifiedEmail = () => {
-        router.push('/list-your-events/setup/agreement');
+        toast.success(`✅ Using verified backup email: ${email}`);
+        setTimeout(() => router.push('/list-your-events/setup/agreement'), 800);
     };
 
     React.useEffect(() => {
@@ -58,15 +59,14 @@ export default function BackupContactPage() {
 
     const handleSendOTP = async () => {
         if (showOtp && timeLeft > 0) return;
-        setError('');
         
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError('Please enter a valid email address.');
+            toast.error('Please enter a valid email address.');
             return;
         }
         const session = getOrganizerSession();
         if (session?.email && email.toLowerCase() === session.email.toLowerCase()) {
-            setError('Backup email must be different from your login email.');
+            toast.error('Backup email must be different from your login email.');
             return;
         }
         
@@ -110,9 +110,8 @@ export default function BackupContactPage() {
     };
 
     const handleVerifyAndContinue = async () => {
-        setError('');
         const otpValue = otp.join('');
-        if (otpValue.length < 6) { setError('Please enter the complete 6-digit OTP.'); return; }
+        if (otpValue.length < 6) { toast.error('Please enter the complete 6-digit OTP.'); return; }
         const session = getOrganizerSession();
         setVerifying(true);
         try {
@@ -123,9 +122,11 @@ export default function BackupContactPage() {
                 backupEmail: email,
                 backupEmailVerified: true 
             }));
-            router.push('/list-your-events/setup/agreement');
+            
+            toast.success(`✅ Backup email ${email} verified successfully!`);
+            setTimeout(() => router.push('/list-your-events/setup/agreement'), 800);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'OTP verification failed');
+            toast.error(err instanceof Error ? err.message : 'OTP verification failed');
         } finally {
             setVerifying(false);
         }
@@ -137,7 +138,7 @@ export default function BackupContactPage() {
                 <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
 
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="03" completedSteps={['01', '02']} />
+                        <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} />
                     </aside>
 
                     <div className="flex-1 flex flex-col pt-4 mt-[-75px]">
@@ -149,17 +150,13 @@ export default function BackupContactPage() {
                         </div>
 
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="03" completedSteps={['01', '02']} />
+                            <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} />
                         </div>
 
                         <div className="space-y-10 mt-[-15px]">
                             <h1 className="text-[32px] font-medium text-black" style={{ fontFamily: 'Anek Latin' }}>
                                 Backup contact
                             </h1>
-
-                            {error && (
-                                <p className="text-red-500 text-[14px] font-medium">{error}</p>
-                            )}
 
                             {isCurrentEmailVerified && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl">
@@ -186,7 +183,7 @@ export default function BackupContactPage() {
                                         />
                                         {showOtp && (
                                             <button
-                                                onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); setError(''); }}
+                                                onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); }}
                                                 className="mt-2 text-[14px] font-medium text-[#5331EA]"
                                             >
                                                 Change email

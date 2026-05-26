@@ -18,7 +18,7 @@ export default function PlaySetupLayout({ children }: { children: React.ReactNod
 
     useEffect(() => {
         if (!hasCheckedSession) return;
-        
+
         const session = getOrganizerSession();
         if (!session) {
             router.replace('/list-your-play/Login');

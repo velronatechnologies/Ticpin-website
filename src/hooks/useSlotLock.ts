@@ -85,9 +85,11 @@ export function useSlotLock(type: 'play' | 'event' | 'dining') {
         return () => clearInterval(interval);
     }, [locks]);
 
-    // 4. APIs
     const lockSlot = async (referenceId: string, date: string, slot: string, courtName?: string) => {
-        if (!lockKey) return false;
+        if (!lockKey) {
+            console.warn('[SlotLock] No lock key available');
+            return false;
+        }
         try {
             const res = await fetch('/backend/api/booking/lock', {
                 method: 'POST',
@@ -123,16 +125,21 @@ export function useSlotLock(type: 'play' | 'event' | 'dining') {
                 } catch {
                     // ignore parse errors and keep fallback
                 }
-                throw new Error(errorText);
+                console.error('[SlotLock] Lock error:', errorText);
+                return false;
             }
         } catch (err) {
-            console.error(err);
-            throw err;
+            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+            console.error('[SlotLock] Lock failed:', errorMsg);
+            return false;
         }
     };
 
     const unlockSlot = async (referenceId: string, date: string, slot: string, courtName?: string) => {
-        if (!lockKey) return false;
+        if (!lockKey) {
+            console.warn('[SlotLock] No lock key available for unlock');
+            return false;
+        }
         try {
             const res = await fetch('/backend/api/booking/unlock', {
                 method: 'POST',
@@ -150,10 +157,37 @@ export function useSlotLock(type: 'play' | 'event' | 'dining') {
                 await fetchLocks();
                 return true;
             }
+            const errorText = await res.text().catch(() => 'Unknown error');
+            console.error('[SlotLock] Unlock failed:', errorText);
             return false;
         } catch (err) {
-            console.error(err);
+            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+            console.error('[SlotLock] Unlock error:', errorMsg);
             return false;
+        }
+    };
+
+    const unlockAll = async () => {
+        if (!lockKey || locks.length === 0) {
+            console.warn('[SlotLock] Cannot unlock: no lock key or no active locks');
+            return;
+        }
+        try {
+            const res = await fetch('/backend/api/booking/unlock-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lock_key: lockKey, type })
+            });
+            
+            if (res.ok) {
+                setLocks([]);
+            } else {
+                const errorText = await res.text().catch(() => 'Unknown error');
+                console.error('[SlotLock] Unlock all failed:', errorText);
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+            console.error('[SlotLock] Unlock all error:', errorMsg);
         }
     };
 
@@ -164,6 +198,7 @@ export function useSlotLock(type: 'play' | 'event' | 'dining') {
         loading,
         lockSlot,
         unlockSlot,
+        unlockAll,
         refreshLocks: fetchLocks
     };
 }

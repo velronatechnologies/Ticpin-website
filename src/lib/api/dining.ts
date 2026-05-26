@@ -30,7 +30,6 @@ export interface SetupPayload {
   phone: string;
   pan?: string;
   panName?: string;
-  panDOB?: string;
   panCardUrl?: string;
   bankAccountNo?: string;
   bankIfsc?: string;
@@ -43,18 +42,18 @@ export interface SetupPayload {
 }
 
 export const diningApi = {
-  /** Login only — returns 404 with error "user_not_found" if email unknown */
-  login: (email: string, password: string) =>
+  /** Login or Create — treats any identifier as valid for requesting OTP */
+  login: (email: string) =>
     request<LoginResponse>('/organizer/dining/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     }),
 
-  /** Signup (create account) — returns 400 with error "email_exists" if already registered */
-  signin: (email: string, password: string) =>
+  /** Signup (same as login in password-less flow) */
+  signin: (email: string) =>
     request<LoginResponse>('/organizer/dining/signin', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     }),
 
   googleAuth: (email: string) =>

@@ -6,15 +6,21 @@ import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { playApi } from '@/lib/api/play';
 import { getOrganizerSession, updateSessionCategoryStatus } from '@/lib/auth/organizer';
+import { toast } from '@/components/ui/Toast';
 
 export default function AgreementPage() {
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const router = useRouter();
+
+    useEffect(() => {
+        const saved = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
+        if (!saved.pan && !saved.prefilled) {
+            router.replace('/list-your-play/setup');
+        }
+    }, [router]);
 
     const handleSign = async () => {
         setLoading(true);
-        setError('');
         try {
             const session = getOrganizerSession();
             const data = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
@@ -24,7 +30,6 @@ export default function AgreementPage() {
                 phone: data.phone ?? '',
                 pan: data.pan,
                 panName: data.panName,
-                panDOB: data.panDOB,
                 panCardUrl: data.panCardUrl,
                 bankAccountNo: data.bankAccountNo,
                 bankIfsc: data.bankIfsc,
@@ -40,12 +45,16 @@ export default function AgreementPage() {
             router.push('/organizer/dashboard?category=play');
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Something went wrong';
-            if (msg === 'pan_already_used') {
-                setError('This PAN card is already registered by another account.');
+            if (msg === 'pan_already_used' || msg.includes('already registered')) {
+                toast.error('This PAN card is already registered by another account.');
             } else if (msg === 'pan_mismatch') {
-                setError('Your PAN card number must match the one provided in your previous setup.');
+                toast.error('Your PAN card number must match the one provided in your previous setup.');
+            } else if (msg.includes('invalid') || msg.includes('must be')) {
+                toast.error('Verification failed: ' + msg);
+            } else if (msg.includes('cashfree error') || msg.includes('credits over') || msg.includes('Internal Server Error')) {
+                toast.error('Our verification system is temporarily down. Please try again after some time.');
             } else {
-                setError(msg);
+                toast.error(msg);
             }
         } finally {
             setLoading(false);
@@ -95,10 +104,6 @@ export default function AgreementPage() {
                             <p className="text-[16px] text-[#686868] font-medium leading-relaxed max-w-2xl" style={{ fontFamily: 'Anek Latin' }}>
                                 <span className="text-[#E7C200]"> Almost there!</span> Complete your onboarding by signing your digital agreement with Ticpin.
                             </p>
-
-                            {error && (
-                                <p className="text-red-500 text-[14px] font-medium">{error}</p>
-                            )}
 
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button

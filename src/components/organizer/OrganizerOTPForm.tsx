@@ -27,14 +27,17 @@ interface Props {
 function OTPContent({ vertical, api, setupPath, loginPath }: Props) {
     const router = useRouter();
     const [email, setEmail] = useState('');
+    const [loginType, setLoginType] = useState<'email' | 'mobile'>('email');
 
     useEffect(() => {
         const storedEmail = sessionStorage.getItem('otp_pending_email');
+        const storedType = sessionStorage.getItem('otp_pending_type') as 'email' | 'mobile';
         if (!storedEmail) {
             router.replace(loginPath);
             return;
         }
         setEmail(storedEmail);
+        if (storedType) setLoginType(storedType);
     }, [router, loginPath]);
 
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -145,7 +148,7 @@ function OTPContent({ vertical, api, setupPath, loginPath }: Props) {
             <main className="flex-1 flex flex-col items-center justify-start pt-20 px-6 overflow-y-auto scrollbar-hide">
                 <div className="w-full max-w-[1000px]">
                     <h1 className="font-medium text-black mb-2" style={{ fontSize: '40px', lineHeight: '44px' }}>
-                        Verify your email
+                        {loginType === 'email' ? 'Verify your email' : 'Verify your phone'}
                     </h1>
                     <div className="w-52 h-px bg-[#AEAEAE] my-8" />
                     <h2 className="font-medium text-black mb-3" style={{ fontSize: '30px', lineHeight: '33px' }}>

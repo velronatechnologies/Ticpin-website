@@ -6,17 +6,16 @@ import { ChevronRight } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { diningApi } from '@/lib/api/dining';
 import { getOrganizerSession, updateSessionCategoryStatus } from '@/lib/auth/organizer';
+import { toast } from '@/components/ui/Toast';
 
 function AgreementContent() {
     const searchParams = useSearchParams();
     const category = searchParams.get('category');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const router = useRouter();
 
     const handleSign = async () => {
         setLoading(true);
-        setError('');
         try {
             const session = getOrganizerSession();
             const data = JSON.parse(sessionStorage.getItem('setup_dining') ?? '{}');
@@ -26,7 +25,6 @@ function AgreementContent() {
                 phone: data.phone ?? '',
                 pan: data.pan,
                 panName: data.panName,
-                panDOB: data.panDOB,
                 panCardUrl: data.panCardUrl,
                 bankAccountNo: data.bankAccountNo,
                 bankIfsc: data.bankIfsc,
@@ -43,11 +41,11 @@ function AgreementContent() {
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Something went wrong';
             if (msg === 'pan_already_used') {
-                setError('This PAN card is already registered by another account.');
+                toast.error('This PAN card is already registered by another account.');
             } else if (msg === 'pan_mismatch') {
-                setError('Your PAN card number must match the one provided in your previous setup.');
+                toast.error('Your PAN card number must match the one provided in your previous setup.');
             } else {
-                setError(msg);
+                toast.error(msg);
             }
         } finally {
             setLoading(false);
@@ -97,10 +95,6 @@ function AgreementContent() {
                             <p className="text-[16px] text-[#686868] font-medium leading-relaxed max-w-2xl" style={{ fontFamily: 'Anek Latin' }}>
                                 <span className="text-[#5331EA] "> Almost there!</span> Complete your onboarding by signing your digital agreement with Ticpin.
                             </p>
-
-                            {error && (
-                                <p className="text-red-500 text-[14px] font-medium">{error}</p>
-                            )}
 
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button

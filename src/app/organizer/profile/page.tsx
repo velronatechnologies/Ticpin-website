@@ -59,7 +59,10 @@ function ProfileContent() {
                     setUploadedPhotoUrl(data.profilePhoto || null);
                 }
             } catch (err) {
-                setFormData(prev => ({ ...prev, email: s.email }));
+                import('@/lib/auth/organizer').then(({ clearOrganizerSession }) => {
+                    clearOrganizerSession();
+                    router.replace('/list-your-dining/Login');
+                });
             } finally {
                 setLoading(false);
             }

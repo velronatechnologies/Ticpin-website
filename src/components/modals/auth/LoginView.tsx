@@ -63,15 +63,15 @@ const LoginView: React.FC<LoginViewProps> = ({
                 {view === 'number' ? (
                     <>
                         <div className="text-center space-y-2">
-                            <h3 className="text-[32px] text-zinc-900 font-bold">Enter your mobile number</h3>
+                            <h3 className="text-[32px] text-zinc-900 font-semi-medium">Enter your mobile number</h3>
                             <p className="text-base text-zinc-500 font-medium">Don't have an account? We'll set one up for you</p>
                         </div>
 
                         <div className="w-full max-w-[604px] space-y-8">
                             <div className="flex gap-4">
-                                <div className="flex items-center gap-2 px-4 bg-white border border-zinc-200 rounded-2xl h-[60px] min-w-[100px] cursor-pointer hover:border-zinc-300 transition-all">
+                                <div className="flex items-center gap-2 px-4 bg-white border border-zinc-900 rounded-2xl h-[60px] min-w-[100px] cursor-pointer hover:border-zinc-300 transition-all">
                                     <Image src="https://flagcdn.com/w40/in.png" alt="IN" width={24} height={16} className="w-6 h-4 object-cover rounded-sm" />
-                                    <span className="text-lg text-zinc-900 font-semibold">+91</span>
+                                    <span className="text-lg text-zinc-900 font-medium">+91</span>
                                     <ChevronDown size={16} className="text-zinc-400" />
                                 </div>
                                 <input
@@ -93,28 +93,28 @@ const LoginView: React.FC<LoginViewProps> = ({
                             <button
                                 onClick={handleSendOtp}
                                 disabled={number.length !== 10 || loading}
-                                className="w-full h-[55px] bg-black text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-xl shadow-black/10"
+                                className="w-full h-[55px] bg-black text-white text-xl font-medium rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-white disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Sending OTP…' : 'Continue'}
+                                {loading ? ' ' : 'Continue'}
                             </button>
 
                             <div className="text-center">
                                 <p className="text-[13px] text-zinc-500 font-medium leading-relaxed">
                                     By continuing, you agree to our<br />
-                                    <span className="text-zinc-400 font-semibold cursor-pointer hover:text-zinc-600 transition-colors">Terms of Service</span>&nbsp;
-                                    <span className="text-zinc-400 font-semibold cursor-pointer hover:text-zinc-600 transition-colors">Privacy Policy</span>
+                                    <span className="text-zinc-400 font-medium cursor-pointer hover:text-zinc-600 transition-colors">Terms of Service</span>&nbsp;
+                                    <span className="text-zinc-400 font-medium cursor-pointer hover:text-zinc-600 transition-colors">Privacy Policy</span>
                                 </p>
                             </div>
                         </div>
                     </>
                 ) : (
                     <>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-[32px] text-zinc-900 font-bold">Enter OTP</h3>
+                        <div className="text-center space-y-2 mt-[-50px]">
+                            <h3 className="text-[32px] text-zinc-900 font-medium">Enter OTP</h3>
                             <p className="text-[15px] text-zinc-500 font-medium">
                                 We sent a 6-digit code to +91 {number}{' '}
                                 <span
-                                    className="text-black font-bold cursor-pointer hover:underline"
+                                    className="text-[#5331EA] font-medium cursor-pointer hover:underline"
                                     onClick={onNumberChange}
                                 >
                                     (Change)
@@ -122,8 +122,8 @@ const LoginView: React.FC<LoginViewProps> = ({
                             </p>
                         </div>
 
-                        <div className="w-full max-w-[604px] space-y-10">
-                            <div className="flex justify-between gap-3">
+                        <div className="w-full max-w-[604px] space-y-7 flex flex-col justify-center items-center">
+                            <div className="flex justify-between  gap-7">
                                 {otp.map((digit, i) => (
                                     <input
                                         key={i}
@@ -131,7 +131,7 @@ const LoginView: React.FC<LoginViewProps> = ({
                                         type="text"
                                         inputMode="numeric"
                                         maxLength={1}
-                                        className="w-[64px] h-[64px] bg-white border border-zinc-200 rounded-[11px] text-center text-2xl font-bold focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all shadow-sm"
+                                        className="w-[94px] h-[55px] bg-white border border-zinc-200 rounded-[18px] text-center text-2xl font-medium focus:outline-none transition-all"
                                         value={digit}
                                         onChange={(e) => handleOtpChange(i, e.target.value)}
                                         onKeyDown={(e) => handleKeyDown(i, e)}
@@ -146,16 +146,16 @@ const LoginView: React.FC<LoginViewProps> = ({
                                 <button
                                     onClick={handleVerifyOtp}
                                     disabled={otp.some(d => !d) || loading}
-                                    className="w-full h-[55px] bg-black text-white text-xl font-bold rounded-[11px] hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-xl shadow-black/10"
+                                    className="w-[710px] h-[55px] bg-black text-white text-xl font-medium rounded-[18px] hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:bg-zinc-200 disabled:text-white disabled:cursor-not-allowed"
                                 >
-                                    {loading ? 'Verifying…' : 'Continue'}
+                                    {loading ? ' ' : 'Continue'}
                                 </button>
                                 <div className="text-center">
                                     <p className="text-[15px] text-zinc-500 font-medium">
                                         Didn&apos;t get the OTP?{' '}
                                         <span
                                             onClick={handleResend}
-                                            className="text-black font-bold cursor-pointer hover:underline"
+                                            className="text-[#5331EA] font-medium cursor-pointer hover:underline"
                                         >
                                             {loading ? 'Sending…' : 'Resend OTP'}
                                         </span>

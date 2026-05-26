@@ -56,43 +56,41 @@ export default function ListingCard({ listing, vertical, onDelete }: ListingCard
     };
 
     return (
-        <div className="bg-white rounded-[20px] p-6 shadow-sm border border-black/5 flex flex-col md:flex-row gap-8 min-h-[220px] relative group hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-[15px] p-8 flex flex-col md:flex-row gap-10 h-auto md:h-[240px] relative items-center border border-[#aeaeae]">
             {/* Image (16:9 aspect) */}
-            <div className="w-full md:w-[320px] aspect-[16/9] bg-[#EBE4FF] rounded-[15px] overflow-hidden shrink-0 relative">
-                {listing.landscape_image_url || listing.portrait_image_url ? (
+            <div className="w-full md:w-[240px] h-[135px] bg-[rgba(255,241,168,0.3)] rounded-[20px] overflow-hidden shrink-0 relative flex flex-col items-center justify-center border border-[#aeaeae]">
+                {listing.portrait_image_url || listing.landscape_image_url ? (
                     <Image
                         src={listing.landscape_image_url || listing.portrait_image_url || ''}
                         alt={listing.name}
                         fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-cover transition-transform duration-300"
                     />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#5331EA]/30">
-                        <ImageOff size={40} />
-                        <span className="text-[14px] font-medium uppercase tracking-wider text-center px-4">
-                            ({vertical} image)<br />16:9 aspect ratio
-                        </span>
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-black/50 text-center p-3">
+                        <span className="text-[15px] font-semibold" style={{ fontFamily: 'Anek Latin' }}>{`{EVENT POSTER}`}</span>
+                        <span className="text-[11px] font-medium" style={{ fontFamily: 'Anek Latin' }}>16:9 aspect ratio</span>
                     </div>
                 )}
             </div>
 
             {/* Content Section */}
-            <div className="flex-1 flex flex-col justify-between py-1">
-                <div className="space-y-2">
-                    <h3 className="text-[32px] font-bold text-black leading-tight uppercase" style={{ fontFamily: 'Anek Latin' }}>
-                        {listing.name}
+            <div className="flex-1 flex flex-col justify-center py-0.5 gap-3">
+                <div className="space-y-0.5">
+                    <h3 className="text-[24px] md:text-[28px] font-medium text-black leading-tight uppercase" style={{ fontFamily: 'Anek Latin' }}>
+                        {listing.name || '{PLAY NAME}'}
                     </h3>
-                    <p className="text-[24px] font-medium text-[#686868] uppercase" style={{ fontFamily: 'Anek Latin' }}>
-                        {listing.city || 'LOCATION'}
+                    <p className="text-[18px] md:text-[20px] font-medium text-black/70 uppercase" style={{ fontFamily: 'Anek Latin' }}>
+                        {listing.city || '{LOCATION}'}
                     </p>
                 </div>
 
-                <div className="flex items-center gap-4 mt-6">
+                <div className="flex items-center gap-4 mt-2">
                     <button
                         onClick={handleEdit}
-                        className="bg-black text-white px-6 h-[48px] rounded-[10px] flex items-center gap-3 text-[16px] font-bold transition-all active:scale-95 shadow-sm"
+                        className="bg-black text-white px-6 h-[44px] md:h-[48px] rounded-[15px] flex items-center gap-2 text-[16px] font-medium transition-all"
                     >
-                        <Settings size={20} />
+                        <Settings size={18} className="text-white" />
                         <span style={{ fontFamily: 'Anek Latin' }}>Manage {vertical}</span>
                     </button>
 
@@ -101,39 +99,35 @@ export default function ListingCard({ listing, vertical, onDelete }: ListingCard
                             <button
                                 onClick={handleDelete}
                                 disabled={deleting}
-                                className="h-[48px] px-6 rounded-[10px] bg-red-500 text-white text-[15px] font-bold"
+                                className="h-[44px] md:h-[48px] px-6 rounded-[15px] bg-red-500 text-white text-[15px] font-bold"
                             >
                                 {deleting ? '...' : 'Confirm'}
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
-                                className="h-[48px] px-6 rounded-[10px] border border-zinc-200 text-zinc-500 text-[15px]"
+                                className="h-[44px] md:h-[48px] w-[44px] md:w-[48px] rounded-[15px] border border-zinc-200 text-zinc-500 flex items-center justify-center"
                             >
-                                x
+                                <XCircle size={16} />
                             </button>
                         </div>
                     ) : (
                         <button
                             onClick={handleDelete}
-                            className="w-[48px] h-[48px] rounded-[10px] flex items-center justify-center text-red-300 hover:text-red-500 transition-colors"
+                            className="w-[44px] md:w-[48px] h-[44px] md:h-[48px] rounded-[15px] flex items-center justify-center text-red-300 transition-colors"
                         >
-                            <Trash2 size={22} />
+                            <Trash2 size={20} />
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Status Badges Section (Top Right) */}
-            <div className="md:absolute top-8 right-8 flex flex-col gap-3 items-end">
-                <div className={`px-6 py-2 rounded-[15px] text-[18px] font-medium ${statusCfg.bg} ${statusCfg.text} shadow-sm min-w-[120px] text-center`} style={{ fontFamily: 'Anek Latin' }}>
-                    {statusCfg.label}
+            <div className="md:absolute top-8 right-8">
+                <div
+                    className={`px-5 py-1.5 rounded-[12px] text-[14px] md:text-[18px] font-semibold min-w-[90px] md:min-w-[70px] h-[48px] flex items-center justify-center text-center ${status === 'pending' ? 'bg-[#F9C9A9] text-black' : 'bg-[#65B54E]/50 text-black'}`}
+                    style={{ fontFamily: 'Anek Latin' }}
+                >
+                    {status === 'pending' ? 'Under review' : 'Live'}
                 </div>
-                {/* Visual purely for design matching (image shows two badges sometimes) */}
-                {status === 'approved' && isDateToday(listing.createdAt) && (
-                    <div className="px-6 py-2 rounded-[15px] text-[18px] font-medium bg-[#BBF7D0] text-[#166534] shadow-sm min-w-[120px] text-center" style={{ fontFamily: 'Anek Latin' }}>
-                        New
-                    </div>
-                )}
             </div>
         </div>
     );

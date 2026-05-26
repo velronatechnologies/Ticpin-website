@@ -76,7 +76,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
             setShowLogoutModal(true);
             return;
         }
-        
+
         if (!session) {
             setIsLoginModalOpen(true);
             return;
@@ -113,12 +113,12 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
     }
 
     return (
-        <div className="min-h-screen font-[family-name:var(--font-anek-latin)]" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 100%)' }}>
-            <main className="max-w-[1440px] mx-auto px-4 md:px-14 py-8 space-y-12">
+        <div className="min-h-screen font-[family-name:var(--font-anek-latin)] pt-[20px]" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 100%)' }}>
+            <main className="max-w-[1440px] mx-auto  px-4 md:px-14 py-8 space-y-12">
                 <div className="flex flex-col lg:flex-row gap-10">
                     <div className="flex-1 space-y-12">
                         {/* Banner */}
-                        <div className="relative w-full h-[350px] md:h-[500px] rounded-[30px] overflow-hidden shadow-sm group">
+                        <div className="relative w-full h-[350px] md:h-[500px] rounded-[6px] overflow-hidden shadow-sm group">
                             {bannerImg ? (
                                 <Image
                                     src={bannerImg}
@@ -162,11 +162,11 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                                 <div className="flex items-center gap-5">
-                                    <div className="w-[56px] h-[56px] bg-[#FFFBFB] rounded-[15px] shadow-sm flex items-center justify-center border border-[#AEAEAE]/10">
+                                    <div className="w-[56px] h-[56px] bg-[#D9D9D9]] rounded-[15px] shadow-sm flex items-center justify-center border border-[#AEAEAE]/10">
                                         <div className="w-[18px] h-[18px] border-2 border-black rounded-full" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Language</span>
+                                        <span className="text-[14px] font-medium text-[#AEAEAE]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Language</span>
                                         <span className="text-[20px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                                             {event.guide?.languages?.length ? event.guide.languages.filter(Boolean).join(', ') : 'TBA'}
                                         </span>
@@ -174,8 +174,8 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                                 </div>
 
                                 <div className="flex items-center gap-5">
-                                    <div className="w-[56px] h-[56px] bg-[#FFFBFB] rounded-[15px] shadow-sm flex items-center justify-center border border-[#AEAEAE]/10">
-                                        <Timer className="w-[21px] h-[25px] text-[#686868]" />
+                                    <div className="w-[56px] h-[56px] bg-[#D9D9D9] rounded-[15px] shadow-sm flex items-center justify-center border border-[#AEAEAE]/10">
+                                        <Timer className="w-[21px] h-[25px] text-[#AEAEAE]" />
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Duration</span>
@@ -184,8 +184,8 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                                 </div>
 
                                 <div className="flex items-center gap-5">
-                                    <div className="w-[56px] h-[56px] bg-[#FFFBFB] rounded-[15px] shadow-sm flex items-center justify-center border border-[#AEAEAE]/10">
-                                        <Ticket className="w-[24px] h-[24px] text-[#686868]" strokeWidth={1.5} />
+                                    <div className="w-[56px] h-[56px] bg-[#D9D9D9] rounded-[15px] shadow-sm flex items-center justify-center border border-[#AEAEAE]/10">
+                                        <Ticket className="w-[24px] h-[24px] text-[#AEAEAE]" strokeWidth={1.5} />
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Tickets Needed For</span>
@@ -202,7 +202,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                                 <div className="flex flex-col gap-6">
                                     {event.artists.map((artist, idx) => (
                                         <div key={idx} className="flex items-center gap-10">
-                                            <div className="relative w-[169px] h-[169px] bg-white rounded-[15px] shadow-sm border border-[#AEAEAE]/20 overflow-hidden flex items-center justify-center">
+                                            <div className="relative w-[169px] h-[169px] bg-white rounded-[6px] shadow-sm border border-[#AEAEAE]/20 overflow-hidden flex items-center justify-center">
                                                 {artist.image_url ? (
                                                     <Image src={artist.image_url} alt={artist.name} fill className="object-cover" />
                                                 ) : (
@@ -224,13 +224,13 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                                 <h2 className="text-3xl font-bold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Gallery</h2>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                     {event.gallery_urls.slice(0, 4).map((src, i) => (
-                                        <div key={i} className="relative aspect-square rounded-[20px] overflow-hidden border border-zinc-200 shadow-sm">
+                                        <div key={i} className="relative aspect-square rounded-[6px] overflow-hidden border border-zinc-200 shadow-sm">
                                             <Image src={src} fill className="object-cover" alt={`Gallery ${i}`} />
                                         </div>
                                     ))}
                                 </div>
                                 {event.landscape_image_url && (
-                                    <div className="relative w-full h-[300px] md:h-[450px] rounded-[30px] overflow-hidden shadow-sm mt-8">
+                                    <div className="relative w-full h-[300px] md:h-[450px] rounded-[6px] overflow-hidden shadow-sm mt-8">
                                         <Image src={event.landscape_image_url} fill className="object-cover" alt="Gallery Banner" />
                                     </div>
                                 )}
@@ -239,67 +239,84 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
 
                         {/* Venue Section */}
                         <section className="space-y-6">
-                            <h2 className="text-3xl font-bold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Venue</h2>
-                            <div className="p-6 bg-white rounded-[20px] border border-[#AEAEAE]/30 flex flex-col md:flex-row items-center justify-between gap-6">
-                                <div className="space-y-1">
-                                    <h4 className="text-xl text-[#686868] font-bold" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.venue_name || 'Venue TBA'}</h4>
-                                    <p className="text-xl text-[#686868] font-medium" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.venue_address || event.city || 'Address not provided'}</p>
+                            <h2 className="text-xl font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Venue</h2>
+                            <div className="p-8 bg-white rounded-[20px] border border-[#AEAEAE] flex flex-col md:flex-row items-center justify-between gap-8 min-h-[97px]">
+                                <div className="space-y-1 flex-1">
+                                    <h4 className="text-lg font-semibold text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.venue_name || 'Venue TBA'}</h4>
+                                    <p className="text-base font-medium text-[#686868] leading-relaxed">
+                                        {event.venue_address || event.city || 'Address not provided'}
+                                    </p>
                                 </div>
-                                {event.google_map_link ? (
+                                {event.google_map_link && (
                                     <a
                                         href={event.google_map_link}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 px-6 py-3 bg-transparent border border-zinc-300 rounded-[10px] text-black uppercase tracking-tight hover:bg-zinc-50 transition-colors text-[18px] font-bold"
+                                        className="flex items-center justify-center gap-2 w-[154px] h-[44px] bg-white border border-[#AEAEAE] rounded-[7px] text-black font-medium uppercase text-[18px] hover:bg-zinc-50 transition-all shrink-0"
+                                        style={{ fontFamily: 'var(--font-anek-tamil)', lineHeight: '1.2' }}
                                     >
-                                        <MapPin size={18} strokeWidth={1.5} /> GET DIRECTIONS
+                                        <MapPin size={18} className="text-black" />
+                                        <span>GET DIRECTIONS</span>
                                     </a>
-                                ) : (
-                                    <div className="flex items-center gap-1.5 px-6 py-3 bg-transparent border border-zinc-100 rounded-[10px] text-gray-300 uppercase tracking-tight text-[18px] font-bold cursor-not-allowed">
-                                        <MapPin size={18} /> GET DIRECTIONS
-                                    </div>
                                 )}
                             </div>
                         </section>
 
                         {/* FAQ and Terms */}
-                        <div className="space-y-4">
-                            <div className="bg-white border border-[#AEAEAE]/30 rounded-[20px] overflow-hidden">
+                        <div className="space-y-5">
+                            <div className="bg-white border border-[#AEAEAE] rounded-[20px] overflow-hidden">
                                 <button
                                     onClick={() => setActiveFaq(activeFaq === 99 ? null : 99)}
-                                    className="w-full p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 transition-colors"
+                                    className="w-full p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 transition-colors min-h-[80px]"
                                 >
-                                    <span className="text-xl font-bold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Frequently Asked Questions</span>
-                                    <ChevronDown className={`w-6 h-6 text-[#686868] transition-transform ${activeFaq === 99 ? 'rotate-180' : ''}`} />
+                                    <span className="text-xl font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Frequently Asked Questions</span>
+                                    <ChevronDown className={`w-6 h-6 text-[#000000] transition-transform ${activeFaq === 99 ? 'rotate-180' : ''}`} />
                                 </button>
                                 {activeFaq === 99 && (
-                                    <div className="px-6 pb-6 pt-2 space-y-4 border-t border-zinc-50">
+                                    <div className="px-6 pb-6 pt-4 space-y-4 border-t border-[#AEAEAE]/20">
                                         {event.faqs && event.faqs.length > 0 ? (
                                             event.faqs.map((faq, i) => (
                                                 <div key={i} className="space-y-1">
-                                                    <p className="font-bold text-black">{faq.question}</p>
-                                                    <p className="text-[#686868]">{faq.answer}</p>
+                                                    <p className="font-bold text-black text-base">{faq.question}</p>
+                                                    <p className="text-[#686868] text-base">{faq.answer}</p>
                                                 </div>
                                             ))
                                         ) : (
-                                            <p className="text-zinc-400 italic">No FAQs available for this event.</p>
+                                            <p className="text-zinc-400 italic text-base">No FAQs available for this event.</p>
                                         )}
                                     </div>
                                 )}
                             </div>
 
-                            <div className="bg-white border border-[#AEAEAE]/30 rounded-[20px] overflow-hidden">
+                            <div className="bg-white border border-[#AEAEAE] rounded-[20px] overflow-hidden">
                                 <button
                                     onClick={() => setActiveFaq(activeFaq === 100 ? null : 100)}
-                                    className="w-full p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 transition-colors"
+                                    className="w-full p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 transition-colors min-h-[80px]"
                                 >
-                                    <span className="text-xl font-bold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Event Terms & Conditions</span>
-                                    <ChevronDown className={`w-6 h-6 text-[#686868] transition-transform ${activeFaq === 100 ? 'rotate-180' : ''}`} />
+                                    <span className="text-xl font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Terms & Conditions</span>
+                                    <ChevronDown className={`w-6 h-6 text-[#000000] transition-transform ${activeFaq === 100 ? 'rotate-180' : ''}`} />
                                 </button>
                                 {activeFaq === 100 && (
-                                    <div className="px-6 pb-6 pt-2 border-t border-zinc-50">
-                                        <div className="text-[#686868] leading-relaxed whitespace-pre-wrap">
+                                    <div className="px-6 pb-6 pt-4 border-t border-[#AEAEAE]/20">
+                                        <div className="text-[#686868] text-base font-medium leading-relaxed whitespace-pre-wrap">
                                             {event.terms || "Standard terms and conditions apply. Please check with the venue for specific rules."}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-white border border-[#AEAEAE] rounded-[20px] overflow-hidden">
+                                <button
+                                    onClick={() => setActiveFaq(activeFaq === 101 ? null : 101)}
+                                    className="w-full p-6 flex items-center justify-between cursor-pointer hover:bg-zinc-50 transition-colors min-h-[80px]"
+                                >
+                                    <span className="text-xl font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Cancellation Policy</span>
+                                    <ChevronDown className={`w-6 h-6 text-[#000000] transition-transform ${activeFaq === 101 ? 'rotate-180' : ''}`} />
+                                </button>
+                                {activeFaq === 101 && (
+                                    <div className="px-6 pb-6 pt-4 border-t border-[#AEAEAE]/20">
+                                        <div className="text-[#686868] text-base font-medium leading-relaxed">
+                                            Cancellations are subject to the event organizer's policy. Please contact support for more details.
                                         </div>
                                     </div>
                                 )}
@@ -310,7 +327,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                     {/* Sidebar / Booking Card */}
                     <div className="w-full lg:w-[400px]">
                         <div className="lg:sticky lg:top-32 space-y-6">
-                            <div className="bg-white border border-[#AEAEAE]/30 rounded-[20px] overflow-hidden shadow-sm">
+                            <div className="bg-white border border-[#AEAEAE]/30 rounded-[6px] overflow-hidden shadow-sm">
                                 <div className="p-8 space-y-6">
                                     <div className="space-y-4">
                                         <h1 className="text-3xl font-bold text-black leading-tight" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.name}</h1>
@@ -376,7 +393,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                 onClose={() => setIsLoginModalOpen(false)}
                 onSuccess={() => router.push(`/events/${id}/book/tickets`)}
             />
-            
+
             <OrganizerLogoutModal
                 isOpen={showLogoutModal}
                 onClose={() => setShowLogoutModal(false)}

@@ -6,15 +6,15 @@ import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { eventsApi } from '@/lib/api/events';
 import { getOrganizerSession, updateSessionCategoryStatus } from '@/lib/auth/organizer';
+import { toast } from '@/components/ui/Toast';
 
 export default function AgreementPage() {
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [showConfirm, setShowConfirm] = useState(false);
     const router = useRouter();
 
     const handleSign = async () => {
         setLoading(true);
-        setError('');
         try {
             const session = getOrganizerSession();
             const data = JSON.parse(sessionStorage.getItem('setup_events') ?? '{}');
@@ -24,7 +24,6 @@ export default function AgreementPage() {
                 phone: data.phone ?? '',
                 pan: data.pan,
                 panName: data.panName,
-                panDOB: data.panDOB,
                 panCardUrl: data.panCardUrl,
                 bankAccountNo: data.bankAccountNo,
                 bankIfsc: data.bankIfsc,
@@ -37,15 +36,16 @@ export default function AgreementPage() {
             });
             updateSessionCategoryStatus('events', 'pending');
             sessionStorage.removeItem('setup_events');
-            router.push('/organizer/dashboard?category=events');
+            toast.success('🎉 Your setup has been submitted successfully! Pending approval.');
+            setTimeout(() => router.push('/organizer/dashboard?category=events'), 1200);
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Something went wrong';
             if (msg === 'pan_already_used') {
-                setError('This PAN card is already registered by another account.');
+                toast.error('This PAN card is already registered by another account.');
             } else if (msg === 'pan_mismatch') {
-                setError('Your PAN card number must match the one provided in your previous setup.');
+                toast.error('Your PAN card number must match the one provided in your previous setup.');
             } else {
-                setError(msg);
+                toast.error(msg);
             }
         } finally {
             setLoading(false);
@@ -96,19 +96,47 @@ export default function AgreementPage() {
                                 <span className="text-[#5331EA]"> Almost there!</span> Complete your onboarding by signing your digital agreement with Ticpin.
                             </p>
 
-                            {error && (
-                                <p className="text-red-500 text-[14px] font-medium">{error}</p>
-                            )}
-
-                            <div className="pt-2 flex justify-center md:justify-start">
-                                <button
-                                    onClick={handleSign}
-                                    disabled={loading}
-                                    className="bg-black text-white w-full max-w-[160px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 disabled:opacity-60"
-                                >
-                                    {loading ? 'Submitting...' : 'Sign agreement'}<ChevronRight size={18} className="transition-transform" />
-                                </button>
+                            <div className="bg-blue-50 border border-blue-200 rounded-[14px] px-5 py-4 max-w-2xl">
+                                <p className="text-[14px] text-blue-800 font-medium leading-relaxed">
+                                    ✓ All your setup details have been verified successfully. Review the agreement terms and click "Sign agreement" to complete your onboarding.
+                                </p>
                             </div>
+
+                            {showConfirm ? (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-[14px] px-5 py-4 max-w-2xl space-y-4 animate-in fade-in slide-in-from-top-4">
+                                    <p className="text-[14px] font-semibold text-yellow-900">
+                                        ⚠️ Confirm Submission
+                                    </p>
+                                    <p className="text-[14px] text-yellow-800 font-medium leading-relaxed">
+                                        You are about to submit your setup for approval. This action cannot be undone. All the details you've provided will be sent to our verification team.
+                                    </p>
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            onClick={() => setShowConfirm(false)}
+                                            className="bg-white border border-yellow-300 text-yellow-900 h-[40px] px-6 rounded-[12px] text-[14px] font-medium transition-all active:scale-95"
+                                        >
+                                            Go Back
+                                        </button>
+                                        <button
+                                            onClick={handleSign}
+                                            disabled={loading}
+                                            className="bg-green-600 text-white h-[40px] px-6 rounded-[12px] text-[14px] font-medium transition-all active:scale-95 disabled:opacity-60"
+                                        >
+                                            {loading ? 'Submitting...' : 'Yes, Submit'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="pt-2 flex justify-center md:justify-start">
+                                    <button
+                                        onClick={() => setShowConfirm(true)}
+                                        disabled={loading}
+                                        className="bg-black text-white w-full max-w-[160px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 disabled:opacity-60"
+                                    >
+                                        Sign agreement<ChevronRight size={18} className="transition-transform" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

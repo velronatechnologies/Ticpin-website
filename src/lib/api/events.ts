@@ -15,16 +15,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const eventsApi = {
-  login: (email: string, password: string) =>
+  login: (email: string) =>
     request<LoginResponse>('/organizer/events/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     }),
 
-  signin: (email: string, password: string) =>
+  signin: (email: string) =>
     request<LoginResponse>('/organizer/events/signin', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email }),
     }),
 
   googleAuth: (email: string) =>

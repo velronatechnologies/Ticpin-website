@@ -37,7 +37,6 @@ export interface OrganizerDetail {
         gstNumber: string;
         pan: string;
         panName: string;
-        panDOB: string;
         panCardUrl: string;
         backupEmail: string;
         backupPhone: string;

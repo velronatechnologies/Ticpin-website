@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation } from '@/lib/useLocation';
-import Link from 'next/link';
 import SportCategoryCard from '@/components/play/SportCategoryCard';
 import VenueCard from '@/components/play/VenueCard';
 import FilterBar from '@/components/play/FilterBar';
@@ -11,12 +10,17 @@ import Footer from '@/components/layout/Footer';
 import MobileHome from '@/components/mobile/MobileHome';
 
 interface RealPlay {
-    id: string;
+    _id?: string;
+    id?: string;
     name: string;
     city?: string;
     portrait_image_url?: string;
     landscape_image_url?: string;
+    image?: string;
+    images?: string[];
     category?: string;
+    sub_category?: string;
+    dimension?: string;
     rating?: number;
     status?: string;
     price_starts_from?: number;
@@ -30,9 +34,15 @@ const sportsCategories = [
     { name: 'BADMINTON', image: '/play/playbm.png', href: '/play/badminton' },
     { name: 'TABLE TENNIS', image: '/play/playtt.png', href: '/play/table-tennis' },
     { name: 'BASKETBALL', image: '/play/playbb.png', href: '/play/basketball' },
+    { name: 'VOLLEYBALL', image: '/play/playbb.png', href: '/play/volleyball' },
 ];
 
-const filters = ['All', 'Top Rated', 'Cricket', 'Pickleball', 'Badminton', 'Football', 'Tennis', 'Basketball', 'Table Tennis'];
+const filters = ['All', 'Top Rated', 'Cricket', 'Pickleball', 'Badminton', 'Football', 'Tennis', 'Basketball', 'Table Tennis', 'Volleyball'];
+
+const getVenueImage = (venue: RealPlay) =>
+    venue.landscape_image_url || venue.portrait_image_url || venue.images?.[0] || venue.image;
+
+const getVenueId = (venue: RealPlay) => venue.id || venue._id || venue.name;
 
 export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[] }) {
     const [venues, setVenues] = useState<RealPlay[]>(initialVenues);
@@ -57,14 +67,31 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
 
     const selectedSports = modalFilters.sports ?? [];
     const selectedDimensions = modalFilters.dimension ?? [];
-    const selectedSort = (modalFilters.sort ?? [])[0] ?? '';
+    const selectedSort = (modalFilters.play_sort ?? modalFilters.sort ?? [])[0] ?? '';
     const selectedLocation = useLocation();
     const cityFilter = selectedLocation ? selectedLocation.split(',')[0].trim().toLowerCase() : '';
 
+    const handleFilterChange = (filter: string) => {
+        setActiveFilter(filter);
+        if (filter === 'All') {
+            setModalFilters(prev => ({ ...prev, sports: [] }));
+        } else if (filter === 'Top Rated') {
+            // Keep existing sports filters if any
+        } else {
+            setModalFilters(prev => ({ ...prev, sports: [filter] }));
+        }
+    };
+
     let filteredVenues = venues.filter(v => {
         // Filter by city - only after mount to avoid hydration mismatch
-        if (mounted && cityFilter && !v.city?.toLowerCase().includes(cityFilter)) return false;
-        // Chip filter
+        if (mounted && cityFilter) {
+            const vCity = (v.city || '').toLowerCase();
+            if (!vCity.includes(cityFilter) && !cityFilter.includes(vCity)) return false;
+        }
+
+        // 1. Category Filter (Chip OR Modal)
+        // If modal has sports selected, it takes precedence or is combined.
+        // Let's make them work together: if activeFilter is set and not 'All', it must match.
         if (activeFilter !== 'All') {
             if (activeFilter === 'Top Rated') {
                 if ((v.rating || 0) < 4) return false;
@@ -72,14 +99,15 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
                 if (v.category?.toLowerCase() !== activeFilter.toLowerCase()) return false;
             }
         }
-        // Modal → Sports multi-select
-        if (selectedSports.length > 0) {
+
+        // 2. Modal → Sports multi-select (if not already filtered by chip)
+        if (selectedSports.length > 0 && activeFilter === 'All') {
             if (!selectedSports.some(s => v.category?.toLowerCase() === s.toLowerCase())) return false;
         }
-        // Modal → Dimension multi-select
+
+        // 3. Modal → Dimension multi-select
         if (selectedDimensions.length > 0) {
-            const vAny = v as any;
-            const vDim = (vAny.dimension || vAny.sub_category || '').toLowerCase().replace(/\s+/g, '');
+            const vDim = (v.dimension || v.sub_category || '').toLowerCase().replace(/\s+/g, '');
             if (!selectedDimensions.some(d => {
                 const search = d.toLowerCase().replace(/\s+/g, '');
                 return vDim.includes(search) || search.includes(vDim);
@@ -111,16 +139,20 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
 
     // Mobile view
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-        return <MobileHome events={[]} dinings={[]} plays={venues} />;
+        const venuesForMobile = venues.map(v => ({
+            ...v,
+            id: v.id || v._id || v.name
+        }));
+        return <MobileHome events={[]} dinings={[]} plays={venuesForMobile} />;
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">
-            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 py-8 md:py-12 space-y-12 md:space-y-20">
+        <div className="hidden md:block min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
+            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 pt-2 pb-6 md:pt-3 md:pb-8 space-y-4 md:space-y-6">
                 {/* Explore Sports Section */}
-                <section className="space-y-8 md:space-y-10">
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Sports</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 px-2 max-w-5xl">
+                <section className='pt-[20px] pb-[20px]'>
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-2 md:mb-3 uppercase text-black tracking-normal text-[20px] md:text-[24px]" style={{ fontWeight: 600 }}>Explore Sports</h2>
+                    <div className="flex flex-wrap gap-4 md:gap-5 px-1 max-w-[1280px]">
                         {sportsCategories.map((sport, i) => (
                             <SportCategoryCard
                                 key={i}
@@ -133,15 +165,15 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
                 </section>
 
                 {/* All Sports Venues Section */}
-                <section className="space-y-8 md:space-y-10">
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All Sports Venues</h2>
+                <section className="space-y-2.5 md:space-y-3">
+                    <h2 className=" pb-2 font-[family-name:var(--font-anek-latin)] font-semibold uppercase text-black tracking-normal text-[20px] md:text-[24px]" style={{ fontWeight: 600 }}>All Sports Venues</h2>
 
                     {/* Filters */}
                     <div>
                         <FilterBar
                             filters={filters}
                             activeFilter={activeFilter}
-                            onFilterChange={setActiveFilter}
+                            onFilterChange={handleFilterChange}
                             type="play"
                             onApply={setModalFilters}
                             initialModalFilters={modalFilters}
@@ -150,19 +182,21 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
 
                     {/* Venues Grid */}
                     {filteredVenues.length === 0 ? (
-                        <div className="text-center py-20 text-zinc-400 text-lg">No sports venues found for "{activeFilter}"</div>
+                        <div className="text-center py-20 text-zinc-400">
+                            No sports venues found for "{activeFilter}"
+                        </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-7xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 max-w-7xl mx-auto pt-1 mt-[30px]">
                             {filteredVenues.map((venue) => (
-                                <Link key={venue.id} href={`/play/${venue.name}`}>
-                                    <VenueCard
-                                        name={venue.name}
-                                        location={venue.city ?? ''}
-                                        image={venue.portrait_image_url || venue.landscape_image_url || '/play/m.png'}
-                                        priceStartsFrom={venue.price_starts_from}
-                                        category={venue.category}
-                                    />
-                                </Link>
+                                <VenueCard
+                                    key={getVenueId(venue)}
+                                    id={getVenueId(venue)}
+                                    name={venue.name}
+                                    location={venue.city ?? ''}
+                                    image={getVenueImage(venue)}
+                                    priceStartsFrom={venue.price_starts_from}
+                                    category={venue.category}
+                                />
                             ))}
                         </div>
                     )}

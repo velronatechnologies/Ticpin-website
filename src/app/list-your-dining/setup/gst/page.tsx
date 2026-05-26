@@ -5,8 +5,8 @@ import Link from 'next/link';
 import SetupSidebar from '@/app/list-your-dining/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-
 import { organizerApi } from '@/lib/api/organizer';
+import { toast } from '@/components/ui/Toast';
 
 const STORAGE_KEY = 'setup_dining';
 
@@ -15,11 +15,9 @@ function GstSelectionContent() {
     const searchParams = useSearchParams();
     const categoryQuery = searchParams.get('category');
     const [selectedGsts, setSelectedGsts] = React.useState<string[]>([]);
-    const [manualGst, setManualGst] = React.useState('');
     const [prefilled, setPrefilled] = React.useState(false);
     const [gstList, setGstList] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(false);
-    const [error, setError] = React.useState('');
 
     React.useEffect(() => {
         const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
@@ -28,37 +26,38 @@ function GstSelectionContent() {
         
         if (saved.prefilled) setPrefilled(true);
 
+        if (saved.fetchedGstList && Array.isArray(saved.fetchedGstList) && saved.fetchedGstPan === saved.pan) {
+            setGstList(saved.fetchedGstList);
+            return;
+        }
+
         if (saved.pan) {
             setLoading(true);
-            // Mocking GST fetch for testing
-            console.log('Mocking GST fetch for testing');
-            setTimeout(() => {
-                const mockGstList = [
-                    { gstin: saved.pan + 'Z1', status: 'ACTIVE', state: 'TAMIL NADU' },
-                ];
-                setGstList(mockGstList);
-                if (selectedGsts.length === 0 && !saved.gstList && !saved.gstNumber) {
-                    setSelectedGsts([mockGstList[0].gstin]);
-                }
-                setLoading(false);
-            }, 500);
-            /* organizerApi.fetchGST(saved.pan)
+            organizerApi.fetchGST(saved.pan)
                 .then(res => {
                     if (res.status === 'SUCCESS' && res.data.gstin_list) {
                         const list = res.data.gstin_list;
-                        setGstList(list);
-                        if (list.length === 1 && selectedGsts.length === 0 && !saved.gstList && !saved.gstNumber) {
-                            setSelectedGsts([list[0].gstin]);
-                        }
+                        const validGsts = list.filter((item: any) => {
+                            const status = (item.status || '').toUpperCase();
+                            return status === 'ACTIVE' || status === 'REGULAR';
+                        });
+                        setGstList(validGsts);
+
+                        const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
+                        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+                            ...existing,
+                            fetchedGstList: validGsts,
+                            fetchedGstPan: saved.pan
+                        }));
                     }
                 })
                 .catch(err => {
                     console.error('Fetch GST failed', err);
-                    setError(err.message || 'Failed to fetch GST details');
+                    toast.error(err.message || 'Failed to fetch GST details');
                 })
-                .finally(() => setLoading(false)); */
+                .finally(() => setLoading(false));
         }
-    }, [selectedGsts.length]);
+    }, []);
 
     const toggleGst = (gstin: string) => {
         setSelectedGsts(prev => {
@@ -66,36 +65,20 @@ function GstSelectionContent() {
                 return prev.filter(g => g !== gstin);
             }
             if (prev.length >= 3) {
+                toast.error('You can select a maximum of 3 GST accounts.');
                 return prev;
             }
             return [...prev, gstin];
         });
     };
 
-    const handleManualAdd = () => {
-        if (!manualGst) return;
-        if (selectedGsts.includes(manualGst)) {
-            setManualGst('');
-            return;
-        }
-        if (selectedGsts.length >= 3) {
-            alert('Maximum 3 GSTINs can be selected');
-            return;
-        }
-        setSelectedGsts([...selectedGsts, manualGst]);
-        setManualGst('');
-    };
-
     const handleContinue = () => {
-        if (selectedGsts.length === 0 && !manualGst) {
-            setError('Please select or enter at least one GSTIN');
+        if (selectedGsts.length === 0) {
+            toast.error('Please select at least one GSTIN');
             return;
         }
 
         let finalGsts = [...selectedGsts];
-        if (manualGst && !finalGsts.includes(manualGst) && finalGsts.length < 3) {
-            finalGsts.push(manualGst);
-        }
 
         const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ 
@@ -173,38 +156,6 @@ function GstSelectionContent() {
                                         )}
 
                                         <div className="space-y-8 pt-4">
-                                            <div className="flex flex-col gap-3">
-                                                <label className="text-[14px] font-medium text-[#686868]">Enter GSTIN Manually (if not in the list)</label>
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="eg. 22AAAAA0000A1Z5"
-                                                        value={manualGst}
-                                                        onChange={(e) => setManualGst(e.target.value.toUpperCase())}
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
-                                                        className="flex-1 h-12 px-4 border border-[#AEAEAE] rounded-[14px] text-[15px] font-medium focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-400 text-zinc-800 font-mono"
-                                                    />
-                                                    <button 
-                                                        onClick={handleManualAdd}
-                                                        className="px-4 h-12 bg-zinc-100 border border-zinc-200 rounded-[14px] text-[14px] font-semibold hover:bg-zinc-200 transition-colors"
-                                                    >
-                                                        Add
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {selectedGsts.length > 0 && (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {selectedGsts.map(gst => (
-                                                        <div key={gst} className="bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-full flex items-center gap-2 group">
-                                                            <span className="text-[13px] font-bold font-mono">{gst}</span>
-                                                            <button onClick={() => toggleGst(gst)} className="text-zinc-400 hover:text-red-500">
-                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
 
                                             <p className="text-[13px] text-[#686868] font-medium leading-relaxed">
                                                 Please note, we only support Regular and Active GSTs to onboard as partners.
@@ -212,8 +163,6 @@ function GstSelectionContent() {
                                         </div>
                                     </>
                                 )}
-
-                                {error && <p className="text-red-500 text-[14px] font-medium">{error}</p>}
                             </div>
 
                             <div className="pt-2 flex justify-center md:justify-start">

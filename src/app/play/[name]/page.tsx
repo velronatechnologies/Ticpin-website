@@ -31,6 +31,7 @@ interface RealPlay {
     terms?: string;
     price_starts_from?: number;
     price_per_slot?: number;
+    min_duration?: string;
 }
 
 async function getVenueData(name: string): Promise<RealPlay | null> {

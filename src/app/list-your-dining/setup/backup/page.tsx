@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { organizerApi } from '@/lib/api/organizer';
 import { getOrganizerSession } from '@/lib/auth/organizer';
+import { toast } from '@/components/ui/Toast';
 
 function BackupContactContent() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -15,7 +16,6 @@ function BackupContactContent() {
     const [prefilled, setPrefilled] = useState(false);
     const [loading, setLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
-    const [error, setError] = useState('');
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
 
@@ -58,15 +58,14 @@ function BackupContactContent() {
 
     const handleSendOTP = async () => {
         if (showOtp && timeLeft > 0) return;
-        setError('');
         
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError('Please enter a valid email address.');
+            toast.error('Please enter a valid email address.');
             return;
         }
         const session = getOrganizerSession();
         if (session?.email && email.toLowerCase() === session.email.toLowerCase()) {
-            setError('Backup email must be different from your login email.');
+            toast.error('Backup email must be different from your login email.');
             return;
         }
         
@@ -110,9 +109,8 @@ function BackupContactContent() {
     };
 
     const handleVerifyAndContinue = async () => {
-        setError('');
         const otpValue = otp.join('');
-        if (otpValue.length < 6) { setError('Please enter the complete 6-digit OTP.'); return; }
+        if (otpValue.length < 6) { toast.error('Please enter the complete 6-digit OTP.'); return; }
         const session = getOrganizerSession();
         setVerifying(true);
         try {
@@ -125,7 +123,7 @@ function BackupContactContent() {
             }));
             router.push('/list-your-dining/setup/agreement');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'OTP verification failed');
+            toast.error(err instanceof Error ? err.message : 'OTP verification failed');
         } finally {
             setVerifying(false);
         }
@@ -157,10 +155,6 @@ function BackupContactContent() {
                                 Backup contact
                             </h1>
 
-                            {error && (
-                                <p className="text-red-500 text-[14px] font-medium">{error}</p>
-                            )}
-
                             {isCurrentEmailVerified && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl">
                                     <p className="text-green-800 text-[14px] font-medium">
@@ -186,7 +180,7 @@ function BackupContactContent() {
                                         />
                                         {showOtp && (
                                             <button
-                                                onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); setError(''); }}
+                                                onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); }}
                                                 className="mt-2 text-[14px] font-medium text-[#5331EA]"
                                             >
                                                 Change email

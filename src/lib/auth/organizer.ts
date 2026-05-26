@@ -71,10 +71,37 @@ export function saveOrganizerSession(session: OrganizerSession): void {
 export function clearOrganizerSession(): void {
   if (typeof window === 'undefined') return;
   
-  // Fire-and-forget — clears the HttpOnly ticpin_token on the server
-  fetch('/backend/api/organizer/logout', { method: 'POST', credentials: 'include' }).catch(() => { });
+  // Log what we're clearing
+  console.log('[Auth] Clearing organizer session...');
   
-  // Clear everything
+  // Clear specific sessionStorage keys used during setup
+  const setupKeys = [
+    'setup_events',
+    'setup_dining',
+    'setup_play',
+    'ticpin_organizer_session',
+    'ticpin_cart',
+    'ticpin_billing_data',
+    'ticpin_pending_payment',
+    'ticpin_pending_renew',
+  ];
+  
+  setupKeys.forEach(key => {
+    if (sessionStorage.getItem(key)) {
+      console.debug(`[Auth] Clearing sessionStorage.${key}`);
+      sessionStorage.removeItem(key);
+    }
+  });
+  
+  // Clear localStorage organizer preferences
+  localStorage.removeItem('organizer_preferences');
+  console.debug('[Auth] Cleared organizer_preferences from localStorage');
+  
+  // Fire-and-forget — clears the HttpOnly ticpin_token on the server
+  fetch('/backend/api/organizer/logout', { method: 'POST', credentials: 'include' })
+    .catch(err => console.error('[Auth] Logout API call failed:', err));
+  
+  // Clear everything (cookies, remaining storage, etc)
   clearAllData();
 }
 

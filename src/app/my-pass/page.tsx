@@ -118,12 +118,25 @@ export default function MyPassPage() {
                 body: JSON.stringify({ payment_id: paymentId }),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
+            
+            if (!res.ok) {
+                throw new Error(data.error || 'Renewal failed');
+            }
+            
+            // Validate response structure before setting state
+            if (!data || typeof data.id !== 'string' || !['active', 'expired', 'pending'].includes(data.status)) {
+                console.error('[MyPass] Invalid pass data returned:', data);
+                throw new Error('Invalid pass data received from server');
+            }
+            
             setPass(data);
             setRenewSuccess(true);
+            toast.success('✅ Pass renewed successfully!');
             setTimeout(() => setRenewSuccess(false), 3000);
-        } catch {
-            toast.error('Renewal failed. Please try again.');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Renewal failed. Please try again.';
+            toast.error(message);
+            console.error('[MyPass] Renewal error:', err);
         } finally {
             setRenewLoading(false);
         }

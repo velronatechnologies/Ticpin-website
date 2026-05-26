@@ -6,7 +6,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     credentials: 'include',
     ...options,
   });
-  
+
   // Check if response is ok BEFORE parsing JSON
   if (!res.ok) {
     try {
@@ -21,7 +21,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       throw e;
     }
   }
-  
+
   const data = await res.json();
   return data as T;
 }
@@ -33,7 +33,6 @@ export interface CategoryStatusResponse {
 export interface ExistingSetup {
   pan?: string;
   panName?: string;
-  panDOB?: string;
   panCardUrl?: string;
   bankAccountNo?: string;
   bankIfsc?: string;
@@ -118,9 +117,14 @@ export const organizerApi = {
     return data.url as string;
   },
 
-  /** POST /api/organizer/upload-media — multipart upload, returns { url } */
+  /** POST /api/organizer/upload-profile-photo — multipart upload for profile photo, returns { url } */
   uploadProfilePhoto: async (file: File): Promise<string> => {
-    return organizerApi.uploadMedia(file);
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${BASE}/organizer/upload-profile-photo`, { method: 'POST', body: form, credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+    return data.url as string;
   },
 
   /** POST /api/organizer/upload-media — multipart upload, returns { url } */
@@ -134,10 +138,10 @@ export const organizerApi = {
   },
 
   /** POST /api/organizer/verification/verify-pan — verifies PAN card details */
-  verifyPAN: (pan: string, name: string, dob: string) =>
+  verifyPAN: (pan: string, name: string) =>
     request<{ status: string; message: string; data: any }>('/organizer/verification/verify-pan', {
       method: 'POST',
-      body: JSON.stringify({ pan, name, dob }),
+      body: JSON.stringify({ pan, name }),
     }),
 
   /** GET /api/organizer/verification/fetch-gst — fetches associated GSTINs for a PAN */

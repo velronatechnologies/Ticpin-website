@@ -326,7 +326,6 @@ function OrganizerDetailView({ organizerId, onClose, onStatusChange }: {
                                                 { label: 'GST Number', path: `setups.${idx}.gstNumber`, value: setup.gstNumber },
                                                 { label: 'PAN Card No.', path: `setups.${idx}.pan`, value: setup.pan },
                                                 { label: 'PAN Name', path: `setups.${idx}.panName`, value: setup.panName },
-                                                { label: 'Date of Birth', path: `setups.${idx}.panDOB`, value: setup.panDOB },
                                                 { label: 'Bank Account No.', path: `setups.${idx}.bankAccountNo`, value: setup.bankAccountNo },
                                                 { label: 'Bank Name', path: `setups.${idx}.bankName`, value: setup.bankName },
                                                 { label: 'IFSC Code', path: `setups.${idx}.bankIfsc`, value: setup.bankIfsc },

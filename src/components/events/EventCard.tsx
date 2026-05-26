@@ -20,9 +20,9 @@ export default function EventCard({
   image,
 }: EventCardProps) {
   return (
-    <Link href={`/events/${name}`} className="block">
+    <Link href={`/events/${id}`} className="block">
       <div
-        className="overflow-hidden cursor-pointer w-full sm:w-auto flex flex-col hover:shadow-lg transition-all"
+        className="overflow-hidden cursor-pointer w-full sm:w-auto flex flex-col"
         style={{
           width: '285px',
           background: 'white',
@@ -43,12 +43,12 @@ export default function EventCard({
           <div className="text-xs font-semibold text-purple-600 mb-2">
             {date} / {time}
           </div>
-          <h3 className={`${name.length > 22 ? 'text-base' : 'text-lg'} font-bold text-gray-900 mb-2 line-clamp-2 uppercase leading-tight`}>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
             {name}
           </h3>
           <p className="text-sm text-gray-600 mb-3">{location}</p>
-          <p className="text-xs text-zinc-500 mt-auto">
-            Tickets starting at <span className="font-semibold text-zinc-800">{ticketPrice}</span>
+          <p className="text-xs text-gray-500 mt-auto">
+            Tickets starting at <span className="font-semibold text-gray-700">{ticketPrice}</span>
           </p>
         </div>
       </div>

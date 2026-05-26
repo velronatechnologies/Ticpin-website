@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { organizerApi } from '@/lib/api/organizer';
 import { getOrganizerSession } from '@/lib/auth/organizer';
+import { toast } from '@/components/ui/Toast';
 
 export default function BackupContactPage() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -24,23 +25,28 @@ export default function BackupContactPage() {
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
     const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
     const [prefilled, setPrefilled] = useState(false);
     const [loading, setLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
-    const [error, setError] = useState('');
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
 
     React.useEffect(() => {
         const saved = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-        if (saved.backupEmail) {
-            setEmail(saved.backupEmail);
-            if (saved.prefilled) setPrefilled(true);
-            // Check if backup email was already verified
-            if (saved.backupEmailVerified) {
-                setShowOtp(false);
-                setOtp(['', '', '', '', '', '']);
-            }
+        if (!saved.pan && !saved.prefilled) {
+            router.replace('/list-your-play/setup');
+            return;
+        }
+
+        if (saved.backupEmail) setEmail(saved.backupEmail);
+        if (saved.backupPhone) setPhone(saved.backupPhone);
+        if (saved.prefilled) setPrefilled(true);
+        
+        // Check if backup email was already verified
+        if (saved.backupEmailVerified) {
+            setShowOtp(false);
+            setOtp(['', '', '', '', '', '']);
         }
     }, []);
 
@@ -49,37 +55,52 @@ export default function BackupContactPage() {
     const isCurrentEmailVerified = saved.backupEmail === email && saved.backupEmailVerified;
 
     const handleSkipVerification = () => {
+        const existing = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
+        sessionStorage.setItem('setup_play', JSON.stringify({ ...existing, backupPhone: phone }));
         router.push('/list-your-play/setup/agreement');
     };
 
     const handleContinueWithVerifiedEmail = () => {
+        const existing = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
+        sessionStorage.setItem('setup_play', JSON.stringify({ ...existing, backupPhone: phone }));
         router.push('/list-your-play/setup/agreement');
     };
 
     const handleSendOTP = async () => {
         if (showOtp && timeLeft > 0) return;
-        setError('');
-        
+
         // Basic email regex validation
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError('Please enter a valid email address.');
+            toast.error('Please enter a valid email address.');
             return;
         }
-        
+
+        if (phone && !/^[0-9]{10}$/.test(phone)) {
+            toast.error('Please enter a valid 10-digit phone number.');
+            return;
+        }
+
         const session = getOrganizerSession();
         if (session?.email && email.toLowerCase() === session.email.toLowerCase()) {
-            setError('Backup email must be different from your login email.');
+            toast.error('Backup email must be different from your login email.');
             return;
         }
-        
-        // Instantly show the OTP fields
-        setShowOtp(true);
-        setTimeLeft(180);
-        
-        // Send OTP in the background
-        organizerApi.sendBackupOTP(session?.id ?? '', email, 'play').catch(err => {
-            console.error('Failed to send OTP:', err);
-        });
+
+        setLoading(true);
+        try {
+            await organizerApi.sendBackupOTP(session?.id ?? '', email, 'play');
+            setShowOtp(true);
+            setTimeLeft(180);
+        } catch (err: any) {
+            const msg = err.message || '';
+            if (msg.includes('credits over') || msg.includes('Internal Server Error')) {
+                toast.error('Our verification system is temporarily down. Please try again later.');
+            } else {
+                toast.error('Failed to send OTP. Please try again.');
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleOtpChange = (index: number, value: string) => {
@@ -97,39 +118,28 @@ export default function BackupContactPage() {
         if (e.key === 'Enter') handleVerifyAndContinue();
     };
 
-    const handlePaste = (e: React.ClipboardEvent) => {
-        e.preventDefault();
-        const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-        if (!data) return;
-
-        const next = [...otp];
-        data.split('').forEach((char, i) => {
-            next[i] = char;
-        });
-        setOtp(next);
-
-        // Focus the last filled input or next empty
-        const focusIndex = Math.min(data.length, 5);
-        inputRefs.current[focusIndex]?.focus();
-    };
-
     const handleVerifyAndContinue = async () => {
-        setError('');
         const otpValue = otp.join('');
-        if (otpValue.length < 6) { setError('Please enter the complete 6-digit OTP.'); return; }
+        if (otpValue.length < 6) { toast.error('Please enter the complete 6-digit OTP.'); return; }
         const session = getOrganizerSession();
         setVerifying(true);
         try {
             await organizerApi.verifyBackupOTP(session?.id ?? '', otpValue);
             const existing = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-            sessionStorage.setItem('setup_play', JSON.stringify({ 
-                ...existing, 
+            sessionStorage.setItem('setup_play', JSON.stringify({
+                ...existing,
                 backupEmail: email,
-                backupEmailVerified: true 
+                backupPhone: phone,
+                backupEmailVerified: true
             }));
             router.push('/list-your-play/setup/agreement');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'OTP verification failed');
+        } catch (err: any) {
+            const msg = err.message || '';
+            if (msg.includes('Invalid') || msg.includes('wrong')) {
+                toast.error('Invalid OTP. Please check and try again.');
+            } else {
+                toast.error(msg || 'OTP verification failed');
+            }
         } finally {
             setVerifying(false);
         }
@@ -156,10 +166,6 @@ export default function BackupContactPage() {
                                 Backup contact
                             </h1>
 
-                            {error && (
-                                <p className="text-red-500 text-[14px] font-medium">{error}</p>
-                            )}
-
                             {isCurrentEmailVerified && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl">
                                     <p className="text-green-800 text-[14px] font-medium">
@@ -169,28 +175,46 @@ export default function BackupContactPage() {
                             )}
 
                             <div className="space-y-8 max-w-2xl">
-                                <div className="space-y-3">
-                                    <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
-                                        Enter backup email (must be different from your login email)
-                                    </label>
-                                    <div className="max-w-md">
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendOTP()}
-                                            placeholder="backup@example.com"
-                                            disabled={showOtp}
-                                            className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''}`}
-                                        />
-                                        {showOtp && (
-                                            <button
-                                                onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); setError(''); }}
-                                                className="mt-2 text-[14px] font-medium text-[#E7C200]"
-                                            >
-                                                Change email
-                                            </button>
-                                        )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
+                                            Backup email <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="max-w-md">
+                                            <input
+                                                type="email"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendOTP()}
+                                                placeholder="backup@example.com"
+                                                disabled={showOtp}
+                                                className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''}`}
+                                            />
+                                            {showOtp && (
+                                                <button
+                                                    onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); }}
+                                                    className="mt-2 text-[14px] font-medium text-[#E7C200]"
+                                                >
+                                                    Change email
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
+                                            Backup phone number
+                                        </label>
+                                        <div className="max-w-md">
+                                            <input
+                                                type="tel"
+                                                value={phone}
+                                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                                placeholder="10-digit mobile number"
+                                                disabled={showOtp}
+                                                className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''}`}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

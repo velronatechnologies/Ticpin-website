@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
-import { Anek_Latin, Anek_Tamil, Inter } from "next/font/google";
+import { Anek_Latin, Anek_Tamil, Inter, Geist } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+
+export const runtime = "edge";
 import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import Providers from "@/components/providers/Providers";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FloatingChatWidget from "@/components/FloatingChatWidget";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const anekLatin = Anek_Latin({
   subsets: ["latin"],
@@ -70,7 +75,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       </head>
