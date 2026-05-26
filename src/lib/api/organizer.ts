@@ -148,11 +148,11 @@ export const organizerApi = {
   fetchGST: (pan: string) =>
     request<{ status: string; data: { gstin_list: any[] } }>(`/organizer/verification/fetch-gst?pan=${pan}`),
 
-  /** POST /api/organizer/send-backup-otp — sends OTP to the backup email */
-  sendBackupOTP: (organizerId: string, email: string, category: string) =>
+  /** POST /api/organizer/send-backup-otp — sends OTP to the backup contact */
+  sendBackupOTP: (organizerId: string, identifier: string, category: string) =>
     request<{ message: string }>('/organizer/send-backup-otp', {
       method: 'POST',
-      body: JSON.stringify({ organizerId, email, category }),
+      body: JSON.stringify({ organizerId, identifier, category }),
     }),
 
   /** POST /api/organizer/verify-backup-otp — verifies the backup email OTP */

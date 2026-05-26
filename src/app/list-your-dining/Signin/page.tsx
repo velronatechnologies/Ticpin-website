@@ -1,14 +1,13 @@
 'use client';
 
-import OrganizerSigninForm from '@/components/organizer/OrganizerSigninForm';
+import OrganizerLoginForm from '@/components/organizer/OrganizerLoginForm';
 
 export default function SignupPage() {
     return (
-        <OrganizerSigninForm
+        <OrganizerLoginForm
             vertical="dining"
             setupPath="/list-your-dining/setup"
-            loginPath="/list-your-dining/Login"
-            signinTitle="Create Business account"
+            signinPath="/list-your-dining/Signin"
         />
     );
 }

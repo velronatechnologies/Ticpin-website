@@ -131,8 +131,17 @@ function OTPContent({ vertical, api, setupPath, loginPath }: Props) {
             setOTPSentAt(email, vertical);
             setResent(true);
             setTimeLeft(180); // Reset local timer
-        } catch {
-            setError('Could not resend OTP. Try again later.');
+        } catch (e: any) {
+            const msg = e instanceof Error ? e.message : 'Could not resend OTP';
+            if (msg.includes('Please wait') && msg.includes('seconds')) {
+                const match = msg.match(/\d+/);
+                if (match) {
+                    const seconds = parseInt(match[0], 10);
+                    setTimeLeft(seconds);
+                    return;
+                }
+            }
+            setError(msg);
         } finally {
             setIsResending(false);
         }

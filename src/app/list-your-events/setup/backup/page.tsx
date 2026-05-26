@@ -12,36 +12,45 @@ export default function BackupContactPage() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [showOtp, setShowOtp] = useState(false);
     const [timeLeft, setTimeLeft] = useState(180);
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [prefilled, setPrefilled] = useState(false);
     const [loading, setLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
 
+    const [loginType, setLoginType] = useState<'email' | 'mobile'>('email');
+
     React.useEffect(() => {
+        const session = getOrganizerSession();
+        if (session?.email) {
+            setLoginType(session.email.includes('@') ? 'email' : 'mobile');
+        }
+
         const saved = JSON.parse(sessionStorage.getItem('setup_events') ?? '{}');
-        if (saved.backupEmail) {
-            setEmail(saved.backupEmail);
+        const backupVal = session?.email.includes('@') ? saved.backupPhone : saved.backupEmail;
+        
+        if (backupVal) {
+            setIdentifier(backupVal);
             if (saved.prefilled) setPrefilled(true);
-            // Check if backup email was already verified
-            if (saved.backupEmailVerified) {
+            // Check if backup contact was already verified
+            if (saved.backupVerified) {
                 setShowOtp(false);
                 setOtp(['', '', '', '', '', '']);
             }
         }
     }, []);
 
-    // Check if current email is already verified
+    // Check if current contact is already verified
     const saved = JSON.parse(sessionStorage.getItem('setup_events') ?? '{}');
-    const isCurrentEmailVerified = saved.backupEmail === email && saved.backupEmailVerified;
+    const isCurrentVerified = (saved.backupEmail === identifier || saved.backupPhone === identifier) && saved.backupVerified;
 
     const handleSkipVerification = () => {
         router.push('/list-your-events/setup/agreement');
     };
 
-    const handleContinueWithVerifiedEmail = () => {
-        toast.success(`✅ Using verified backup email: ${email}`);
+    const handleContinueWithVerified = () => {
+        toast.success(`✅ Using verified backup: ${identifier}`);
         setTimeout(() => router.push('/list-your-events/setup/agreement'), 800);
     };
 
@@ -60,22 +69,42 @@ export default function BackupContactPage() {
     const handleSendOTP = async () => {
         if (showOtp && timeLeft > 0) return;
         
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            toast.error('Please enter a valid email address.');
-            return;
+        if (loginType === 'email') {
+            // Logic type email means backup MUST be mobile
+            if (!/^\d{10}$/.test(identifier)) {
+                toast.error('Please enter a valid 10-digit phone number.');
+                return;
+            }
+        } else {
+            // Login type mobile means backup MUST be email
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+                toast.error('Please enter a valid email address.');
+                return;
+            }
         }
+
         const session = getOrganizerSession();
-        if (session?.email && email.toLowerCase() === session.email.toLowerCase()) {
-            toast.error('Backup email must be different from your login email.');
+        if (session?.email && identifier.toLowerCase() === session.email.toLowerCase()) {
+            toast.error('Backup contact must be different from your login contact.');
             return;
         }
-        
-        setShowOtp(true);
-        setTimeLeft(180);
-        
-        organizerApi.sendBackupOTP(session?.id ?? '', email, 'events').catch(err => {
-            console.error('Failed to send OTP:', err);
-        });
+
+        setLoading(true);
+        try {
+            await organizerApi.sendBackupOTP(session?.id ?? '', identifier, 'events');
+            setShowOtp(true);
+            setTimeLeft(180);
+            toast.success(`OTP sent to ${identifier}`);
+        } catch (err: any) {
+            const msg = err instanceof Error ? err.message : 'Failed to send OTP';
+            if (msg === 'email_already_in_use' || msg === 'phone_already_in_use') {
+                toast.error('This contact is already being used by another organization.');
+            } else {
+                toast.error(msg);
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleOtpChange = (index: number, value: string) => {
@@ -117,13 +146,18 @@ export default function BackupContactPage() {
         try {
             await organizerApi.verifyBackupOTP(session?.id ?? '', otpValue);
             const existing = JSON.parse(sessionStorage.getItem('setup_events') ?? '{}');
-            sessionStorage.setItem('setup_events', JSON.stringify({ 
-                ...existing, 
-                backupEmail: email,
-                backupEmailVerified: true 
-            }));
+            const updateObj = {
+                ...existing,
+                backupVerified: true
+            };
+            if (loginType === 'email') {
+                updateObj.backupPhone = identifier;
+            } else {
+                updateObj.backupEmail = identifier;
+            }
+            sessionStorage.setItem('setup_events', JSON.stringify(updateObj));
             
-            toast.success(`✅ Backup email ${email} verified successfully!`);
+            toast.success(`✅ Backup ${loginType === 'email' ? 'phone' : 'email'} verified successfully!`);
             setTimeout(() => router.push('/list-your-events/setup/agreement'), 800);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'OTP verification failed');
@@ -158,10 +192,10 @@ export default function BackupContactPage() {
                                 Backup contact
                             </h1>
 
-                            {isCurrentEmailVerified && (
+                            {isCurrentVerified && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl">
                                     <p className="text-green-800 text-[14px] font-medium">
-                                        ✅ Backup email <span className="font-semibold">{email}</span> is already verified
+                                        ✅ Backup {loginType === 'email' ? 'phone' : 'email'} <span className="font-semibold">{identifier}</span> is already verified
                                     </p>
                                 </div>
                             )}
@@ -169,24 +203,40 @@ export default function BackupContactPage() {
                             <div className="space-y-8 max-w-2xl">
                                 <div className="space-y-3">
                                     <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
-                                        Enter backup email (must be different from your login email)
+                                        {loginType === 'email' 
+                                            ? 'Enter backup phone number (required for account security)' 
+                                            : 'Enter backup email address (required for account security)'}
                                     </label>
                                     <div className="max-w-md">
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendOTP()}
-                                            placeholder="backup@example.com"
-                                            disabled={showOtp}
-                                            className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''}`}
-                                        />
+                                        <div className="relative">
+                                            {loginType === 'email' && (
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 py-4 text-zinc-800 font-medium border-r border-black/30 pr-3 mr-3 h-1/2 flex items-center gap-1">
+                                                    <span>+91</span>
+                                                </div>
+                                            )}
+                                            <input
+                                                type={loginType === 'email' ? 'tel' : 'email'}
+                                                value={identifier}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (loginType === 'email') {
+                                                        setIdentifier(val.replace(/\D/g, '').slice(0, 10));
+                                                    } else {
+                                                        setIdentifier(val);
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendOTP()}
+                                                placeholder={loginType === 'email' ? '10-digit mobile number' : 'backup@example.com'}
+                                                disabled={showOtp}
+                                                className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''} ${loginType === 'email' ? 'pl-[70px]' : ''}`}
+                                            />
+                                        </div>
                                         {showOtp && (
                                             <button
                                                 onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); }}
                                                 className="mt-2 text-[14px] font-medium text-[#5331EA]"
                                             >
-                                                Change email
+                                                Change {loginType === 'email' ? 'phone' : 'email'}
                                             </button>
                                         )}
                                     </div>
@@ -194,7 +244,7 @@ export default function BackupContactPage() {
 
                                 {!showOtp ? (
                                     <div className="flex gap-4">
-                                        {!isCurrentEmailVerified && (
+                                        {!isCurrentVerified && (
                                             <button
                                                 onClick={handleSendOTP}
                                                 disabled={loading}

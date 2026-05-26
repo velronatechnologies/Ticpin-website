@@ -48,6 +48,18 @@ export default function AdminLoginForm() {
         } finally { setLoading(false); }
     };
 
+    const handleSendPhoneOtp = async () => {
+        if (!phone) { setError('Phone number is required'); return; }
+        if (phone.length !== 10) { setError('Please enter a valid 10-digit phone number'); return; }
+        setLoading(true); setError('');
+        try {
+            await authApi.login(phone, 'admin');
+            setView('otp');
+        } catch (e: any) {
+            setError(e.message);
+        } finally { setLoading(false); }
+    };
+
     const handleVerifyOtp = async () => {
         const code = otp.join('');
         if (code.length !== 6) { setError('Enter 6 digits'); return; }

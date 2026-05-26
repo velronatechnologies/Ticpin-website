@@ -12,6 +12,50 @@ export default function BackupContactPage() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [showOtp, setShowOtp] = useState(false);
     const [timeLeft, setTimeLeft] = useState(180);
+    const [identifier, setIdentifier] = useState('');
+    const [prefilled, setPrefilled] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const router = useRouter();
+
+    const [loginType, setLoginType] = useState<'email' | 'mobile'>('email');
+
+    React.useEffect(() => {
+        const session = getOrganizerSession();
+        if (session?.email) {
+            setLoginType(session.email.includes('@') ? 'email' : 'mobile');
+        }
+
+        const saved = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
+        if (!saved.pan && !saved.prefilled) {
+            router.replace('/list-your-play/setup');
+            return;
+        }
+
+        const backupVal = session?.email.includes('@') ? saved.backupPhone : saved.backupEmail;
+        if (backupVal) setIdentifier(backupVal);
+        if (saved.prefilled) setPrefilled(true);
+        
+        // Check if backup contact was already verified
+        if (saved.backupVerified) {
+            setShowOtp(false);
+            setOtp(['', '', '', '', '', '']);
+        }
+    }, []);
+
+    // Check if current contact is already verified
+    const saved = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
+    const isCurrentVerified = (saved.backupEmail === identifier || saved.backupPhone === identifier) && saved.backupVerified;
+
+    const handleSkipVerification = () => {
+        router.push('/list-your-play/setup/agreement');
+    };
+
+    const handleContinueWithVerified = () => {
+        toast.success(`✅ Using verified backup: ${identifier}`);
+        setTimeout(() => router.push('/list-your-play/setup/agreement'), 800);
+    };
 
     React.useEffect(() => {
         if (!showOtp || timeLeft <= 0) return;
@@ -24,79 +68,40 @@ export default function BackupContactPage() {
         const s = seconds % 60;
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
-    const [prefilled, setPrefilled] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [verifying, setVerifying] = useState(false);
-    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-    const router = useRouter();
-
-    React.useEffect(() => {
-        const saved = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-        if (!saved.pan && !saved.prefilled) {
-            router.replace('/list-your-play/setup');
-            return;
-        }
-
-        if (saved.backupEmail) setEmail(saved.backupEmail);
-        if (saved.backupPhone) setPhone(saved.backupPhone);
-        if (saved.prefilled) setPrefilled(true);
-        
-        // Check if backup email was already verified
-        if (saved.backupEmailVerified) {
-            setShowOtp(false);
-            setOtp(['', '', '', '', '', '']);
-        }
-    }, []);
-
-    // Check if current email is already verified
-    const saved = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-    const isCurrentEmailVerified = saved.backupEmail === email && saved.backupEmailVerified;
-
-    const handleSkipVerification = () => {
-        const existing = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-        sessionStorage.setItem('setup_play', JSON.stringify({ ...existing, backupPhone: phone }));
-        router.push('/list-your-play/setup/agreement');
-    };
-
-    const handleContinueWithVerifiedEmail = () => {
-        const existing = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-        sessionStorage.setItem('setup_play', JSON.stringify({ ...existing, backupPhone: phone }));
-        router.push('/list-your-play/setup/agreement');
-    };
 
     const handleSendOTP = async () => {
         if (showOtp && timeLeft > 0) return;
 
-        // Basic email regex validation
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            toast.error('Please enter a valid email address.');
-            return;
-        }
-
-        if (phone && !/^[0-9]{10}$/.test(phone)) {
-            toast.error('Please enter a valid 10-digit phone number.');
-            return;
+        if (loginType === 'email') {
+            if (!/^\d{10}$/.test(identifier)) {
+                toast.error('Please enter a valid 10-digit phone number.');
+                return;
+            }
+        } else {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+                toast.error('Please enter a valid email address.');
+                return;
+            }
         }
 
         const session = getOrganizerSession();
-        if (session?.email && email.toLowerCase() === session.email.toLowerCase()) {
-            toast.error('Backup email must be different from your login email.');
+        if (session?.email && identifier.toLowerCase() === session.email.toLowerCase()) {
+            toast.error('Backup contact must be different from your login contact.');
             return;
         }
 
         setLoading(true);
         try {
-            await organizerApi.sendBackupOTP(session?.id ?? '', email, 'play');
+            await organizerApi.sendBackupOTP(session?.id ?? '', identifier, 'play');
             setShowOtp(true);
             setTimeLeft(180);
+            toast.success(`OTP sent to ${identifier}`);
         } catch (err: any) {
-            const msg = err.message || '';
-            if (msg.includes('credits over') || msg.includes('Internal Server Error')) {
-                toast.error('Our verification system is temporarily down. Please try again later.');
+            const msg = err instanceof Error ? err.message : 'Failed to send OTP';
+            if (msg === 'email_already_in_use' || msg === 'phone_already_in_use') {
+                toast.error('This contact is already being used by another organization.');
             } else {
-                toast.error('Failed to send OTP. Please try again.');
+                toast.error(msg);
             }
         } finally {
             setLoading(false);
@@ -118,6 +123,22 @@ export default function BackupContactPage() {
         if (e.key === 'Enter') handleVerifyAndContinue();
     };
 
+    const handlePaste = (e: React.ClipboardEvent) => {
+        e.preventDefault();
+        const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        if (!data) return;
+
+        const next = [...otp];
+        data.split('').forEach((char, i) => {
+            next[i] = char;
+        });
+        setOtp(next);
+
+        // Focus the last filled input or next empty
+        const focusIndex = Math.min(data.length, 5);
+        inputRefs.current[focusIndex]?.focus();
+    };
+
     const handleVerifyAndContinue = async () => {
         const otpValue = otp.join('');
         if (otpValue.length < 6) { toast.error('Please enter the complete 6-digit OTP.'); return; }
@@ -126,20 +147,21 @@ export default function BackupContactPage() {
         try {
             await organizerApi.verifyBackupOTP(session?.id ?? '', otpValue);
             const existing = JSON.parse(sessionStorage.getItem('setup_play') ?? '{}');
-            sessionStorage.setItem('setup_play', JSON.stringify({
+            const updateObj = {
                 ...existing,
-                backupEmail: email,
-                backupPhone: phone,
-                backupEmailVerified: true
-            }));
-            router.push('/list-your-play/setup/agreement');
-        } catch (err: any) {
-            const msg = err.message || '';
-            if (msg.includes('Invalid') || msg.includes('wrong')) {
-                toast.error('Invalid OTP. Please check and try again.');
+                backupVerified: true
+            };
+            if (loginType === 'email') {
+                updateObj.backupPhone = identifier;
             } else {
-                toast.error(msg || 'OTP verification failed');
+                updateObj.backupEmail = identifier;
             }
+            sessionStorage.setItem('setup_play', JSON.stringify(updateObj));
+            
+            toast.success(`✅ Backup ${loginType === 'email' ? 'phone' : 'email'} verified successfully!`);
+            setTimeout(() => router.push('/list-your-play/setup/agreement'), 800);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'OTP verification failed');
         } finally {
             setVerifying(false);
         }
@@ -166,61 +188,59 @@ export default function BackupContactPage() {
                                 Backup contact
                             </h1>
 
-                            {isCurrentEmailVerified && (
+                            {isCurrentVerified && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl">
                                     <p className="text-green-800 text-[14px] font-medium">
-                                        ✅ Backup email <span className="font-semibold">{email}</span> is already verified
+                                        ✅ Backup {loginType === 'email' ? 'phone' : 'email'} <span className="font-semibold">{identifier}</span> is already verified
                                     </p>
                                 </div>
                             )}
 
                             <div className="space-y-8 max-w-2xl">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-3">
-                                        <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
-                                            Backup email <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="max-w-md">
-                                            <input
-                                                type="email"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendOTP()}
-                                                placeholder="backup@example.com"
-                                                disabled={showOtp}
-                                                className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''}`}
-                                            />
-                                            {showOtp && (
-                                                <button
-                                                    onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); }}
-                                                    className="mt-2 text-[14px] font-medium text-[#E7C200]"
-                                                >
-                                                    Change email
-                                                </button>
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
+                                        {loginType === 'email' 
+                                            ? 'Enter backup phone number (required for account security)' 
+                                            : 'Enter backup email address (required for account security)'}
+                                    </label>
+                                    <div className="max-w-md">
+                                        <div className="relative">
+                                            {loginType === 'email' && (
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 py-4 text-zinc-800 font-medium border-r border-black/30 pr-3 mr-3 h-1/2 flex items-center gap-1">
+                                                    <span>+91</span>
+                                                </div>
                                             )}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin' }}>
-                                            Backup phone number
-                                        </label>
-                                        <div className="max-w-md">
                                             <input
-                                                type="tel"
-                                                value={phone}
-                                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                                placeholder="10-digit mobile number"
+                                                type={loginType === 'email' ? 'tel' : 'email'}
+                                                value={identifier}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (loginType === 'email') {
+                                                        setIdentifier(val.replace(/\D/g, '').slice(0, 10));
+                                                    } else {
+                                                        setIdentifier(val);
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => e.key === 'Enter' && !loading && handleSendOTP()}
+                                                placeholder={loginType === 'email' ? '10-digit mobile number' : 'backup@example.com'}
                                                 disabled={showOtp}
-                                                className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''}`}
+                                                className={`w-full h-12 px-4 border border-black/30 rounded-[14px] text-[15px] font-medium focus:outline-none placeholder:text-zinc-400 mt-3 ${showOtp ? 'bg-zinc-50 opacity-70' : ''} ${loginType === 'email' ? 'pl-[70px]' : ''}`}
                                             />
                                         </div>
+                                        {showOtp && (
+                                            <button
+                                                onClick={() => { setShowOtp(false); setOtp(['', '', '', '', '', '']); }}
+                                                className="mt-2 text-[14px] font-medium text-[#E7C200]"
+                                            >
+                                                Change {loginType === 'email' ? 'phone' : 'email'}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
                                 {!showOtp ? (
                                     <div className="flex gap-4">
-                                        {!isCurrentEmailVerified && (
+                                        {!isCurrentVerified && (
                                             <button
                                                 onClick={handleSendOTP}
                                                 disabled={loading}

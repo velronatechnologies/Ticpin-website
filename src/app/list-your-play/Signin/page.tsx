@@ -1,13 +1,13 @@
 'use client';
 
-import OrganizerSigninForm from '@/components/organizer/OrganizerSigninForm';
+import OrganizerLoginForm from '@/components/organizer/OrganizerLoginForm';
 
 export default function SignupPage() {
     return (
-        <OrganizerSigninForm
+        <OrganizerLoginForm
             vertical="play"
             setupPath="/list-your-play/setup"
-            loginPath="/list-your-play/Login"
+            signinPath="/list-your-play/Signin"
         />
     );
 }

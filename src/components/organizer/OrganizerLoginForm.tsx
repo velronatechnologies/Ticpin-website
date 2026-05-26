@@ -78,6 +78,9 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
             if (remaining === 0) {
                 await authApi.login(identifier, vertical);
                 setOTPSentAt(identifier, vertical);
+                setTimeLeft(180);
+            } else {
+                setTimeLeft(remaining);
             }
 
             sessionStorage.setItem('otp_pending_email', identifier);
@@ -85,6 +88,20 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
             setOtpSent(true);
         } catch (e: any) {
             const msg = e instanceof Error ? e.message : 'Login failed';
+            
+            // Handle cooldown error gracefully - sync with backend timer
+            if (msg.includes('Please wait') && msg.includes('seconds')) {
+                const match = msg.match(/\d+/);
+                if (match) {
+                    const seconds = parseInt(match[0], 10);
+                    setTimeLeft(seconds);
+                    setOtpSent(true); 
+                    sessionStorage.setItem('otp_pending_email', identifier);
+                    sessionStorage.setItem('otp_pending_type', loginType);
+                    return; // No need to show red error for expected cooldown
+                }
+            }
+
             if (msg === 'user_not_found') {
                 setError('Account not found. Please sign up first.');
             } else {
@@ -150,8 +167,19 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
             setOTPSentAt(identifier, vertical);
             setResent(true);
             setTimeLeft(180);
-        } catch {
-            setError('Could not resend OTP. Try again later.');
+        } catch (e: any) {
+            const msg = e instanceof Error ? e.message : 'Could not resend OTP';
+            
+            // Handle cooldown error gracefully if synced backend timer is longer
+            if (msg.includes('Please wait') && msg.includes('seconds')) {
+                const match = msg.match(/\d+/);
+                if (match) {
+                    const seconds = parseInt(match[0], 10);
+                    setTimeLeft(seconds);
+                    return;
+                }
+            }
+            setError(msg);
         } finally { setIsResending(false); }
     };
 
@@ -206,6 +234,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                     type={loginType === 'email' ? 'email' : 'tel'} 
                                     placeholder={loginType === 'email' ? 'Email address' : 'Enter phone number'} 
                                     value={identifier}
+                                    disabled={otpSent}
                                     onChange={e => {
                                         const val = e.target.value;
                                         if (loginType === 'mobile') {
@@ -220,7 +249,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                             else handleVerify();
                                         }
                                     }}
-                                    className={`w-full py-4 border-[1.5px] border-[#AEAEAE] rounded-[20px] text-zinc-800 placeholder-[#AEAEAE] focus:outline-none focus:border-black transition-colors ${loginType === 'mobile' ? 'pl-24 pr-6' : 'px-6'}`}
+                                    className={`w-full py-4 border-[1.5px] border-[#AEAEAE] rounded-[20px] text-zinc-800 placeholder-[#AEAEAE] focus:outline-none focus:border-black transition-colors ${loginType === 'mobile' ? 'pl-24 pr-6' : 'px-6'} ${otpSent ? 'bg-zinc-50 cursor-not-allowed opacity-70' : ''}`}
                                     style={{ height: '65px' }} />
                             </div>
 

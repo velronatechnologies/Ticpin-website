@@ -132,10 +132,24 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setLoading(true);
         setError('');
 
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            const res = await fetch('/backend/api/user/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: number, category: 'events' }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'Failed to send OTP');
+                setLoading(false);
+                return;
+            }
             setView('otp');
-        }, 1000);
+        } catch (err) {
+            setError('Failed to send OTP. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleOtpChange = (index: number, value: string) => {
@@ -168,22 +182,30 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setLoading(true);
         setError('');
 
+        const otpCode = otp.join('');
+        if (otpCode.length !== 6) {
+            setError('Please enter a 6-digit OTP');
+            setLoading(false);
+            return;
+        }
+
         try {
-            const res = await fetch('/backend/api/user/login', {
+            const res = await fetch('/backend/api/user/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ phone: number }),
+                body: JSON.stringify({ phone: number, otp: otpCode }),
             });
             
             const data = await res.json();
             if (!res.ok) {
-                setError(data.error || 'Login failed');
+                setError(data.error || 'Verification failed');
                 setLoading(false);
                 return;
             }
             
-            loginUser({ id: data.id || data._id || number, phone: number, name: data.name || '' });
+            const userData = data.user || data;
+            loginUser({ id: userData.id || userData._id || number, phone: number, name: userData.name || '' });
 
             if (onSuccess) {
                 onClose();
@@ -192,7 +214,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 setView('profile');
             }
         } catch (err) {
-            setError('Login failed. Please try again.');
+            setError('Verification failed. Please try again.');
         } finally {
             setLoading(false);
         }

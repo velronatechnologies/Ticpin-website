@@ -1,13 +1,13 @@
 'use client';
 
-import OrganizerSigninForm from '@/components/organizer/OrganizerSigninForm';
+import OrganizerLoginForm from '@/components/organizer/OrganizerLoginForm';
 
 export default function SignupPage() {
     return (
-        <OrganizerSigninForm
+        <OrganizerLoginForm
             vertical="events"
             setupPath="/list-your-events/setup"
-            loginPath="/list-your-events/Login"
+            signinPath="/list-your-events/Signin"
         />
     );
 }
