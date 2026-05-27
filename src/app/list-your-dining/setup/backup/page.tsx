@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/Toast';
 function BackupContactContent() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [showOtp, setShowOtp] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(180);
+    const [timeLeft, setTimeLeft] = useState(30);
     const [identifier, setIdentifier] = useState('');
     const [prefilled, setPrefilled] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -91,7 +91,7 @@ function BackupContactContent() {
         try {
             await organizerApi.sendBackupOTP(session?.id ?? '', identifier, 'dining');
             setShowOtp(true);
-            setTimeLeft(180);
+            setTimeLeft(30);
             toast.success(`OTP sent to ${identifier}`);
         } catch (err: any) {
             const msg = err instanceof Error ? err.message : 'Failed to send OTP';
