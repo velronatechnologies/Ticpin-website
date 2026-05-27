@@ -59,7 +59,7 @@ export default function TicpassPage() {
         style={{
           width: '1440px',
           height: '1748px',
-          transform: `scale(${Math.min(scale, window.innerHeight / 1748)})`,
+          transform: `scale(${Math.min(scale, typeof window !== 'undefined' ? window.innerHeight / 1748 : 1)})`,
           transformOrigin: 'top center'
         }}
       >

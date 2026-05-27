@@ -13,7 +13,7 @@ const ADMIN_ROUTES = [
     '/admin'
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     
     // Enforce no-cache for slot-booking pages (must always show latest lock state from DB)

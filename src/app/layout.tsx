@@ -3,7 +3,7 @@ import { Anek_Latin, Anek_Tamil, Inter, Geist } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
-export const runtime = "edge";
+
 import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import Providers from "@/components/providers/Providers";
 import { ToastProvider } from "@/components/ui/Toast";
