@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { getOrganizerSession, updateSessionEmail } from '@/lib/auth/organizer';
+import { getOrganizerSession, updateSessionEmail, updateSessionPhone } from '@/lib/auth/organizer';
 import { organizerApi, OrganizerProfile } from '@/lib/api/organizer';
 import { Camera, Save, ArrowLeft, ChevronDown, Check, Loader2, X } from 'lucide-react';
 import OrganizerHeader from '@/components/organizer/OrganizerHeader';
@@ -21,6 +21,7 @@ function ProfileContent() {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phone: '',
         brandName: '',
         pan: '',
         description: ''
@@ -33,6 +34,15 @@ function ProfileContent() {
     const [emailOTP, setEmailOTP] = useState('');
     const [emailLoading, setEmailLoading] = useState(false);
     const [emailError, setEmailError] = useState('');
+
+    // Mobile Change State
+    const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
+    const [mobileChangeStep, setMobileChangeStep] = useState<'request' | 'verify'>('request');
+    const [tempMobile, setTempMobile] = useState('');
+    const [mobileOTP, setMobileOTP] = useState('');
+    const [mobileLoading, setMobileLoading] = useState(false);
+    const [mobileError, setMobileError] = useState('');
+
     const [saveError, setSaveError] = useState('');
 
     useEffect(() => {
@@ -51,6 +61,7 @@ function ProfileContent() {
                     setFormData({
                         name: data.name || '',
                         email: data.email || s.email,
+                        phone: data.phone || '',
                         brandName: data.name || '', // Use name as brand name for now
                         pan: '', // Backend might not return PAN in profile
                         description: data.address || '' // Use address as description for now
@@ -175,6 +186,47 @@ function ProfileContent() {
         }
     };
 
+    const handleRequestMobileChange = async () => {
+        if (!tempMobile || tempMobile.length < 10) {
+            setMobileError('Please enter a valid 10-digit mobile number');
+            return;
+        }
+        setMobileLoading(true);
+        setMobileError('');
+        try {
+            await organizerApi.requestMobileChange(tempMobile);
+            setMobileChangeStep('verify');
+        } catch (err: any) {
+            setMobileError(err.message || 'Failed to send OTP');
+        } finally {
+            setMobileLoading(false);
+        }
+    };
+
+    const handleVerifyMobileChange = async () => {
+        if (!mobileOTP || mobileOTP.length < 6) {
+            setMobileError('Please enter 6-digit OTP');
+            return;
+        }
+        setMobileLoading(true);
+        setMobileError('');
+        try {
+            await organizerApi.verifyMobileChange(tempMobile, mobileOTP);
+            updateSessionPhone(tempMobile);
+            setFormData(prev => ({ ...prev, phone: tempMobile }));
+            setIsMobileModalOpen(false);
+            setMobileChangeStep('request');
+            setTempMobile('');
+            setMobileOTP('');
+            alert('Mobile number updated successfully');
+            router.refresh();
+        } catch (err: any) {
+            setMobileError(err.message || 'Verification failed');
+        } finally {
+            setMobileLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
@@ -221,6 +273,23 @@ function ProfileContent() {
                             {isEditing && (
                                 <button
                                     onClick={() => setIsEmailModalOpen(true)}
+                                    className="px-6 h-[59px] bg-black text-white rounded-[8px] font-bold text-lg hover:bg-zinc-800 transition-all active:scale-95"
+                                >
+                                    Change
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row md:items-center gap-8">
+                        <label className="text-[23px] font-medium text-black w-48">User phone:</label>
+                        <div className="flex-1 max-w-[933px] flex items-center gap-4">
+                            <div className="flex-1 h-[59px] bg-[#E1E1E1] border border-[#686868] rounded-[8px] flex items-center px-6">
+                                <span className="text-[23px] font-medium text-black">{formData.phone || 'Not specified'}</span>
+                            </div>
+                            {isEditing && (
+                                <button
+                                    onClick={() => setIsMobileModalOpen(true)}
                                     className="px-6 h-[59px] bg-black text-white rounded-[8px] font-bold text-lg hover:bg-zinc-800 transition-all active:scale-95"
                                 >
                                     Change
@@ -410,6 +479,86 @@ function ProfileContent() {
                                         className="flex-[2] h-[60px] bg-black text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
                                     >
                                         {emailLoading ? <Loader2 className="animate-spin" /> : 'Verify & Change'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {/* Mobile Change Modal */}
+            {isMobileModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[30px] p-10 w-full max-w-[500px] space-y-8 relative shadow-2xl">
+                        <button
+                            onClick={() => setIsMobileModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-400 hover:text-black transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="text-center space-y-2">
+                            <h3 className="text-2xl font-bold text-black">Change Mobile Number</h3>
+                            <p className="text-zinc-500">
+                                {mobileChangeStep === 'request'
+                                    ? 'Enter your new mobile number. We will send an OTP to it to authorize this change.'
+                                    : `Enter the OTP sent to your new mobile number to verify the change to ${tempMobile}`}
+                            </p>
+                        </div>
+
+                        {mobileError && (
+                            <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center text-sm font-medium border border-red-100">
+                                {mobileError}
+                            </div>
+                        )}
+
+                        {mobileChangeStep === 'request' ? (
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-black uppercase tracking-wider">New Mobile Number</label>
+                                    <input
+                                        type="tel"
+                                        value={tempMobile}
+                                        onChange={(e) => setTempMobile(e.target.value)}
+                                        placeholder="Enter new mobile number"
+                                        maxLength={10}
+                                        className="w-full h-[60px] px-6 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 ring-black/5 outline-none font-medium"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleRequestMobileChange}
+                                    disabled={mobileLoading}
+                                    className="w-full h-[60px] bg-black text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {mobileLoading ? <Loader2 className="animate-spin" /> : 'Send OTP'}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-black uppercase tracking-wider">Verification OTP</label>
+                                    <input
+                                        type="text"
+                                        value={mobileOTP}
+                                        onChange={(e) => setMobileOTP(e.target.value)}
+                                        placeholder="Enter 6-digit OTP"
+                                        maxLength={6}
+                                        className="w-full h-[60px] px-6 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 ring-black/5 outline-none font-bold text-center tracking-[0.5em] text-xl"
+                                    />
+                                </div>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setMobileChangeStep('request')}
+                                        className="flex-1 h-[60px] bg-zinc-100 text-black rounded-xl font-bold hover:bg-zinc-200 transition-all"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={handleVerifyMobileChange}
+                                        disabled={mobileLoading}
+                                        className="flex-[2] h-[60px] bg-black text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        {mobileLoading ? <Loader2 className="animate-spin" /> : 'Verify & Change'}
                                     </button>
                                 </div>
                             </div>

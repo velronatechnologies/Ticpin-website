@@ -4,11 +4,15 @@
 
 export const authApi = {
     // Organizer/User Login
-    login: async (identifier: string, vertical?: string) => {
+    login: async (identifier: string, vertical?: string, verificationCredential?: string) => {
         const response = await fetch('/backend/api/organizer/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: identifier, vertical }),
+            body: JSON.stringify({ 
+                email: identifier, 
+                vertical, 
+                verification_credential: verificationCredential 
+            }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Login failed');

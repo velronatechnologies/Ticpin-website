@@ -108,74 +108,35 @@ export default function DiningClient({
     }, [venues, cityFilter, activeFilter, selectedCategories, selectedAmenities, selectedSort]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white">
-            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 py-8 md:py-12 space-y-12 md:space-y-20">
-                <section>
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-6 md:mb-8 uppercase text-black tracking-normal text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Explore Dining</h2>
-                    <div className="flex flex-wrap gap-4 md:gap-6 pb-4">
-                        {/* Premium Dining */}
-                        <Link href="/dining/premium-dining" className="block flex-shrink-0 cursor-pointer">
-                            <div
-                                className="rounded-[30px] border border-transparent flex flex-col group overflow-hidden relative"
-                                style={{
-                                    background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
-                                    width: '170px',
-                                    height: '252px'
-                                }}
-                            >
-                                <div className="px-[20px] pt-[20px] pb-1">
-                                    <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line leading-tight">
-                                        Premium{"\n"}dining
-                                    </h3>
-                                </div>
-                                <div className="flex-1 relative w-full flex items-end justify-end">
-                                    <div className="relative w-[150px] h-[180px] -mr-4">
-                                        <Image
-                                            src="/dining/diningimg1.png"
-                                            alt="Premium dining"
-                                            fill
-                                            className="object-contain object-right-bottom"
-                                            priority
-                                            sizes="(max-width: 768px) 170px, 170px"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </Link>
-
-                        {/* Club & Chill, Pure Veg, etc. */}
+        <div className="min-h-screen bg-white">
+            <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 pt-2 pb-6 md:pt-3 md:pb-8 space-y-4 md:space-y-6">
+                <section className="pt-[20px] pb-[20px]">
+                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-2 md:mb-3 uppercase text-black tracking-normal text-[20px] md:text-[24px]" style={{ fontWeight: 600 }}>Explore Dining</h2>
+                    <div className="flex flex-wrap gap-4 md:gap-5 px-1 max-w-[1280px]">
                         {[
-                            { title: "Club &\nChill", img: "/dining/diningimg2.png", href: "/dining/club-chill" },
-                            { title: "Pure\nveg", img: "/dining/diningimg3.png", href: "/dining/pure-veg" },
-                            { title: "Cafe\nvibes", img: "/dining/diningimg4.png", href: "/dining/cafe-vibes" },
-                            { title: "Family\nfavourites", img: "/dining/diningimg5.png", href: "/dining/family-favourites" },
-                            { title: "Bar &\nbites", img: "/dining/diningimg6.png", href: "/dining/bar-bites" }
+                            { title: "Premium Dining", img: "/dining/diningimg1.png", href: "/dining/premium-dining" },
+                            { title: "Club & Chill", img: "/dining/diningimg2.png", href: "/dining/club-chill" },
+                            { title: "Pure Veg", img: "/dining/diningimg3.png", href: "/dining/pure-veg" },
+                            { title: "Cafe Vibes", img: "/dining/diningimg4.png", href: "/dining/cafe-vibes" },
+                            { title: "Family Favourites", img: "/dining/diningimg5.png", href: "/dining/family-favourites" },
+                            { title: "Bar & Bites", img: "/dining/diningimg6.png", href: "/dining/bar-bites" }
                         ].map((cat, i) => (
                             <Link key={i} href={cat.href} className="block flex-shrink-0 cursor-pointer">
                                 <div
-                                    className="rounded-[30px] border border-transparent flex flex-col group overflow-hidden relative"
+                                    className="w-[140px] shrink-0 h-auto aspect-[152/215] rounded-[26px] border border-transparent p-3 flex flex-col items-center justify-between cursor-pointer group"
                                     style={{
-                                        background: 'linear-gradient(105.73deg, #866BFF -160.73%, #BDB1F3 93.19%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box',
-                                        width: '170px',
-                                        height: '252px'
+                                        background: 'linear-gradient(180deg, #FFFFFF 50%, #BDB1F3 159.52%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box'
                                     }}
                                 >
-                                    <div className="px-[20px] pt-[20px] pb-1 font-[family-name:var(--font-anek-latin)]">
-                                        <h3 className="text-xl md:text-2xl font-medium text-black whitespace-pre-line leading-tight">
-                                            {cat.title}
-                                        </h3>
-                                    </div>
-                                    <div className="flex-1 relative w-full flex items-end justify-end">
-                                        <div className="relative w-[150px] h-[180px] -mr-4">
-                                            <Image
-                                                src={cat.img}
-                                                alt={cat.title}
-                                                fill
-                                                className="object-contain object-right-bottom"
-                                                priority={i === 0}
-                                                sizes="(max-width: 768px) 170px, 170px"
-                                            />
-                                        </div>
+                                    <h3 className="text-sm md:text-base font-semibold text-black text-center break-words leading-tight font-[family-name:var(--font-anek-latin)] uppercase">
+                                        {cat.title}
+                                    </h3>
+                                    <div className="relative w-full aspect-square flex items-center justify-center mt-1 overflow-hidden">
+                                        <img
+                                            src={cat.img}
+                                            alt={cat.title}
+                                            className="w-full h-full object-contain scale-105"
+                                        />
                                     </div>
                                 </div>
                             </Link>
@@ -184,8 +145,8 @@ export default function DiningClient({
                 </section>
 
                 {offers.length > 0 && (
-                    <section>
-                        <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal mb-6 md:mb-8 uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>Exclusive Offers</h2>
+                    <section className="space-y-2.5 md:space-y-3">
+                        <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold uppercase text-black tracking-normal text-[20px] md:text-[24px]" style={{ fontWeight: 600 }}>Exclusive Offers</h2>
                         <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4">
                             {offers.map((offer) => {
                                 const targetId = offer.entity_ids?.[0];
@@ -227,32 +188,35 @@ export default function DiningClient({
                     </section>
                 )}
 
-                <section className="space-y-6 md:space-y-8">
-                    <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold tracking-normal uppercase text-black text-[24px] md:text-[30px]" style={{ fontWeight: 600 }}>All Restaurants</h2>
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        {['Filters', 'All', 'Top rated', 'Pure Veg', 'Serves Alcohol', '50% OFF'].map((filter) => (
-                            <FilterButton
-                                key={filter}
-                                label={filter}
-                                active={activeFilter === filter}
-                                onClick={() => {
-                                    if (filter === 'Filters') {
-                                        setIsFilterModalOpen(true);
-                                    } else {
-                                        setActiveFilter(filter);
-                                    }
-                                }}
-                            />
-                        ))}
+                <section className="space-y-2.5 md:space-y-3">
+                    <div className="space-y-2.5 md:space-y-3">
+                        <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold uppercase text-black tracking-normal text-[20px] md:text-[24px]" style={{ fontWeight: 600 }}>All Restaurants</h2>
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                            {['Filters', 'All', 'Top rated', 'Pure Veg', 'Serves Alcohol', '50% OFF'].map((filter) => (
+                                <FilterButton
+                                    key={filter}
+                                    label={filter}
+                                    active={activeFilter === filter}
+                                    onClick={() => {
+                                        if (filter === 'Filters') {
+                                            setIsFilterModalOpen(true);
+                                        } else {
+                                            setActiveFilter(filter);
+                                        }
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
                     {filteredVenues.length === 0 ? (
-                        <div className="text-center py-20 text-zinc-400 text-lg">No restaurants available</div>
+                        <div className="text-center py-20 bg-white/50 rounded-[20px] border border-dashed border-zinc-300 text-zinc-400 text-lg">
+                            No restaurants available
+                        </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        <div className="flex flex-wrap gap-6 justify-center sm:justify-start transition-all">
                             {filteredVenues.map((res) => (
                                 <Link key={res.id} href={`/dining/venue/${res.name}`}>
                                     <EventCard
-                                        variant="wide"
                                         title={res.name}
                                         location={res.city ?? ''}
                                         date="Rating"

@@ -132,22 +132,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setLoading(true);
         setError('');
 
-        try {
-            const res = await fetch('/backend/api/user/send-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: number, category: 'events' }),
-            });
+        // Start background request immediately
+        const apiCall = fetch('/backend/api/user/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: number, category: 'events' }),
+        }).then(async (res) => {
             const data = await res.json();
             if (!res.ok) {
-                setError(data.error || 'Failed to send OTP');
-                setLoading(false);
-                return;
+                throw new Error(data.error || 'Failed to send OTP');
             }
+            return data;
+        });
+
+        // Set up optimistic timeout of 1.5s
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1500));
+
+        try {
+            await timeoutPromise;
             setView('otp');
-        } catch (err) {
-            setError('Failed to send OTP. Please try again.');
-        } finally {
+            setLoading(false);
+
+            // Await or catch error in background
+            apiCall.catch((err) => {
+                setError(err.message || 'Failed to send OTP. Reverting...');
+                setView('number');
+            });
+        } catch (err: any) {
+            setError(err.message || 'Failed to send OTP. Please try again.');
             setLoading(false);
         }
     };

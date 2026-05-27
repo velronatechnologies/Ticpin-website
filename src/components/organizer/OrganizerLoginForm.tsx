@@ -37,6 +37,8 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
     const [isResending, setIsResending] = useState(false);
     const [resent, setResent] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
+    const [verificationStep, setVerificationStep] = useState<'none' | 'email_required' | 'phone_required'>('none');
+    const [verificationCredential, setVerificationCredential] = useState('');
     const router = useRouter();
 
     useEffect(() => {
@@ -68,28 +70,82 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
             return;
         }
 
+        if (verificationStep === 'phone_required' && !/^\d{10}$/.test(verificationCredential)) {
+            setError('Please enter a valid 10-digit registered mobile number for verification');
+            return;
+        }
+
+        if (verificationStep === 'email_required' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(verificationCredential)) {
+            setError('Please enter a valid registered email address for verification');
+            return;
+        }
+
         setError('');
         setLoading(true);
 
         try {
-            const { getRemainingCooldown, setOTPSentAt } = await import('@/lib/utils/otp-state');
+            const { getRemainingCooldown } = await import('@/lib/utils/otp-state');
             const remaining = getRemainingCooldown(identifier, vertical);
 
-            if (remaining === 0) {
-                await authApi.login(identifier, vertical);
-                setOTPSentAt(identifier, vertical);
-                setTimeLeft(180);
-            } else {
+            if (remaining > 0) {
+                // Cooldown is active: just show the timer with remaining time immediately
                 setTimeLeft(remaining);
+                setOtpSent(true);
+                sessionStorage.setItem('otp_pending_email', identifier);
+                sessionStorage.setItem('otp_pending_type', loginType);
+                setLoading(false);
+                return;
             }
+        } catch (importErr) {
+            console.error('Error importing otp-state:', importErr);
+        }
 
+        let apiCompleted = false;
+        let apiError: any = null;
+        let apiResult: any = null;
+        let delayCompleted = false;
+
+        const triggerUIActivation = () => {
+            setOtpSent(true);
+            setTimeLeft(180);
             sessionStorage.setItem('otp_pending_email', identifier);
             sessionStorage.setItem('otp_pending_type', loginType);
-            setOtpSent(true);
-        } catch (e: any) {
-            const msg = e instanceof Error ? e.message : 'Login failed';
+        };
+
+        const handleSuccess = async (res: any) => {
+            if (res.status === 'phone_verification_required') {
+                setOtpSent(false);
+                setTimeLeft(0);
+                sessionStorage.removeItem('otp_pending_email');
+                sessionStorage.removeItem('otp_pending_type');
+                setVerificationStep('phone_required');
+                setError('');
+                setLoading(false);
+                return;
+            } else if (res.status === 'email_verification_required') {
+                setOtpSent(false);
+                setTimeLeft(0);
+                sessionStorage.removeItem('otp_pending_email');
+                sessionStorage.removeItem('otp_pending_type');
+                setVerificationStep('email_required');
+                setError('');
+                setLoading(false);
+                return;
+            }
+
+            const { setOTPSentAt } = await import('@/lib/utils/otp-state');
+            setOTPSentAt(identifier, vertical);
+            setLoading(false);
+        };
+
+        const handleFailure = (err: any) => {
+            setOtpSent(false);
+            setTimeLeft(0);
+            sessionStorage.removeItem('otp_pending_email');
+            sessionStorage.removeItem('otp_pending_type');
+
+            const msg = err instanceof Error ? err.message : 'Login failed';
             
-            // Handle cooldown error gracefully - sync with backend timer
             if (msg.includes('Please wait') && msg.includes('seconds')) {
                 const match = msg.match(/\d+/);
                 if (match) {
@@ -98,18 +154,57 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                     setOtpSent(true); 
                     sessionStorage.setItem('otp_pending_email', identifier);
                     sessionStorage.setItem('otp_pending_type', loginType);
-                    return; // No need to show red error for expected cooldown
+                    setLoading(false);
+                    return;
                 }
             }
 
             if (msg === 'user_not_found') {
                 setError('Account not found. Please sign up first.');
             } else {
-                setError(msg);
+                setError('There is an issue with sending. Please try again.');
             }
-        } finally {
             setLoading(false);
-        }
+        };
+
+        // Start background API call
+        authApi.login(identifier, vertical, verificationCredential)
+            .then((res) => {
+                apiCompleted = true;
+                apiResult = res;
+                if (delayCompleted) {
+                    handleSuccess(res);
+                }
+            })
+            .catch((err) => {
+                apiCompleted = true;
+                apiError = err;
+                if (delayCompleted) {
+                    handleFailure(err);
+                } else {
+                    setLoading(false);
+                    const msg = err instanceof Error ? err.message : 'Login failed';
+                    if (msg === 'user_not_found') {
+                        setError('Account not found. Please sign up first.');
+                    } else {
+                        setError('There is an issue with sending. Please try again.');
+                    }
+                }
+            });
+
+        // 1.5 seconds delay before showing the OTP boxes and Verify button
+        setTimeout(() => {
+            delayCompleted = true;
+            if (apiCompleted) {
+                if (apiError) {
+                    return;
+                }
+                triggerUIActivation();
+                handleSuccess(apiResult);
+            } else {
+                triggerUIActivation();
+            }
+        }, 1500);
     };
 
     const handleVerify = async () => {
@@ -215,6 +310,8 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                             setLoginType(val);
                             if (val === 'email' && !identifier.includes('@')) setIdentifier('');
                             if (val === 'mobile' && identifier.includes('@')) setIdentifier('');
+                            setVerificationStep('none');
+                            setVerificationCredential('');
                         }} 
                     />
 
@@ -266,6 +363,45 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                 )}
                             </div>
                         </div>
+
+                        {verificationStep !== 'none' && (
+                            <div className="mt-6 animate-in fade-in duration-200">
+                                <label className="block font-medium text-[#686868] mb-4" style={{ fontSize: '20px', lineHeight: '22px' }}>
+                                    {verificationStep === 'email_required' 
+                                        ? 'Confirm registered email address (Backup Email)' 
+                                        : 'Confirm registered mobile number'}
+                                </label>
+                                <div className="relative flex items-center">
+                                    {verificationStep === 'phone_required' && (
+                                        <div className="absolute left-6 flex items-center gap-1.5 text-zinc-800 font-medium border-r border-[#AEAEAE] pr-3 mr-3 h-1/2">
+                                            <span>+91</span>
+                                            <ChevronDown size={16} className="text-[#AEAEAE]" />
+                                        </div>
+                                    )}
+                                    <input 
+                                        type={verificationStep === 'email_required' ? 'email' : 'tel'} 
+                                        placeholder={verificationStep === 'email_required' ? 'Enter registered email' : 'Enter registered mobile number'} 
+                                        value={verificationCredential}
+                                        disabled={otpSent}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (verificationStep === 'phone_required') {
+                                                setVerificationCredential(val.replace(/\D/g, '').slice(0, 10));
+                                            } else {
+                                                setVerificationCredential(val);
+                                            }
+                                        }}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                handleSendOTP();
+                                            }
+                                        }}
+                                        className={`w-full py-4 border-[1.5px] border-[#AEAEAE] rounded-[20px] text-zinc-800 placeholder-[#AEAEAE] focus:outline-none focus:border-black transition-colors ${verificationStep === 'phone_required' ? 'pl-24 pr-6' : 'px-6'} ${otpSent ? 'bg-zinc-50 cursor-not-allowed opacity-70' : ''}`}
+                                        style={{ height: '65px' }} 
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex items-center justify-start mt-4 gap-6">
                             {!otpSent ? (

@@ -155,7 +155,7 @@ export default function EventsClient({ initialEvents }: { initialEvents: RealEve
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white">
+        <div className="min-h-screen bg-white">
             <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 pt-2 pb-6 md:pt-3 md:pb-8 space-y-4 md:space-y-6">
                 <section className="pt-[20px] pb-[20px]">
                     <h2 className="font-[family-name:var(--font-anek-latin)] font-semibold mb-2 md:mb-3 uppercase text-black tracking-normal text-[20px] md:text-[24px]" style={{ fontWeight: 600 }}>Explore Events</h2>

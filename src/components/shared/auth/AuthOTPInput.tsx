@@ -12,6 +12,11 @@ interface AuthOTPInputProps {
 export default function AuthOTPInput({ otp, setOtp, onComplete, error }: AuthOTPInputProps) {
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+    useEffect(() => {
+        inputRefs.current[0]?.focus();
+    }, []);
+
+
     const handleChange = (index: number, value: string) => {
         if (!/^\d*$/.test(value)) return;
         const next = [...otp];

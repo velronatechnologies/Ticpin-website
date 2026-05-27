@@ -125,6 +125,19 @@ export function updateSessionEmail(newEmail: string): void {
   });
 }
 
+/** Updates the phone inside the stored session cookie if it is the primary login identifier */
+export function updateSessionPhone(newPhone: string): void {
+  const session = getOrganizerSession();
+  if (!session) return;
+  // If the session email (identifier) does not contain '@', it means they logged in via phone
+  if (session.email && !session.email.includes('@')) {
+    saveOrganizerSession({
+      ...session,
+      email: newPhone,
+    });
+  }
+}
+
 /** React hook to get and track organizer session */
 export function useOrganizerSession() {
   const [session, setSession] = useState<OrganizerSession | null>(null);

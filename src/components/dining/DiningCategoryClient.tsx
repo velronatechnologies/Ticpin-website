@@ -98,18 +98,18 @@ export default function DiningCategoryClient({ category, title, image }: DiningC
                         ))}
                     </div>
 
-                    {/* Restaurants Grid */}
+                    {/* Restaurants Flex Wrap */}
                     {loading ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
                             {[1, 2, 3].map(i => (
-                                <div key={i} className="h-[480px] bg-zinc-100 animate-pulse rounded-[15px] border border-zinc-200" />
+                                <div key={i} className="w-[285px] h-[480px] bg-zinc-100 animate-pulse rounded-[10px] border border-zinc-200" />
                             ))}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                        <div className="flex flex-wrap gap-6 justify-center sm:justify-start transition-all">
                             {restaurants.length > 0 ? (
                                 restaurants.map((res) => (
-                                    <Link key={res.id} href={`/dining/venue/${res.id}`}>
+                                    <Link key={res.id} href={`/dining/venue/${res.id}`} className="block">
                                         <EventCard
                                             title={res.name}
                                             location={res.city}
@@ -121,7 +121,7 @@ export default function DiningCategoryClient({ category, title, image }: DiningC
                                     </Link>
                                 ))
                             ) : (
-                                <div className="col-span-full flex flex-col items-center justify-center py-32 text-zinc-400">
+                                <div className="w-full flex flex-col items-center justify-center py-32 text-zinc-400">
                                     <p className="text-xl font-medium mb-2">No restaurants found</p>
                                     <p className="text-sm">We couldn't find any restaurants in the "{title}" category.</p>
                                 </div>

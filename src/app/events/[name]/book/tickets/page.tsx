@@ -7,9 +7,8 @@ import { bookingApi } from '@/lib/api/booking';
 import { passApi, TicpinPass } from '@/lib/api/pass';
 import { useUserSession } from '@/lib/auth/user';
 import { TicketSkeleton } from '@/components/ui/Skeleton';
-import { Zap, Clock } from 'lucide-react';
+import { Zap, Clock, User } from 'lucide-react';
 import { useSlotLock } from '@/hooks/useSlotLock';
-import { toast } from '@/components/ui/Toast';
 
 interface TicketCategory {
     name: string;
@@ -119,12 +118,11 @@ export default function TicketSelectionPage() {
     );
 
     return (
-        <div className="min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)]" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 100%)' }}>
-
-            {/* Header — no global navbar */}
+        <div className="h-screen overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] bg-white">
+            {/* Header */}
             <header className="w-full h-[60px] md:h-[80px] bg-white flex items-center justify-between px-6 md:px-10 border-b border-[#FFFFFF] shadow-sm relative z-10">
-                <div className="flex-shrink-0 cursor-pointer relative w-[100px] h-[25px]" onClick={() => router.push('/')}>
-                    <Image src="/ticpin-logo-black.png" alt="TICPIN" fill className="object-contain" />
+                <div className="flex-shrink-0 cursor-pointer" onClick={() => router.push('/')}>
+                    <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-[20px] md:h-[25px] w-auto" />
                 </div>
 
                 <div className="flex flex-col items-center justify-center absolute left-1/2 -translate-x-1/2">
@@ -136,7 +134,11 @@ export default function TicketSelectionPage() {
                     </p>
                 </div>
 
-                <div className="w-6 h-6" /> {/* spacer */}
+                <div className="flex items-center gap-3">
+                    <div className="w-[25px] h-[25px] bg-[#E1E1E1] rounded-full flex items-center justify-center">
+                        <User className="text-[#686868]" size={12} />
+                    </div>
+                </div>
             </header>
 
             {timeRemaining > 0 && Object.values(counts).some(v => v > 0) && (
@@ -150,8 +152,9 @@ export default function TicketSelectionPage() {
                 </div>
             )}
 
-            <main className="w-full max-w-[1400px] mx-auto px-6 md:px-12 py-8 space-y-6 flex-grow">
-                <h2 className="text-black" style={{ fontSize: '32px', fontFamily: "'Anek Tamil Condensed', sans-serif", fontWeight: 400, lineHeight: '50px' }}>
+            {/* Main Content */}
+            <main className="w-full max-w-[1000px] mx-auto px-6 md:px-12 py-8 space-y-2 flex-grow overflow-y-auto">
+                <h2 className="text-black" style={{ fontSize: '28px', fontFamily: "var(--font-anek-tamil-condensed)", fontWeight: 515, lineHeight: '38px' }}>
                     CHOOSE TICKETS
                 </h2>
 
@@ -161,68 +164,72 @@ export default function TicketSelectionPage() {
                     const current = counts[i] ?? 0;
 
                     return (
-                        <div key={i} className={`w-full bg-white border-[0.5px] rounded-[15px] p-5 md:p-6 flex flex-col md:flex-row justify-between gap-5 relative transition-all hover:shadow-md ${isSoldOut ? 'border-red-200 opacity-70' : 'border-[#AEAEAE]'}`}>
-                            {/* Category image */}
-                            {cat.has_image && cat.image_url && (
-                                <div className="relative w-[90px] h-[90px] rounded-[10px] overflow-hidden flex-shrink-0">
-                                    <Image src={cat.image_url} alt={cat.name} fill className="object-cover" />
-                                </div>
-                            )}
-
-                            <div className="flex flex-col gap-2 flex-grow">
-                                <span className="text-[22px] md:text-[24px] font-semibold text-black uppercase" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                    {cat.name}
-                                </span>
-                                {isSoldOut && (
-                                    <span className="inline-block bg-red-100 text-red-600 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full w-fit">
-                                        SOLD OUT
+                        <div key={i} className={`w-full bg-white border-[0.5px] rounded-[15px] p-3.5 md:p-4 flex flex-col md:flex-row justify-between items-start relative gap-3.5 h-auto min-h-[125px] ${isSoldOut ? 'border-red-200 opacity-70' : 'border-[#AEAEAE]'}`}>
+                            <div className="flex flex-col gap-1 flex-grow w-full">
+                                <div className="flex flex-wrap items-center gap-x-2">
+                                    <span className="text-[15px] md:text-[17px] font-semibold text-black uppercase" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        {cat.name}
                                     </span>
-                                )}
-                                <div className="text-[28px] md:text-[32px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                    {isSoldOut && (
+                                        <span className="inline-block bg-red-100 text-red-600 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                                            SOLD OUT
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="text-[18px] md:text-[21px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                                     ₹{cat.price ?? 0}
                                 </div>
-                                <div className="w-full h-[1px] bg-[#686868]/30" />
-                                <p className="text-[12px] md:text-[13px] font-medium text-[#686868]">
-                                    • This ticket grants entry to one individual only.
-                                </p>
-                                {cat.capacity && (
-                                    <p className={`text-[12px] md:text-[13px] font-semibold ${available <= 10 && !isSoldOut ? 'text-orange-500 font-bold' : 'text-[#686868]'}`}>
-                                        {isSoldOut
-                                            ? '• No seats available'
-                                            : available === Infinity
-                                                ? null
-                                                : `• ${available} seat${available === 1 ? '' : 's'} available`}
+
+                                <div className="w-full h-[1px] bg-[#686868]/30"></div>
+
+                                <div className="space-y-0.5 mt-0.5">
+                                    <p className="text-[9px] md:text-[11px] font-medium text-[#686868] max-w-md" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        • This ticket grants entry to one individual only.
                                     </p>
-                                )}
+                                    <p className="text-[9px] md:text-[11px] font-medium text-[#686868] max-w-md" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        • This is a standing section.
+                                    </p>
+                                    {cat.capacity && (
+                                        <p className={`text-[9px] md:text-[11px] font-semibold ${available <= 10 && !isSoldOut ? 'text-orange-500 font-bold' : 'text-[#686868]'}`}>
+                                            {isSoldOut
+                                                ? '• No seats available'
+                                                : available === Infinity
+                                                    ? null
+                                                    : `• ${available} seat${available === 1 ? '' : 's'} available`}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Counter */}
-                            <div className="flex flex-col items-center justify-start gap-3 min-w-[100px]">
+                            <div className="flex flex-col items-center justify-center min-w-[100px] shrink-0 md:mt-[1px]">
                                 {isSoldOut ? (
                                     <div className="w-[86px] h-[38px] bg-red-100 rounded-[7px] flex items-center justify-center">
                                         <span className="text-[14px] text-red-600 font-semibold uppercase">Full</span>
                                     </div>
+                                ) : current === 0 ? (
+                                    /* ADD Button Box */
+                                    <button
+                                        onClick={() => add(i)}
+                                        className="w-[86px] h-[38px] bg-[#D9D9D9] rounded-[7px] flex items-center justify-center hover:bg-[#c8c8c8] active:scale-[0.98] transition-all"
+                                    >
+                                        <span 
+                                            className="text-[25px] text-black leading-none" 
+                                            style={{ 
+                                                fontFamily: "var(--font-anek-tamil-condensed)", 
+                                                fontWeight: 500
+                                            }}
+                                        >
+                                            ADD
+                                        </span>
+                                    </button>
                                 ) : (
-                                    <>
-                                        {current === 0 ? (
-                                            <button
-                                                onClick={() => add(i)}
-                                                className="w-[86px] h-[38px] bg-[#D9D9D9] rounded-[7px] hover:bg-zinc-300 transition-colors active:scale-95"
-                                            >
-                                                <span className="text-[20px] md:text-[28px] text-black" style={{ fontFamily: "'Anek Tamil Condensed', sans-serif" }}>ADD</span>
-                                            </button>
-                                        ) : (
-                                            <div className="w-[86px] h-[38px] bg-black rounded-[7px] flex items-center justify-between px-2 text-white shadow-lg">
-                                                <button onClick={() => remove(i)} className="w-6 h-6 flex items-center justify-center text-[24px] leading-none hover:text-[#D9D9D9] cursor-pointer transition-colors">-</button>
-                                                <span className="text-[18px] md:text-[20px] font-medium" style={{ fontFamily: "'Anek Tamil Condensed', sans-serif" }}>{current}</span>
-                                                <button
-                                                    onClick={() => add(i)}
-                                                    disabled={current >= available}
-                                                    className="w-6 h-6 flex items-center justify-center text-[20px] leading-none hover:text-[#D9D9D9] cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                                >+</button>
-                                            </div>
-                                        )}
-                                    </>
+                                    /* Quantity Selector Box */
+                                    <div className="w-[86px] h-[38px] bg-black rounded-[7px] flex items-center justify-between px-2.5 text-white">
+                                        <button onClick={() => remove(i)} className="text-[22px] leading-none hover:text-[#D9D9D9] cursor-pointer active:scale-90 transition-transform flex items-center justify-center w-6 h-6">-</button>
+                                        <span className="text-[18px] font-medium flex items-center justify-center" style={{ fontFamily: "var(--font-anek-tamil-condensed)" }}>{current}</span>
+                                        <button onClick={() => add(i)} disabled={current >= available} className="text-[18px] leading-none hover:text-[#D9D9D9] cursor-pointer active:scale-90 transition-transform flex items-center justify-center w-6 h-6">+</button>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -231,7 +238,7 @@ export default function TicketSelectionPage() {
 
                 {/* Ticpass Apply */}
                 {pass && pass.benefits.events_discount_active && (
-                    <div className="w-full bg-[#F5F3FF] border border-[#DDD6FE] rounded-[15px] p-5 flex items-center justify-between shadow-sm">
+                    <div className="w-full bg-[#F5F3FF] border border-[#DDD6FE] rounded-[15px] p-4 flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-[#7C3AED] rounded-xl flex items-center justify-center text-white">
                                 <Zap size={20} fill="currentColor" />
@@ -256,12 +263,12 @@ export default function TicketSelectionPage() {
             </main>
 
             {/* Sticky Footer */}
-            <footer className="w-full h-[70px] md:h-[110px] bg-[#2A2A2A] sticky bottom-0 z-50 flex items-center justify-between px-6 md:px-10 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+            <footer className="w-full h-[70px] md:h-[90px] bg-[#2A2A2A] shrink-0 flex items-center justify-between px-6 md:px-10 z-50">
                 <div className="flex flex-col justify-center">
-                    <span className="text-[20px] md:text-[28px] font-medium text-white" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                    <span className="text-[20px] md:text-[26px] font-medium text-white" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                         ₹{totalPrice.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-[12px] md:text-[16px] font-medium text-white opacity-80 uppercase" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                    <span className="text-[12px] md:text-[14px] font-medium text-white opacity-80 uppercase" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                         {totalTickets} {totalTickets === 1 ? 'TICKET' : 'TICKETS'}
                     </span>
                 </div>
@@ -285,10 +292,16 @@ export default function TicketSelectionPage() {
                         sessionStorage.setItem('ticpin_cart', JSON.stringify(cart));
                         router.push(`/events/${name}/book/review`);
                     }}
-                    className={`group relative w-[130px] md:w-[220px] h-[40px] md:h-[54px] bg-white rounded-[7px] flex items-center justify-center transition-all overflow-hidden ${totalTickets === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'active:scale-[0.98] hover:bg-[#7B2FF7] hover:text-white'}`}
+                    className={`w-[160px] md:w-[140px] h-[55px] md:h-[55px] bg-white rounded-[10px] flex items-center justify-center transition-all ${totalTickets === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'active:scale-[0.98]'}`}
                 >
-                    <span className="relative z-10 text-[16px] md:text-[22px] font-medium text-black group-hover:text-white uppercase tracking-wider" style={{ fontFamily: "'Anek Tamil Condensed', sans-serif" }}>
-                        CONTINUE
+                    <span
+                        style={{
+                            fontFamily: "var(--font-anek-tamil-condensed)",
+                            fontWeight: 500
+                        }}
+                        className="text-[18px] md:text-[24px] text-black uppercase leading-none"
+                    >
+                        ADD TO CART
                     </span>
                 </button>
             </footer>

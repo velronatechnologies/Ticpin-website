@@ -174,4 +174,18 @@ export const organizerApi = {
       method: 'POST',
       body: JSON.stringify({ newEmail, otp }),
     }),
+
+  /** POST /api/organizer/profile/change-mobile/request — sends OTP to new mobile number */
+  requestMobileChange: (newMobile: string) =>
+    request<{ message: string }>('/organizer/profile/change-mobile/request', {
+      method: 'POST',
+      body: JSON.stringify({ newMobile }),
+    }),
+
+  /** POST /api/organizer/profile/change-mobile/verify — verifies OTP and updates mobile number */
+  verifyMobileChange: (newMobile: string, otp: string) =>
+    request<{ message: string }>('/organizer/profile/change-mobile/verify', {
+      method: 'POST',
+      body: JSON.stringify({ newMobile, otp }),
+    }),
 };

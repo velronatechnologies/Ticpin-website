@@ -147,7 +147,7 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
     }
 
     return (
-        <div className="hidden md:block min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
+        <div className="hidden md:block min-h-screen bg-gradient-to-b from-[#FFFCED] via-white to-white font-[family-name:var(--font-anek-latin)]">
             <main className="mx-auto max-w-[1440px] px-4 md:px-10 lg:px-16 pt-2 pb-6 md:pt-3 md:pb-8 space-y-4 md:space-y-6">
                 {/* Explore Sports Section */}
                 <section className='pt-[20px] pb-[20px]'>
