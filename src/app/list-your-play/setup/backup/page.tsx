@@ -250,28 +250,28 @@ export default function BackupContactPage() {
                                             </button>
                                         )}
 
-                                        {prefilled && !isCurrentEmailVerified && (
+                                        {prefilled && !isCurrentVerified && (
                                             <button
                                                 onClick={handleSkipVerification}
                                                 className="bg-white border border-black/30 text-black h-[48px] px-8 rounded-[15px] text-[15px] font-medium flex items-center justify-center gap-2 transition-all active:scale-95"
                                             >
-                                                Use verified email <ChevronRight size={18} />
+                                                Skip verification <ChevronRight size={18} />
                                             </button>
                                         )}
 
-                                        {isCurrentEmailVerified && (
+                                        {isCurrentVerified && (
                                             <button
-                                                onClick={handleContinueWithVerifiedEmail}
+                                                onClick={handleContinueWithVerified}
                                                 className="bg-green-600 text-white h-[48px] px-8 rounded-[15px] text-[15px] font-medium flex items-center justify-center gap-2 transition-all active:scale-95"
                                             >
-                                                Continue with Verified Email <ChevronRight size={18} />
+                                                Continue with Verified Contact <ChevronRight size={18} />
                                             </button>
                                         )}
                                     </div>
                                 ) : (
                                     <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
                                         <p className="text-[14px] text-[#686868] font-medium" style={{ fontFamily: 'Anek Latin' }}>
-                                            An OTP has been sent to <span className="text-black font-semibold">{email}</span> for verification.
+                                            An OTP has been sent to <span className="text-black font-semibold">{identifier}</span> for verification.
                                         </p>
 
                                         <div className="space-y-3">
