@@ -78,15 +78,15 @@ export default function GstSelectionPage() {
                     // Show user-friendly error message based on error type
                     let userMessage = 'Unable to fetch your GST details at this moment.';
                     
-                        if (err.message && err.message.includes('ip_validation_failed')) {
-                            userMessage = 'Our system is experiencing temporary connectivity issues. Please try again in a few moments.';
-                        } else if (err.message && err.message.includes('authentication_error')) {
-                            userMessage = 'Unable to verify your GST information. Please try again later.';
-                        } else if (err.message && (err.message.includes('cashfree error') || err.message.includes('credits over') || err.message.includes('Internal Server Error'))) {
-                            userMessage = 'Our verification system is temporarily down. Please try again after some time.';
-                        }
-                        
-                        toast.error(userMessage);
+                    if (err.message && err.message.includes('ip_validation_failed')) {
+                        userMessage = 'Our system is experiencing temporary connectivity issues. Please try again in a few moments.';
+                    } else if (err.message && err.message.includes('authentication_error')) {
+                        userMessage = 'Unable to verify your GST information. Please try again later.';
+                    } else if (err.message && (err.message.includes('cashfree error') || err.message.includes('credits over') || err.message.includes('Internal Server Error'))) {
+                        userMessage = 'Our verification system is temporarily down. Please try again after some time.';
+                    }
+                    
+                    toast.error(userMessage);
                 })
                 .finally(() => setLoading(false));
         }
@@ -215,21 +215,23 @@ export default function GstSelectionPage() {
                                             <p className="text-[14px] text-[#686868] font-medium">No valid GST accounts found. Please check your PAN details.</p>
                                         )}
 
-                                        <div className="flex gap-4 items-center pt-2">
-                                            <input
-                                                type="checkbox"
-                                                id="noGstCheckbox"
-                                                checked={noGst}
-                                                onChange={e => {
-                                                    setNoGst(e.target.checked);
-                                                    if (e.target.checked) setSelectedGsts([]);
-                                                }}
-                                                className="w-6 h-6 rounded-[8px] border border-zinc-300 bg-white accent-black focus:ring-0 focus:ring-offset-0 cursor-pointer flex-shrink-0"
-                                            />
-                                            <label htmlFor="noGstCheckbox" className="text-[14px] text-black font-semibold cursor-pointer select-none">
-                                                I don't have GST for this PAN
-                                            </label>
-                                        </div>
+                                        {selectedGsts.length === 0 && (
+                                            <div className="flex gap-4 items-center pt-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="noGstCheckbox"
+                                                    checked={noGst}
+                                                    onChange={e => {
+                                                        setNoGst(e.target.checked);
+                                                        if (e.target.checked) setSelectedGsts([]);
+                                                    }}
+                                                    className="w-6 h-6 rounded-[8px] border border-zinc-300 bg-white accent-black focus:ring-0 focus:ring-offset-0 cursor-pointer flex-shrink-0"
+                                                />
+                                                <label htmlFor="noGstCheckbox" className="text-[14px] text-black font-semibold cursor-pointer select-none">
+                                                    I don't have GST for this PAN
+                                                </label>
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
