@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Minus, Plus, ChevronLeft } from 'lucide-react';
-import { useUserSession } from '@/lib/auth/user';
+import { useUserSession, getUserSession } from '@/lib/auth/user';
 import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import AuthModal from '@/components/modals/AuthModal';
 import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
@@ -69,10 +69,27 @@ const DiningBooking: React.FC = () => {
     const [nextDays] = useState(getNextDays());
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isAuthChecking, setIsAuthChecking] = useState(true);
     const session = useUserSession();
     const organizerSession = getOrganizerSession();
     const [pass, setPass] = useState<TicpinPass | null>(null);
     const [usePass, setUsePass] = useState(false);
+
+    useEffect(() => {
+        const activeSession = getUserSession();
+        if (!activeSession) {
+            setShowAuthModal(true);
+        }
+        setIsAuthChecking(false);
+    }, []);
+
+    const handleAuthModalClose = () => {
+        setShowAuthModal(false);
+        const activeSession = getUserSession();
+        if (!activeSession) {
+            router.push(`/dining/venue/${name}`);
+        }
+    };
 
     useEffect(() => {
         if (!name || typeof name !== 'string') return;
@@ -189,10 +206,11 @@ const DiningBooking: React.FC = () => {
         }
     };
 
-    if (loading) {
+    if (loading || isAuthChecking || (!session?.id && !getUserSession())) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
                 <div className="w-10 h-10 border-4 border-[#7B2FF7] border-t-transparent rounded-full animate-spin" />
+                <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} />
             </div>
         );
     }
@@ -520,7 +538,7 @@ const DiningBooking: React.FC = () => {
 
             <AuthModal
                 isOpen={showAuthModal}
-                onClose={() => setShowAuthModal(false)}
+                onClose={handleAuthModalClose}
                 onSuccess={() => {
                     setShowAuthModal(false);
                     handleBooking();

@@ -1,18 +1,34 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { bookingApi } from '@/lib/api/booking';
 import BookingDetailsClient from '@/components/bookings/BookingDetailsClient';
 
 export default function PlayBookingDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const bookingId = params?.id as string;
   const session = useUserSession();
 
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasCheckedSession(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasCheckedSession) return;
+    if (!session) {
+      router.replace('/bookings');
+    }
+  }, [hasCheckedSession, session, router]);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -23,7 +39,7 @@ export default function PlayBookingDetailPage() {
       .finally(() => setLoading(false));
   }, [bookingId, session?.id]);
 
-  if (loading) {
+  if (loading || !hasCheckedSession || !session) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-4">

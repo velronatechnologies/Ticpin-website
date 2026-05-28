@@ -2,18 +2,23 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronRight, Trash2, X, Tag, CheckCircle2, ChevronDown, Clock } from 'lucide-react';
+import { ChevronRight, Trash2, X, Tag, CheckCircle2, ChevronDown, Clock, User } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { useSlotLock } from '@/hooks/useSlotLock';
+import { useReservationStore } from '@/store/useReservationStore';
 import { bookingApi, OfferItem, PaymentOrderResponse } from '@/lib/api/booking';
 import { profileApi } from '@/lib/api/profile';
 import Link from 'next/link';
 import { useUserSession } from '@/lib/auth/user';
 import { useOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import { getBookingStatus } from '@/lib/utils/booking-status';
-import AuthModal from '@/components/modals/AuthModal';
-import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
 import { toast } from '@/components/ui/Toast';
+import { AlertCircle } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
+const OrganizerLogoutModal = dynamic(() => import('@/components/modals/OrganizerLogoutModal'), { ssr: false });
+const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
+const SuccessView = dynamic(() => import('./SuccessView'), { ssr: false });
 
 
 interface CartData {
@@ -33,6 +38,16 @@ interface CartData {
     use_pass?: boolean;
     pass_id?: string;
 }
+
+const INDIAN_STATES = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+    'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+    'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
+    'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh',
+    'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+    'Lakshadweep', 'Puducherry'
+];
 
 /** Dynamically load a third-party payment SDK script (idempotent). */
 function loadScript(src: string): Promise<void> {
@@ -56,9 +71,7 @@ export default function ReviewBookingPage() {
     const [cart, setCart] = useState<CartData | null>(null);
     const [eventData, setEventData] = useState<{id: string; name: string} | null>(null);
 
-    const { timeRemaining, loading: lockLoading, locks, lockSlot, unlockSlot } = useSlotLock('event');
-    const [lockingAttempted, setLockingAttempted] = useState(false);
-    const [isLocking, setIsLocking] = useState(false);
+
     
 
 
@@ -88,21 +101,16 @@ export default function ReviewBookingPage() {
     const [billing, setBilling] = useState({
         name: '',
         phone: '',
-        nationality: 'Indian',
-        address: '',
-        city: '',
+        nationality: 'Indian resident',
         state: '',
-        pincode: '',
     });
 
     // All required billing fields completed
     const billingComplete =
-        billing.name.trim() !== '' &&
-        billing.phone.trim().length >= 10 &&
-        billing.nationality.trim() !== '' &&
-        billing.address.trim() !== '' &&
-        billing.city.trim() !== '' &&
-        billing.pincode.trim().length >= 6 &&
+        (billing.name || '').trim() !== '' &&
+        (billing.phone || '').trim().length >= 10 &&
+        (billing.nationality || '').trim() !== '' &&
+        (billing.state || '').trim() !== '' &&
         acceptedTerms;
 
     // Flow state
@@ -113,18 +121,119 @@ export default function ReviewBookingPage() {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [pass, setPass] = useState<any>(null);
+    const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+    const [previousBookings, setPreviousBookings] = useState<any[]>([]);
+    const [showTimerWarning, setShowTimerWarning] = useState(false);
+    const [phoneInputValue, setPhoneInputValue] = useState('');
+    const isPayingRef = useRef(false);
+    const hasPrefilledRef = useRef(false);
+    const timerWarningShownRef = useRef(false);
+    const razorpayRef = useRef<any>(null);
 
+    const reservationStore = useReservationStore();
+    const [timeRemaining, setTimeRemaining] = useState<number>(0);
+    const [isValidating, setIsValidating] = useState(true);
+
+    // Validate reservation on mount
     useEffect(() => {
-        if (step === 'success') return;
-        
-        // If locks finished loading and we have no active locks or timer hit 0, kick out.
-        // Also don't kick if we don't have eventData loaded yet, or if we are still locking.
-        if (!lockLoading && timeRemaining === 0 && locks.length === 0 && eventData && lockingAttempted && !isLocking) {
-            sessionStorage.removeItem('ticpin_cart');
-            toast.error("Booking session expired. Please start over.");
-            router.push('/');
-        }
-    }, [step, timeRemaining, lockLoading, locks.length, eventData, router]);
+        const validateReservation = async () => {
+            if (!session?.id) {
+                setIsValidating(false);
+                return;
+            }
+
+            const savedCart = sessionStorage.getItem('ticpin_cart');
+            if (!savedCart) {
+                router.replace(`/events/${name}/book`);
+                return;
+            }
+
+            const parsedCart = JSON.parse(savedCart);
+            const eventId = parsedCart.eventId;
+
+            try {
+                // Check if backend has active reservation
+                const activeRes = await bookingApi.checkActiveReservation(eventId, session.id);
+                if (activeRes.active) {
+                    // Update Zustand
+                    reservationStore.setReservation(
+                        activeRes.reservation_id,
+                        activeRes.event_id,
+                        activeRes.tickets.map((t: any) => ({
+                            name: t.category,
+                            price: parsedCart.tickets.find((c: any) => c.name === t.category)?.price || 0,
+                            quantity: t.quantity
+                        })),
+                        activeRes.expires_at
+                    );
+                } else {
+                    // Stale / expired on backend, clear Zustand and redirect back
+                    reservationStore.clearReservation();
+                    sessionStorage.removeItem('ticpin_cart');
+                    toast.error("Your ticket lock has expired. Please select tickets again.");
+                    router.replace(`/events/${name}/book`);
+                }
+            } catch (err) {
+                console.error("Failed to validate reservation on backend:", err);
+            } finally {
+                setIsValidating(false);
+            }
+        };
+
+        validateReservation();
+    }, [session?.id, name, router]);
+
+    // Timer countdown with 3-min warning + 5-min auto-unlock
+    useEffect(() => {
+        const expiresAt = reservationStore.expiresAt;
+        if (!expiresAt || step === 'success') return;
+
+        const updateTimer = () => {
+            if (isPayingRef.current) return;
+
+            const expiresTime = new Date(expiresAt).getTime();
+            const now = Date.now();
+            const diff = Math.max(0, Math.floor((expiresTime - now) / 1000));
+            setTimeRemaining(diff);
+
+            // Show warning popup at 3 minutes (180 seconds)
+            if (diff === 180 && !timerWarningShownRef.current) {
+                timerWarningShownRef.current = true;
+                setShowTimerWarning(true);
+            }
+
+            // Auto-unlock and redirect at 5 minutes remaining (300 seconds = 5 min, so unlock at expiry - 5min)
+            // Actually auto-unlock when time reaches 0
+            if (diff <= 0) {
+                clearInterval(interval);
+                toast.error("Your ticket reservation has expired. Redirecting...");
+                
+                // Close Razorpay popup if open
+                if (razorpayRef.current) {
+                    try {
+                        razorpayRef.current.close();
+                    } catch (e) {
+                        console.error("Failed to close Razorpay popup:", e);
+                    }
+                    razorpayRef.current = null;
+                }
+                
+                // Unlock on backend
+                if (reservationStore.reservationId) {
+                    bookingApi.unlockReservation(reservationStore.reservationId).catch(console.error);
+                }
+                
+                // Clear state
+                reservationStore.clearReservation();
+                sessionStorage.removeItem('ticpin_cart');
+                router.replace(`/events/${name}`);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [reservationStore.expiresAt, reservationStore.reservationId, name, router, step]);
 
     const formatTimer = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -152,16 +261,14 @@ export default function ReviewBookingPage() {
         const savedBilling = sessionStorage.getItem('ticpin_billing_data');
         if (savedBilling) {
             try {
-                setBilling(JSON.parse(savedBilling));
+                const parsed = JSON.parse(savedBilling);
+                setBilling(prev => ({
+                    ...prev,
+                    ...parsed,
+                    nationality: parsed.nationality || prev.nationality || 'Indian resident',
+                    state: parsed.state || prev.state || '',
+                }));
             } catch (e) { }
-        }
-
-        const savedStep = sessionStorage.getItem('ticpin_booking_step');
-        if (savedStep === 'billing') {
-            setStep('billing');
-            setTimeout(() => {
-                billingRef.current?.scrollIntoView({ behavior: 'instant' });
-            }, 100);
         }
 
         // ── Cashfree redirect return ───────────────────────────────────
@@ -212,7 +319,7 @@ export default function ReviewBookingPage() {
     // Also pre-fill with session data if available and state is empty
     useEffect(() => {
         const loadUserData = async () => {
-            if (session?.id) {
+            if (session?.id && !hasPrefilledRef.current) {
                 try {
                     // Fetch profile and booking history in parallel
                     const [profile, history] = await Promise.all([
@@ -220,25 +327,35 @@ export default function ReviewBookingPage() {
                         bookingApi.getUserBookings({ userId: session.id }).catch(() => [])
                     ]);
 
+                    // Extract and store last 3 confirmed bookings
+                    const confirmed = (Array.isArray(history) ? history : [])
+                        ?.filter((b: any) => { const s = getBookingStatus(b).toLowerCase(); return s === 'booked' || s === 'confirmed'; })
+                        ?.sort((a: any, b: any) => new Date(b.booked_at).getTime() - new Date(a.booked_at).getTime())
+                        ?.slice(0, 3);
+                    setPreviousBookings(confirmed || []);
+
                     // Find latest successful booking
                     const latestBooking = (Array.isArray(history) ? [...history] : [])
-                        ?.filter((b: any) => getBookingStatus(b) === 'booked' || getBookingStatus(b) === 'confirmed')
+                        ?.filter((b: any) => { const s = getBookingStatus(b).toLowerCase(); return s === 'booked' || s === 'confirmed'; })
                         ?.sort((a: any, b: any) => new Date(b.booked_at).getTime() - new Date(a.booked_at).getTime())[0];
 
-                    setBilling(prev => ({
-                        ...prev,
-                        name: prev.name || latestBooking?.user_name || profile?.name || session?.name || '',
-                        phone: prev.phone || latestBooking?.user_phone || profile?.phone || session?.phone || '',
-                        address: prev.address || latestBooking?.address || profile?.address || '',
-                        city: prev.city || latestBooking?.city || profile?.district || '',
-                        state: prev.state || latestBooking?.state || profile?.state || '',
-                        pincode: prev.pincode || latestBooking?.pincode || '',
-                        nationality: prev.nationality !== 'Indian' ? prev.nationality : (latestBooking?.nationality || 'Indian'),
-                    }));
+                    setBilling(prev => {
+                        const newBilling = {
+                            name: prev.name || latestBooking?.user_name || profile?.name || session?.name || '',
+                            phone: prev.phone || latestBooking?.user_phone || profile?.phone || session?.phone || '',
+                            nationality: prev.nationality || latestBooking?.nationality || 'Indian resident',
+                            state: prev.state || latestBooking?.state || profile?.state || '',
+                        };
+                        sessionStorage.setItem('ticpin_billing_data', JSON.stringify(newBilling));
+                        return newBilling;
+                    });
 
                     if (!email) {
-                        setEmail(latestBooking?.user_email || profile?.email || session?.email || '');
+                        const newEmail = latestBooking?.user_email || profile?.email || session?.email || '';
+                        setEmail(newEmail);
+                        if (newEmail) sessionStorage.setItem('ticpin_billing_email', newEmail);
                     }
+                    hasPrefilledRef.current = true;
                 } catch (err) {
                     console.error('Failed to load user data', err);
                 }
@@ -253,14 +370,30 @@ export default function ReviewBookingPage() {
     }, [email]);
 
     useEffect(() => {
-        if (billing.name || billing.phone || billing.address) {
+        if (billing.name || billing.phone || billing.state) {
             sessionStorage.setItem('ticpin_billing_data', JSON.stringify(billing));
         }
     }, [billing]);
 
-    useEffect(() => {
-        sessionStorage.setItem('ticpin_booking_step', step);
-    }, [step]);
+    const clearReservationAndFlow = (clearCart: boolean = true, markForceRestart: boolean = false) => {
+        if (reservationStore.reservationId && step !== 'success') {
+            bookingApi.unlockReservation(reservationStore.reservationId).catch(console.error);
+        }
+        if (reservationStore.reservationId || reservationStore.eventId || reservationStore.selectedSeats.length || reservationStore.expiresAt) {
+            reservationStore.clearReservation();
+        }
+        timerWarningShownRef.current = false;
+        setShowTimerWarning(false);
+        setTimeRemaining(0);
+        sessionStorage.removeItem('ticpin_booking_step');
+        sessionStorage.removeItem('ticpin_pending_payment');
+        if (markForceRestart) {
+            sessionStorage.setItem('ticpin_force_new_selection', '1');
+        }
+        if (clearCart) {
+            sessionStorage.removeItem('ticpin_cart');
+        }
+    };
 
     useEffect(() => {
         const entityId = cart?.eventId;
@@ -303,58 +436,58 @@ export default function ReviewBookingPage() {
     const grandTotal = Math.max(0, orderAmount + bookingFee - totalDiscount);
 
     const removeTicket = async (i: number) => {
-        if (!cart) return;
-
-        if (cart.type === 'event') {
-            const dateStr = cart.date || new Date().toISOString().split('T')[0];
-            const ticket = cart.tickets[i];
-            for (let q = 0; q < ticket.quantity; q++) {
-                try {
-                    await unlockSlot(cart.eventId, dateStr, `${ticket.name}|${q}`);
-                } catch (e) {
-                    console.warn("Failed to unlock ticket", e);
-                }
-            }
-        }
+        if (!cart || !session?.id) return;
 
         const newTickets = cart.tickets.filter((_, idx) => idx !== i);
-        const newTotal = newTickets.reduce((s, t) => s + t.price * t.quantity, 0);
-        const newCart = { ...cart, tickets: newTickets, totalPrice: newTotal };
-        setCart(newCart);
-        sessionStorage.setItem('ticpin_cart', JSON.stringify(newCart));
-        if (appliedOffer) applyOffer(appliedOffer, newTotal);
-        if (appliedCoupon) validateCoupon(couponInput, newTotal);
+        
+        if (newTickets.length === 0) {
+            // If all tickets removed, release reservation and redirect back
+            try {
+                if (reservationStore.reservationId) {
+                    await bookingApi.unlockReservation(reservationStore.reservationId);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            reservationStore.clearReservation();
+            sessionStorage.removeItem('ticpin_cart');
+            router.replace(`/events/${name}/book`);
+            return;
+        }
+
+        const ticketReqs = newTickets.map(t => ({
+            category: t.name,
+            quantity: t.quantity
+        }));
+
+        try {
+            const res = await bookingApi.createReservation(cart.eventId, session.id, ticketReqs);
+            if (res.success) {
+                // Update Zustand
+                reservationStore.setReservation(
+                    res.reservation_id,
+                    cart.eventId,
+                    newTickets,
+                    res.expires_at
+                );
+
+                const newTotal = newTickets.reduce((s, t) => s + t.price * t.quantity, 0);
+                const newCart = { ...cart, tickets: newTickets, totalPrice: newTotal };
+                setCart(newCart);
+                sessionStorage.setItem('ticpin_cart', JSON.stringify(newCart));
+                
+                if (appliedOffer) applyOffer(appliedOffer, newTotal);
+                if (appliedCoupon) validateCoupon(couponInput, newTotal);
+                
+                toast.success("Ticket removed!");
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Failed to update reservation.");
+        }
     };
 
-    useEffect(() => {
-        if (!cart || cart.type !== 'event' || lockingAttempted || isLocking) return;
-
-        const performLocking = async () => {
-            setIsLocking(true);
-            try {
-                const dateStr = cart.date || new Date().toISOString().split('T')[0];
-                // Sequential locking to avoid overwhelming backend and race conditions
-                for (const ticket of cart.tickets) {
-                    for (let i = 0; i < ticket.quantity; i++) {
-                        await lockSlot(cart.eventId, dateStr, `${ticket.name}|${i}`);
-                    }
-                }
-                setLockingAttempted(true);
-            } catch (err) {
-                console.error("Locking failed", err);
-                toast.error("Failed to secure all tickets. They might have been sold out.");
-                // We mark it attempted so we don't loop, but the user might be kicked by the expiration check
-                setLockingAttempted(true); 
-            } finally {
-                setIsLocking(false);
-            }
-        };
-
-        performLocking();
-    }, [cart, lockSlot, lockingAttempted, isLocking]);
-
     const updateTicketQuantity = async (i: number, newQuantity: number) => {
-        if (!cart) return;
+        if (!cart || !session?.id) return;
         const oldQuantity = cart.tickets[i].quantity;
 
         if (newQuantity < 1) {
@@ -362,33 +495,44 @@ export default function ReviewBookingPage() {
             return;
         }
 
-        // If it's an event, we handle locks dynamically
-        if (cart.type === 'event') {
-            const dateStr = cart.date || new Date().toISOString().split('T')[0];
-            try {
-                if (newQuantity > oldQuantity) {
-                    for (let q = oldQuantity; q < newQuantity; q++) {
-                        await lockSlot(cart.eventId, dateStr, `${cart.tickets[i].name}|${q}`);
-                    }
-                } else if (newQuantity < oldQuantity) {
-                    for (let q = newQuantity; q < oldQuantity; q++) {
-                        await unlockSlot(cart.eventId, dateStr, `${cart.tickets[i].name}|${q}`);
-                    }
-                }
-            } catch (err: any) {
-                toast.error(err.message || "Failed to update reservation");
-                return;
-            }
-        }
+        // Optimistically calculate new tickets array
+        const newTickets = cart.tickets.map((t, idx) => 
+            idx === i ? { ...t, quantity: newQuantity } : t
+        );
 
-        const newTickets = [...cart.tickets];
-        newTickets[i] = { ...newTickets[i], quantity: newQuantity };
-        const newTotal = newTickets.reduce((s, t) => s + t.price * t.quantity, 0);
-        const newCart = { ...cart, tickets: newTickets, totalPrice: newTotal };
-        setCart(newCart);
-        sessionStorage.setItem('ticpin_cart', JSON.stringify(newCart));
-        if (appliedOffer) applyOffer(appliedOffer, newTotal);
-        if (appliedCoupon) validateCoupon(couponInput, newTotal);
+        // Format for backend
+        const ticketReqs = newTickets.map(t => ({
+            category: t.name,
+            quantity: t.quantity
+        }));
+
+        try {
+            // Re-reserve with new quantities. This deletes the old reservation and locks new seats
+            const res = await bookingApi.createReservation(cart.eventId, session.id, ticketReqs);
+
+            if (res.success) {
+                // Update Zustand
+                reservationStore.setReservation(
+                    res.reservation_id,
+                    cart.eventId,
+                    newTickets,
+                    res.expires_at
+                );
+
+                // Update local cart state
+                const newTotal = newTickets.reduce((s, t) => s + t.price * t.quantity, 0);
+                const newCart = { ...cart, tickets: newTickets, totalPrice: newTotal };
+                setCart(newCart);
+                sessionStorage.setItem('ticpin_cart', JSON.stringify(newCart));
+                
+                if (appliedOffer) applyOffer(appliedOffer, newTotal);
+                if (appliedCoupon) validateCoupon(couponInput, newTotal);
+                
+                toast.success("Ticket quantity updated!");
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Failed to update reservation. Selected tickets may not be available.");
+        }
     };
 
     const applyOffer = (offer: OfferItem, base?: number) => {
@@ -444,12 +588,33 @@ export default function ReviewBookingPage() {
         setCouponError('');
     };
 
-    const handleContinue = () => {
-        if (!billing.phone.trim() || billing.phone.length < 10) {
-            setBookingError('Please enter a valid 10-digit mobile number');
-            return;
+    // Handle phone input with +91 prefix - 10 digits only
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        // Keep only last 10 digits
+        if (value.length > 10) {
+            value = value.slice(-10);
         }
+        setPhoneInputValue(value);
+        if (value.length === 10) {
+            setBilling(b => ({ ...b, phone: value }));
+        }
+    };
 
+    // Browser back: release lock and reset flow.
+    // Keep refresh intact so lock/cart persist on same page refresh.
+    useEffect(() => {
+        const handlePopState = () => {
+            clearReservationAndFlow(true, true);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [reservationStore.reservationId, step]);
+
+    const handleContinue = () => {
         if (organizerSession) {
             setShowLogoutModal(true);
             return;
@@ -458,6 +623,16 @@ export default function ReviewBookingPage() {
         if (!session) {
             setShowAuthModal(true);
             return;
+        }
+
+        const activePhone = (billing.phone || session?.phone || '').trim().replace(/\D/g, '');
+        if (!activePhone || activePhone.length < 10) {
+            setBookingError('Please verify your profile phone number');
+            return;
+        }
+
+        if (billing.phone !== activePhone) {
+            setBilling(b => ({ ...b, phone: activePhone }));
         }
 
         setBookingError('');
@@ -484,6 +659,7 @@ export default function ReviewBookingPage() {
     ) => {
         setBookingLoading(true);
         setBookingError('');
+        isPayingRef.current = true;
         try {
             let result;
             if (cartData.type === 'dining') {
@@ -491,11 +667,8 @@ export default function ReviewBookingPage() {
                     user_email: emailData,
                     user_name: billing.name,
                     user_phone: billing.phone,
-                    address: billing.address,
-                    city: billing.city,
-                    state: billing.state,
-                    pincode: billing.pincode,
                     nationality: billing.nationality,
+                    state: billing.state,
                     dining_id: cartData.eventId,
                     venue_name: cartData.eventName,
                     date: cartData.date || '',
@@ -516,11 +689,8 @@ export default function ReviewBookingPage() {
                     user_email: emailData,
                     user_name: billing.name,
                     user_phone: billing.phone,
-                    address: billing.address,
-                    city: billing.city,
-                    state: billing.state,
-                    pincode: billing.pincode,
                     nationality: billing.nationality,
+                    state: billing.state,
                     play_id: cartData.eventId,
                     venue_name: cartData.eventName,
                     date: cartData.date || '',
@@ -546,11 +716,8 @@ export default function ReviewBookingPage() {
                     user_email: emailData,
                     user_name: billing.name,
                     user_phone: billing.phone,
-                    address: billing.address,
-                    city: billing.city,
-                    state: billing.state,
-                    pincode: billing.pincode,
                     nationality: billing.nationality,
+                    state: billing.state,
                     event_id: cartData.eventId,
                     event_name: cartData.eventName,
                     tickets: cartData.tickets.map(t => ({
@@ -567,9 +734,11 @@ export default function ReviewBookingPage() {
                     payment_gateway: paymentGateway,
                     status: 'booked',
                     use_ticpass: usePass,
+                    reservation_id: reservationStore.reservationId || undefined,
                 });
             }
             setBookingId(result.booking_id);
+            reservationStore.clearReservation();
             sessionStorage.removeItem('ticpin_cart');
             sessionStorage.removeItem('ticpin_billing_email');
             sessionStorage.removeItem('ticpin_billing_data');
@@ -578,51 +747,29 @@ export default function ReviewBookingPage() {
             setStep('success');
         } catch (err: unknown) {
             setBookingError(err instanceof Error ? err.message : 'Booking failed. Please try again.');
+            isPayingRef.current = false;
         } finally {
             setBookingLoading(false);
         }
     };
 
     const handlePayNow = async () => {
-        if (!billing.name.trim()) { setBookingError('Please enter your full name'); return; }
+        if (!(billing.name || '').trim()) { setBookingError('Please enter your full name'); return; }
         if (!email.trim() || !email.includes('@')) { setBookingError('Please enter a valid email address'); return; }
-        if (!billing.nationality.trim()) { setBookingError('Please select your nationality'); return; }
-        if (!billing.address.trim()) { setBookingError('Please enter your address'); return; }
-        if (!billing.city.trim()) { setBookingError('Please enter your city'); return; }
-        if (!billing.pincode.trim() || billing.pincode.length < 6) { setBookingError('Please enter a valid PIN code'); return; }
+        if (!(billing.nationality || '').trim()) { setBookingError('Please select your nationality'); return; }
+        if (!(billing.state || '').trim()) { setBookingError('Please select your state'); return; }
         if (!acceptedTerms) {
             setBookingError('Please accept the terms and conditions');
             return;
         }
         if (!cart) return;
+
+        if (isPayingRef.current) return;
+        isPayingRef.current = true;
         setBookingLoading(true);
         setBookingError('');
 
-        // Check if email belongs to another user or organizer before payment
-        try {
-            const emailCheckRes = await fetch(`/backend/api/profiles/check-email?email=${encodeURIComponent(email)}`, {
-                credentials: 'include',
-            });
-            if (emailCheckRes.ok) {
-                const emailData = await emailCheckRes.json();
-                if (emailData.exists) {
-                    // If it's a user but NOT the current user
-                    if (emailData.isUser && emailData.userId !== session?.id) {
-                        setBookingError('This email is already associated with another account');
-                        setBookingLoading(false);
-                        return;
-                    }
-                    // If it belongs to an organizer
-                    if (emailData.isOrganizer) {
-                        setBookingError('This email is already associated with an organizer account');
-                        setBookingLoading(false);
-                        return;
-                    }
-                }
-            }
-        } catch (err) {
-            console.error('Email check failed:', err);
-        }
+        // Booking email is informational for this booking; no duplicate-account blocking needed.
 
         // Skip payment flow if grand total is 0
         if (grandTotal === 0) {
@@ -700,6 +847,7 @@ export default function ReviewBookingPage() {
                     },
                     theme: { color: '#5331EA' },
                     handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string }) => {
+                        razorpayRef.current = null;
                         await completeBookingWithData(
                             response.razorpay_payment_id,
                             'razorpay',
@@ -716,16 +864,21 @@ export default function ReviewBookingPage() {
                     },
                     modal: {
                         ondismiss: () => {
+                            razorpayRef.current = null;
                             sessionStorage.removeItem('ticpin_pending_payment');
                             setBookingLoading(false);
+                            isPayingRef.current = false;
                             setBookingError('Payment was cancelled. Please try again.');
                         },
                     },
                 };
-                new (window as any).Razorpay(options).open();
+                const rzp = new (window as any).Razorpay(options);
+                razorpayRef.current = rzp;
+                rzp.open();
             }
         } catch (err: unknown) {
             setBookingLoading(false);
+            isPayingRef.current = false;
             setBookingError(err instanceof Error ? err.message : 'Payment initiation failed. Please try again.');
         }
     };
@@ -741,49 +894,60 @@ export default function ReviewBookingPage() {
 
     if (step === 'success') {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center font-[family-name:var(--font-anek-latin)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
-                <div className="w-full max-w-[560px] bg-white rounded-[20px] p-10 mx-6 text-center shadow-sm">
-                    <CheckCircle2 size={56} className="text-green-500 mx-auto mb-4" />
-                    <h1 className="text-[28px] font-semibold text-black mb-2">Booking Confirmed!</h1>
-                    <p className="text-[15px] text-[#686868] mb-1">Your booking ID is</p>
-                    <p className="text-[18px] font-bold text-black mb-4 bg-[#f5f5f5] rounded-[10px] py-3 px-4 font-mono">
-                        #{bookingId.slice(-10).toUpperCase()}
-                    </p>
-                    <p className="text-[14px] text-[#686868] mb-8">
-                        A confirmation has been recorded for <span className="text-black font-medium">{email}</span>.
-                    </p>
-                    <p style={{ color: 'black', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }} className="mb-2">
-                        {cart?.eventName}
-                    </p>
-                    <div className="h-[0.5px] bg-[#AEAEAE] my-4" />
-                    <p className="text-[22px] font-semibold text-black mb-8">₹{grandTotal.toLocaleString('en-IN')} <span className="text-[14px] font-normal text-[#686868]">Total paid</span></p>
-                    <button
-                        onClick={() => router.push('/')}
-                        className="w-full h-[50px] bg-black text-white rounded-[12px] font-semibold text-[16px] hover:bg-zinc-800 transition-colors"
-                    >
-                        Back to Home
-                    </button>
-                </div>
-            </div>
+            <SuccessView
+                bookingId={bookingId}
+                cart={cart}
+                grandTotal={grandTotal}
+                billing={billing}
+                session={session}
+                email={email}
+                setIsProfileDrawerOpen={setIsProfileDrawerOpen}
+            />
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
+        <div className="min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] overflow-x-hidden" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
+            <style>{`
+                /* Hide scrollbars while keeping functionality */
+                .hide-scrollbar {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;      /* Firefox */
+                }
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;  /* Chrome, Safari and Opera */
+                }
+            `}</style>
 
             {/* Header */}
-            <header className="w-full h-[60px] md:h-[80px] bg-white flex items-center justify-between px-6 md:px-10 border-b border-[#FFFFFF] shadow-sm relative z-10">
-                <div className="flex-shrink-0 cursor-pointer" onClick={() => router.push('/')}>
+            <header className="w-full h-[60px] md:h-[70px] bg-white flex items-center justify-between px-6 md:px-10 border-b border-[#FFFFFF] shadow-sm relative z-10 shrink-0">
+                <div className="flex-shrink-0 cursor-pointer" onClick={() => {
+                    clearReservationAndFlow(true);
+                    router.push('/');
+                }}>
                     <Image src="/ticpin-logo-black.png" alt="TICPIN" width={159} height={25} className="h-[20px] md:h-[25px] w-auto object-contain" />
                 </div>
-                <h1 className="text-[18px] md:text-[24px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                <h1 className="text-[18px] md:text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                     {step === 'billing' ? 'Billing Details' : 'Review your booking'}
                 </h1>
-                <div className="w-6 h-6 md:w-[25px]" />
+                <div className="flex items-center gap-3">
+                    <div 
+                        className="w-[48px] h-[48px] md:w-[52px] md:h-[52px] bg-[#F3F4F6] hover:bg-[#E5E7EB] rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 border border-[#E5E7EB] hover:scale-[1.08] active:scale-[0.95] shadow-sm hover:shadow-md"
+                        onClick={() => {
+                            if (!session?.id) {
+                                setShowAuthModal(true);
+                            } else {
+                                setIsProfileDrawerOpen(true);
+                            }
+                        }}
+                    >
+                        <User className="text-[#4B5563]" size={24} />
+                    </div>
+                </div>
             </header>
 
             {timeRemaining > 0 && (
-                <div className="w-full bg-[#f4effe] flex items-center justify-center py-2 border-b border-[#e9defe]">
+                <div className="w-full bg-[#f4effe] flex items-center justify-center py-1.5 border-b border-[#e9defe] shrink-0">
                     <Clock className="w-4 h-4 text-[#5331EA] mr-2" />
                     <span className="text-[13px] font-medium text-[#4a3978]">
                         Complete your booking in <span className="text-[#5331EA] font-bold">{formatTimer(timeRemaining)}</span> mins
@@ -791,30 +955,30 @@ export default function ReviewBookingPage() {
                 </div>
             )}
 
-            <main className="w-full max-w-[1100px] mx-auto px-6 py-8 space-y-8 flex-grow">
+            <main className="w-full max-w-[1100px] mx-auto px-6 py-4 space-y-4 flex-grow overflow-x-hidden">
 
-                <div className="w-full bg-white border border-white rounded-[20px]">
-                    <div className="p-6 md:p-8">
-                        <div className="flex justify-between items-center mb-2 mt-[-20px]">
-                            <h2 style={{ color: 'black', fontSize: '30px', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>
+                <div className="w-full bg-white border border-white rounded-[20px] shadow-sm">
+                    <div className="p-4 md:p-5">
+                        <div className="flex justify-between items-center mb-2 mt-[-10px]">
+                            <h2 style={{ color: 'black', fontSize: '26px', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>
                                 Order Summary
                             </h2>
-                            <div style={{ width: 47, height: 47, borderRadius: '50%', border: '4px solid #1DB954', flexShrink: 0 }} />
+                            <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #1DB954', flexShrink: 0 }} />
                         </div>
 
-                        <div className="border-t border-[#AEAEAE] pt-6 space-y-6 mx-[-24px] md:mx-[-32px] px-6 md:px-8">
+                        <div className="border-t border-[#AEAEAE] pt-4 space-y-4 mx-[-16px] md:mx-[-20px] px-4 md:px-5">
 
                             {/* ITEM DETAILS */}
                             <div>
-                                <div className="flex items-center gap-4 mb-4 mt-[-20px]">
-                                    <h3 style={{ color: 'black', fontSize: '25px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '60px' }} className="uppercase">
+                                <div className="flex items-center gap-2 mb-2 mt-[-10px]">
+                                    <h3 style={{ color: 'black', fontSize: '20px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '40px' }} className="uppercase">
                                         {cart?.type === 'dining' ? 'RESERVATION' : cart?.type === 'play' ? 'SLOTS' : 'TICKETS'}
                                     </h3>
-                                    <div className="flex-grow h-[1px] bg-[#AEAEAE]" />
+                                    <div className="flex-grow h-[0.5px] bg-[#AEAEAE]" />
                                 </div>
 
                                 {cart?.tickets && cart.tickets.length > 0 ? cart.tickets.map((ticket, i) => (
-                                    <div key={i} className="border border-[#AEAEAE] rounded-[10px] p-4 flex justify-between items-start relative mb-4">
+                                    <div key={i} className="border border-[#AEAEAE] rounded-[10px] p-3 flex justify-between items-start relative mb-3">
                                         <div className="space-y-1">
                                             <h4 className="text-[18px] md:text-[22px] font-bold text-black">
                                                 {cart.eventName} <span className="font-normal mx-1">|</span> {cart.city}
@@ -1055,12 +1219,12 @@ export default function ReviewBookingPage() {
 
                             {/* PAYMENT DETAILS */}
                             <div>
-                                <div className="flex items-center gap-4 mb-4 mt-[-20px]">
-                                    <h3 style={{ color: 'black', fontSize: '25px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '60px' }} className="uppercase">PAYMENT DETAILS</h3>
+                                <div className="flex items-center gap-2 mb-2 mt-[-10px]">
+                                    <h3 style={{ color: 'black', fontSize: '20px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '40px' }} className="uppercase">PAYMENT DETAILS</h3>
                                     <div className="flex-grow h-[0.5px] bg-[#AEAEAE]" />
                                 </div>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center mt-[-20px]" style={{ color: 'black', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center mt-[-10px]" style={{ color: 'black', fontSize: '18px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
                                         <span>Subtotal</span>
                                         <span>₹{orderAmount.toLocaleString('en-IN')}</span>
                                     </div>
@@ -1068,7 +1232,7 @@ export default function ReviewBookingPage() {
                                         <div
                                             className="flex justify-between items-center cursor-pointer group"
                                             onClick={() => setShowGstDetails(!showGstDetails)}
-                                            style={{ color: '#686868', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}
+                                            style={{ color: '#686868', fontSize: '18px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}
                                         >
                                             <div className="flex items-center gap-1 group-hover:text-black transition-colors">
                                                 <span>Booking fee (inc. of GST)</span>
@@ -1114,28 +1278,39 @@ export default function ReviewBookingPage() {
 
                             {/* PHONE & CONTINUE */}
                             {step === 'review' && (
-                                <div className="space-y-4 pt-2">
+                                <div className="space-y-3 pt-2">
                                     <div>
-                                        <label className="text-[15px] font-medium text-[#686868] block mb-2">
-                                            Enter your mobile number to receive booking confirmation
+                                        <label className="text-[14px] font-semibold text-[#686868] block mb-1">
+                                            Mobile number for booking confirmation
                                         </label>
-                                        <input
-                                            type="tel"
-                                            value={billing.phone}
-                                            onChange={e => { setBilling(b => ({ ...b, phone: e.target.value.replace(/\D/g, '') })); setBookingError(''); }}
-                                            placeholder="10-digit mobile number"
-                                            maxLength={10}
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                        />
+                                        <div className="w-full h-[50px] border border-[#AEAEAE] rounded-[10px] px-4 flex items-center bg-white">
+                                            <span className="text-[16px] font-semibold text-black mr-2">🇮🇳 +91</span>
+                                            <input
+                                                type="text"
+                                                value={phoneInputValue || billing.phone}
+                                                onChange={handlePhoneChange}
+                                                placeholder="Enter 10-digit mobile"
+                                                maxLength={10}
+                                                inputMode="numeric"
+                                                className="flex-1 h-full bg-transparent focus:outline-none text-black font-semibold text-[15px] placeholder:text-[#AEAEAE]"
+                                                style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
+                                            />
+                                            {(phoneInputValue?.length === 10 || (billing.phone && billing.phone.length === 10)) && (
+                                                <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full uppercase ml-2">
+                                                    Verified
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     {bookingError && (
                                         <p className="text-red-500 text-[14px] font-medium">{bookingError}</p>
                                     )}
+
                                     <button
                                         onClick={handleContinue}
                                         disabled={!cart?.tickets?.length}
-                                        className="w-full h-[50px] bg-black text-white rounded-[10px] uppercase font-semibold tracking-widest flex items-center justify-center disabled:opacity-40"
-                                        style={{ color: 'white', fontSize: '28px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 500 }}
+                                        className="w-full h-[45px] bg-black text-white rounded-[10px] uppercase font-semibold tracking-widest flex items-center justify-center disabled:opacity-40"
+                                        style={{ color: 'white', fontSize: '24px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 500 }}
                                     >
                                         CONTINUE
                                     </button>
@@ -1156,7 +1331,7 @@ export default function ReviewBookingPage() {
                                     <h2 style={{ color: 'black', fontSize: '30px', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>Billing Details</h2>
                                     <p style={{ fontFamily: 'var(--font-anek-latin)' }} className="text-[14px] text-[#686868] mt-1">{cart?.eventName} &nbsp;·&nbsp; ₹{grandTotal.toLocaleString('en-IN')} total</p>
                                 </div>
-                                {/* Check-circle: purple outline → solid green #0AC655 with white tick when all fields done */}
+                                {/* Billing step indicator: green circle with tick */}
                                 <div
                                     style={{
                                         width: 47,
@@ -1167,143 +1342,119 @@ export default function ReviewBookingPage() {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         transition: 'background 0.25s, border-color 0.25s',
-                                        background: billingComplete ? '#0AC655' : 'transparent',
-                                        border: billingComplete ? 'none' : '4px solid #5331EA',
+                                        background: '#0AC655',
+                                        border: 'none',
                                     }}
                                 >
-                                    {billingComplete ? (
-                                        <svg
-                                            style={{ width: '83.33%', height: '83.33%' }}
-                                            viewBox="0 0 39 39"
-                                            fill="none"
-                                        >
-                                            <path
-                                                d="M7 20l9 9 16-16"
-                                                stroke="white"
-                                                strokeWidth="3.5"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
-                                    ) : (
-                                        <div className="w-3 h-3 rounded-full bg-white" />
-                                    )}
+                                    <svg
+                                        style={{ width: '83.33%', height: '83.33%' }}
+                                        viewBox="0 0 39 39"
+                                        fill="none"
+                                    >
+                                        <path
+                                            d="M7 20l9 9 16-16"
+                                            stroke="white"
+                                            strokeWidth="3.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
                                 </div>
                             </div>
 
                             <div className="border-t border-[#AEAEAE] pt-6 space-y-6 mx-[-24px] md:mx-[-32px] px-6 md:px-8 mt-[-15px]">
 
-                                {/* Name + Phone */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>Full Name <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            value={billing.name}
-                                            onChange={e => { setBilling(b => ({ ...b, name: e.target.value })); setBookingError(''); }}
-                                            placeholder="Enter your full name"
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>Phone Number</label>
-                                        <div className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 flex items-center bg-[#f8f8f8]">
-                                            <span className="text-[16px] font-medium text-black" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>{billing.phone}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <p className="text-[14px] text-[#686868] font-semibold" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                    These details will be shown on your invoice <span className="text-red-500">*</span>
+                                </p>
 
-                                {/* Email (read-only) + Nationality */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>Email <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={e => { setEmail(e.target.value); setBookingError(''); }}
-                                            placeholder="Enter your email"
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>Nationality <span className="text-red-500">*</span></label>
-                                        <select
-                                            value={billing.nationality}
-                                            onChange={e => { setBilling(b => ({ ...b, nationality: e.target.value })); setBookingError(''); }}
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] bg-white appearance-none"
-                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                        >
-                                            <option value="">Select nationality</option>
-                                            <option value="Indian">Indian</option>
-                                            <option value="American">American</option>
-                                            <option value="British">British</option>
-                                            <option value="Australian">Australian</option>
-                                            <option value="Canadian">Canadian</option>
-                                            <option value="Chinese">Chinese</option>
-                                            <option value="French">French</option>
-                                            <option value="German">German</option>
-                                            <option value="Japanese">Japanese</option>
-                                            <option value="Korean">Korean</option>
-                                            <option value="Russian">Russian</option>
-                                            <option value="Singaporean">Singaporean</option>
-                                            <option value="South African">South African</option>
-                                            <option value="UAE">UAE</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Address */}
+                                {/* Name */}
                                 <div className="space-y-2">
-                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>Address <span className="text-red-500">*</span></label>
+                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        Name<span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
-                                        value={billing.address}
-                                        onChange={e => { setBilling(b => ({ ...b, address: e.target.value })); setBookingError(''); }}
-                                        placeholder="House / Flat no., Street, Area"
+                                        value={billing.name}
+                                        onChange={e => { setBilling(b => ({ ...b, name: e.target.value })); setBookingError(''); }}
+                                        placeholder="Name*"
                                         className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                        style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
+                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
                                     />
                                 </div>
 
-                                {/* City + State + PIN */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>City <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            value={billing.city}
-                                            onChange={e => { setBilling(b => ({ ...b, city: e.target.value })); setBookingError(''); }}
-                                            placeholder="City"
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                        />
+                                {/* Phone */}
+                                <div className="space-y-2">
+                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        Phone Number
+                                    </label>
+                                    <div className="w-full h-[55px] border border-[#E2E2E2] rounded-[10px] px-5 flex items-center bg-[#F8F8F8] gap-2">
+                                        <span className="text-[20px]">🇮🇳</span>
+                                        <span className="text-[16px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                            +91 {(billing.phone || '').replace(/^\+?91/, '')}
+                                        </span>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>State</label>
-                                        <input
-                                            type="text"
-                                            value={billing.state}
-                                            onChange={e => setBilling(b => ({ ...b, state: e.target.value }))}
-                                            placeholder="State"
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                        />
+                                </div>
+
+                                {/* Nationality */}
+                                <div className="space-y-3">
+                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        Select nationality
+                                    </label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {['Indian resident', 'International visitor'].map((opt) => {
+                                            const active = billing.nationality === opt;
+                                            return (
+                                                <button
+                                                    key={opt}
+                                                    type="button"
+                                                    onClick={() => { setBilling(b => ({ ...b, nationality: opt })); setBookingError(''); }}
+                                                    className={`h-[50px] px-4 rounded-[10px] border flex items-center justify-between ${active ? 'border-[#2A2A2A] bg-white' : 'border-[#E2E2E2] bg-[#FAFAFA]'}`}
+                                                >
+                                                    <span className="text-[16px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>{opt}</span>
+                                                    <span className={`w-4 h-4 rounded-full border-2 ${active ? 'border-[#2A2A2A]' : 'border-[#9CA3AF]'} flex items-center justify-center`}>
+                                                        {active && <span className="w-2 h-2 rounded-full bg-[#2A2A2A]" />}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>PIN Code <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            value={billing.pincode}
-                                            onChange={e => { setBilling(b => ({ ...b, pincode: e.target.value.replace(/\D/g, '') })); setBookingError(''); }}
-                                            placeholder="6-digit PIN"
-                                            maxLength={6}
-                                            className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                        />
-                                    </div>
+                                </div>
+
+                                {/* State */}
+                                <div className="space-y-2">
+                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        Select state
+                                    </label>
+                                    <select
+                                        value={billing.state}
+                                        onChange={e => { setBilling(b => ({ ...b, state: e.target.value })); setBookingError(''); }}
+                                        className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] bg-white appearance-none"
+                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
+                                    >
+                                        <option value="">Select State</option>
+                                        {INDIAN_STATES.map((st) => (
+                                            <option key={st} value={st}>{st}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Email */}
+                                <div className="space-y-2">
+                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        Email<span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={e => { setEmail(e.target.value); setBookingError(''); }}
+                                        placeholder="Email*"
+                                        className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
+                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
+                                    />
+                                    <p className="text-[13px] text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        We'll email you ticket confirmation and invoices
+                                    </p>
                                 </div>
 
                                 {/* Terms */}
@@ -1326,8 +1477,8 @@ export default function ReviewBookingPage() {
                                 <div className="flex gap-4">
                                     <button
                                         onClick={handlePayNow}
-                                        disabled={bookingLoading}
-                                        className="flex-1 h-[55px] bg-black text-white rounded-[10px] font-bold text-[22px] uppercase hover:bg-zinc-800 transition-colors disabled:opacity-50 tracking-wider shadow-lg shadow-black/10"
+                                        disabled={bookingLoading || isPayingRef.current}
+                                        className="flex-1 h-[55px] bg-black text-white rounded-[10px] font-bold text-[22px] uppercase hover:bg-zinc-800 active:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-wider shadow-lg shadow-black/10"
                                         style={{ fontFamily: 'Anek Tamil Condensed' }}
                                     >
                                         {bookingLoading ? 'Processing...' : (grandTotal === 0 ? 'CONTINUE' : 'PAY NOW')}
@@ -1340,6 +1491,34 @@ export default function ReviewBookingPage() {
                 )}
             </main>
 
+            {/* Timer Warning Modal - 3 minutes remaining */}
+            {showTimerWarning && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-[20px] p-6 max-w-[400px] w-full shadow-2xl animate-in scale-in duration-300">
+                        <div className="flex items-center gap-3 mb-4">
+                            <AlertCircle className="w-8 h-8 text-orange-500" />
+                            <h2 className="text-[20px] font-bold text-black">Time Running Out!</h2>
+                        </div>
+                        <p className="text-[14px] text-[#686868] mb-6 leading-relaxed">
+                            Your ticket lock will expire in <span className="font-bold text-orange-600">3 minutes</span>. Complete your booking to secure your seats.
+                        </p>
+                        <div className="bg-orange-50 border border-orange-200 rounded-[10px] p-3 mb-6">
+                            <p className="text-[13px] font-semibold text-orange-700">⏱️ Time remaining: {formatTimer(timeRemaining)}</p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setShowTimerWarning(false);
+                                setStep('billing');
+                                setTimeout(() => billingRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                            }}
+                            className="w-full h-[48px] bg-orange-500 text-white rounded-[10px] font-bold text-[16px] hover:bg-orange-600 transition-colors"
+                        >
+                            Complete Now
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
             <OrganizerLogoutModal 
                 isOpen={showLogoutModal} 
@@ -1347,6 +1526,9 @@ export default function ReviewBookingPage() {
                 onConfirm={handleOrganizerLogout}
                 organizerName={organizerSession?.email}
             />
+            {isProfileDrawerOpen && (
+                <ProfileDrawer onClose={() => setIsProfileDrawerOpen(false)} />
+            )}
         </div>
     );
 }

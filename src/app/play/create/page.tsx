@@ -14,6 +14,9 @@ import { organizerApi } from '@/lib/api/organizer';
 import { usePlayCreateStore, type Selections, type PaymentDetails } from '@/store/playCreateStore';
 
 const CreatePlayPage = () => {
+    const router = useRouter();
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
+    const [authChecked, setAuthChecked] = useState(false);
 
     const {
         venueName, portraitUrl, landscapeUrl, secondaryBannerUrl, videoUrl, galleryUrls, instagramLink, googleMapLink, venueAddress,
@@ -24,10 +27,38 @@ const CreatePlayPage = () => {
         addFaq, removeFaq, addPoc, removePoc, addSalesNotif, removeSalesNotif, clearDraft
     } = usePlayCreateStore();
 
+    // Session check on mount (SSR-safe)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Check organizer session and redirect if not authenticated
+    useEffect(() => {
+        if (!hasCheckedSession) return;
+
+        const session = getOrganizerSession();
+        if (!session) {
+            router.replace('/list-your-play/Login');
+            return;
+        }
+
+        // Check if organizer has approved play registration
+        if (!session.isAdmin && session.categoryStatus?.play !== 'approved') {
+            router.replace('/list-your-play/Login');
+            return;
+        }
+
+        setAuthChecked(true);
+    }, [hasCheckedSession, router]);
+
     // Clear draft on component mount for fresh start
     useEffect(() => {
+        if (!authChecked) return;
         clearDraft();
-    }, [clearDraft]);
+    }, [authChecked, clearDraft]);
 
     // Map legacy setters to zustand setters
     const setVenueName = (v: any) => setField('venueName', typeof v === 'function' ? v(venueName) : v);
@@ -93,13 +124,11 @@ const CreatePlayPage = () => {
         }
     };
 
-    const router = useRouter();
     const editorRef = useRef<HTMLDivElement>(null);
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [isUnderline, setIsUnderline] = useState(false);
     const [hasContent, setHasContent] = useState(false);
-    const [authChecked, setAuthChecked] = useState(false);
 
     // Form fields
     // const [venueName, setVenueName] = useState(''); (moved to store)

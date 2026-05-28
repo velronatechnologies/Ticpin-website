@@ -21,10 +21,25 @@ export default function EventBookingDetailPage() {
   const bookingId = params?.id as string;
   const session = useUserSession();
   
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasCheckedSession(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasCheckedSession) return;
+    if (!session) {
+      router.replace('/bookings');
+    }
+  }, [hasCheckedSession, session, router]);
 
   useEffect(() => {
     if (bookingId) {
@@ -66,7 +81,7 @@ export default function EventBookingDetailPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !hasCheckedSession || !session) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -143,80 +158,97 @@ export default function EventBookingDetailPage() {
         <div className="max-w-[787px] mx-auto">
           <div className="border border-[#686868] rounded-[25px] overflow-hidden" style={{ background: 'radial-gradient(52.97% 102.98% at 0% -7.55%, #D6FAE5 0%, #FFFFFF 100%)' }}>
             <div className="p-8">
-              <div className="flex items-center gap-4 mb-2">
-                <CheckCircle size={38} className="text-[#0AC655]" />
-                <h1 className="text-[34px] font-semibold text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '37px' }}>
-                  Booking confirmed
-                </h1>
+              <div className="flex flex-row items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-4 mb-2">
+                    <CheckCircle size={38} className="text-[#0AC655]" />
+                    <h1 className="text-[34px] font-semibold text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '37px' }}>
+                      Booking confirmed
+                    </h1>
+                  </div>
+                  <p className="text-[17px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
+                    Reach the venue 10 mins before your slot
+                  </p>
+                </div>
+
+                {/* Compact QR Code positioned on the right corner straight to green tick */}
+                <div className="flex flex-col items-center justify-center p-2 bg-white border border-[#686868]/30 rounded-[12px] shadow-sm shrink-0 w-[110px] h-[110px] select-none">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/qr-verify/${booking.booking_id || booking.id}` : '')}`}
+                    alt="Ticket QR Code"
+                    className="w-[75px] h-[75px] object-contain"
+                  />
+                  <p className="text-[9px] font-bold text-black uppercase tracking-wider text-center mt-1" style={{ fontFamily: 'Anek Latin' }}>Scan to Verify</p>
+                </div>
               </div>
-              <p className="text-[17px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
-                Reach the venue 10 mins before your slot
-              </p>
 
-              <div className="border-b border-[#686868] my-6 w-[717px]" />
-
-              <div className="space-y-6">
-                {/* Date & Time */}
-                <div>
-                  <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
-                    Date & Time
-                  </p>
-                  <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
-                    {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'} | {booking.time || booking.time_slot || '-'}
-                  </p>
-                </div>
-
-                <div className="border-b border-[#686868] w-[717px]" />
-
-                {/* Ticket Category */}
-                <div>
-                  <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
-                    Ticket Category
-                  </p>
-                  <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
-                    {booking.ticket_category || booking.category || 'General Entry'}
-                  </p>
-                </div>
-
-                <div className="border-b border-[#686868] w-[717px]" />
-
-                {/* Location */}
-                <div className="flex items-center justify-between">
+              <div className="border-b border-[#686868] my-6 w-[717px]" />              <div className="flex flex-col md:flex-row justify-between items-stretch gap-8">
+                <div className="flex-grow space-y-6">
+                  {/* Date & Time */}
                   <div>
                     <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
-                      Location
+                      Date & Time
                     </p>
                     <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
-                      {booking.venue_city || booking.location || '-'}
+                      {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'} | {booking.time || booking.time_slot || '-'}
                     </p>
                   </div>
-                  <MapPin size={24} className="text-black" />
+
+                  <div className="border-b border-[#686868]/40 w-full" />
+
+                  {/* Ticket Category */}
+                  <div>
+                    <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
+                      Ticket Category
+                    </p>
+                    <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
+                      {booking.ticket_category || booking.category || 'General Entry'}
+                    </p>
+                  </div>
+
+                  <div className="border-b border-[#686868]/40 w-full" />
+
+                  {/* Location */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
+                        Location
+                      </p>
+                      <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
+                        {booking.venue_city || booking.location || '-'}
+                      </p>
+                    </div>
+                    <MapPin size={24} className="text-black" />
+                  </div>
+
+                  <div className="border-b border-[#686868]/40 w-full" />
+
+                  {/* Offer */}
+                  <div>
+                    <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
+                      Offer
+                    </p>
+                    <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
+                      {booking.offer_name || booking.offer || 'No offer applied'}
+                    </p>
+                  </div>
+
+                  {getBookingStatus(booking) === 'CONFIRMED' && (
+                    <>
+                      <div className="border-b border-[#686868]/40 w-full" />
+                      {/* Cancel Booking */}
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        className="text-[22px] font-semibold underline text-[#ED4D1B] block pt-2"
+                        style={{ fontFamily: 'Anek Latin', lineHeight: '24px' }}
+                      >
+                        Cancel booking
+                      </button>
+                    </>
+                  )}
                 </div>
 
-                <div className="border-b border-[#686868] w-[717px]" />
 
-                {/* Offer */}
-                <div>
-                  <p className="text-[17px] font-medium text-[#686868] mb-1" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
-                    Offer
-                  </p>
-                  <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '22px' }}>
-                    {booking.offer_name || booking.offer || 'No offer applied'}
-                  </p>
-                </div>
-
-                <div className="border-b border-[#686868] w-[717px]" />
-
-                {/* Cancel Booking */}
-                {getBookingStatus(booking) === 'CONFIRMED' && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="text-[22px] font-semibold underline text-[#ED4D1B]"
-                    style={{ fontFamily: 'Anek Latin', lineHeight: '24px' }}
-                  >
-                    Cancel booking
-                  </button>
-                )}
               </div>
             </div>
           </div>

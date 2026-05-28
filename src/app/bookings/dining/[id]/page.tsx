@@ -32,9 +32,24 @@ export default function DiningBookingDetailPage() {
   const bookingId = params?.id as string;
   const session = useUserSession();
   
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasCheckedSession(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasCheckedSession) return;
+    if (!session) {
+      router.replace('/bookings');
+    }
+  }, [hasCheckedSession, session, router]);
 
   useEffect(() => {
     if (bookingId) {
@@ -152,7 +167,7 @@ export default function DiningBookingDetailPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !hasCheckedSession || !session) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#FFF7E6] to-white flex items-center justify-center">
         <div className="text-center space-y-4">

@@ -8,8 +8,18 @@ import DOMPurify from 'isomorphic-dompurify';
 import { useUserSession } from '@/lib/auth/user';
 import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import AuthModal from '@/components/modals/AuthModal';
+import { bookingApi } from '@/lib/api/booking';
+import { toast } from '@/components/ui/Toast';
 import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
 import MobileEventDetails from '@/components/mobile/MobileEventDetails';
+
+interface TicketCategory {
+    name: string;
+    price?: number;
+    capacity?: number;
+    image_url?: string;
+    has_image?: boolean;
+}
 
 interface Artist {
     name: string;
@@ -54,6 +64,7 @@ interface EventData {
     guide?: EventGuide;
     status?: string;
     terms?: string;
+    ticket_categories?: TicketCategory[];
 }
 
 export default function EventDetailClient({ event, id }: { event: EventData, id: string }) {
@@ -70,11 +81,43 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
         window.scrollTo(0, 0);
     }, []);
 
-    const handleBook = () => {
+    const handleBook = async () => {
         // Check if organizer is logged in
         if (organizerSession) {
             setShowLogoutModal(true);
             return;
+        }
+
+        // Fetch live availability from backend before entering the booking flow
+        try {
+            const avail = await bookingApi.getEventAvailability(event.id);
+            const bookedMap = avail.booked ?? {};
+            
+            const categories = event.ticket_categories && event.ticket_categories.length > 0
+                ? event.ticket_categories
+                : [{ name: 'General Admission', capacity: 0 }];
+            
+            let totalAvailable = 0;
+            let hasInfinite = false;
+
+            for (const cat of categories) {
+                if (!cat.capacity || cat.capacity <= 0) {
+                    hasInfinite = true;
+                    break;
+                }
+                const booked = bookedMap[cat.name] ?? 0;
+                const left = cat.capacity - booked;
+                if (left > 0) {
+                    totalAvailable += left;
+                }
+            }
+
+            if (!hasInfinite && totalAvailable <= 0) {
+                toast.error('All tickets for this event are currently sold out or locked by others!');
+                return;
+            }
+        } catch (err) {
+            console.error('Error pre-checking availability:', err);
         }
 
         if (!session) {

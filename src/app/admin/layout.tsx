@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getOrganizerSession } from '@/lib/auth/organizer';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const [authorized, setAuthorized] = useState(false);
     const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -19,15 +20,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         if (!hasCheckedSession) return;
         
+        if (pathname?.startsWith('/admin/login')) {
+            setAuthorized(true);
+            return;
+        }
+        
         const session = getOrganizerSession();
-        const isAdmin = session?.isAdmin || session?.email === '23cs139@kpriet.ac.in';
+        const isAdmin = session?.isAdmin || session?.email === '23cs139@kpriet.ac.in' || session?.email === 'ramjib929@gmail.com';
         
         if (!isAdmin) {
             router.replace('/admin/login');
         } else {
             setAuthorized(true);
         }
-    }, [hasCheckedSession, router]);
+    }, [hasCheckedSession, pathname, router]);
 
     if (!authorized || !hasCheckedSession) {
         return (

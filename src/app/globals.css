@@ -102,6 +102,24 @@
   html {
     @apply font-sans;
   }
+
+  a,
+  button,
+  [role="button"],
+  [tabindex],
+  input,
+  select,
+  label,
+  summary,
+  .cursor-pointer {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled {
+    cursor: not-allowed !important;
+  }
 }
 
 .scrollbar-hide::-webkit-scrollbar {

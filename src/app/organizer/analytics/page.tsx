@@ -33,7 +33,7 @@ function AnalyticsContent() {
         setHasMounted(true);
         const s = getOrganizerSession();
         if (!s) {
-            router.replace('/organizer/login');
+            router.replace('/list-your-dining/Login');
             return;
         }
         setSession(s);

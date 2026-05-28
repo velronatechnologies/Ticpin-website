@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight, ChevronLeft, X } from 'lucide-react';
-import { useUserSession } from '@/lib/auth/user';
+import { useUserSession, getUserSession } from '@/lib/auth/user';
 import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import AuthModal from '@/components/modals/AuthModal';
 import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
@@ -188,6 +188,23 @@ export default function PlayBookPage() {
     const [loading, setLoading] = useState(true);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isAuthChecking, setIsAuthChecking] = useState(true);
+
+    useEffect(() => {
+        const activeSession = getUserSession();
+        if (!activeSession) {
+            setShowAuthModal(true);
+        }
+        setIsAuthChecking(false);
+    }, []);
+
+    const handleAuthModalClose = () => {
+        setShowAuthModal(false);
+        const activeSession = getUserSession();
+        if (!activeSession) {
+            router.push(`/play/${venueName}`);
+        }
+    };
 
     const dates = getNextDays(7);
     const [selectedDate, setSelectedDate] = useState(dates[0].key);
@@ -670,10 +687,11 @@ export default function PlayBookPage() {
         setShowAuthModal(true);
     };
 
-    if (loading) {
+    if (loading || isAuthChecking || (!session?.id && !getUserSession())) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
                 <div className="w-10 h-10 border-4 border-[#E7C200] border-t-transparent rounded-full animate-spin" />
+                <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} initialView={authView} />
             </div>
         );
     }
@@ -1180,7 +1198,7 @@ export default function PlayBookPage() {
 
             <AuthModal
                 isOpen={showAuthModal}
-                onClose={() => setShowAuthModal(false)}
+                onClose={handleAuthModalClose}
                 initialView={authView}
             />
 

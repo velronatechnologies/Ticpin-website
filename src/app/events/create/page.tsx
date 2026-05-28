@@ -19,6 +19,7 @@ const CreateEventPage = () => {
     const [isItalic, setIsItalic] = useState(false);
     const [isUnderline, setIsUnderline] = useState(false);
     const [hasContent, setHasContent] = useState(false);
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const [authChecked, setAuthChecked] = useState(false);
 
     // Form fields
@@ -110,6 +111,33 @@ const CreateEventPage = () => {
     const googleMapInstance = useRef<any>(null);
     const markerInstance = useRef<any>(null);
     const API_KEY = "AIzaSyC2gFDSPGY7wtSFHzYwzbPkP6tcq61Lmt8";
+
+    // Session check on mount (SSR-safe)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Check organizer session and redirect if not authenticated
+    useEffect(() => {
+        if (!hasCheckedSession) return;
+
+        const session = getOrganizerSession();
+        if (!session) {
+            router.replace('/list-your-events/Login');
+            return;
+        }
+
+        // Check if organizer has approved events registration
+        if (!session.isAdmin && session.categoryStatus?.events !== 'approved') {
+            router.replace('/list-your-events/Login');
+            return;
+        }
+
+        setAuthChecked(true);
+    }, [hasCheckedSession, router]);
 
     useEffect(() => {
         if (!showMap || mapLoaded) return;

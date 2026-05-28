@@ -86,7 +86,7 @@ const CreateDiningPage = () => {
     useEffect(() => {
         const checkAuth = async () => {
             let session = getOrganizerSession();
-            if (!session) { setAuthChecked(false); return; }
+            if (!session) { router.replace('/list-your-dining/Login'); return; }
 
             // If not approved and not admin, re-sync from DB once to be sure
             if (!session.isAdmin && session.categoryStatus?.dining !== 'approved') {
@@ -100,7 +100,7 @@ const CreateDiningPage = () => {
             }
 
             if (!session.isAdmin && session.categoryStatus?.dining !== 'approved') {
-                setAuthChecked(false);
+                router.replace('/list-your-dining/Login');
                 return;
             }
 
@@ -126,13 +126,12 @@ const CreateDiningPage = () => {
         return () => clearTimeout(timer);
     }, [router]);
 
-    if (!authChecked) {
+    if (!authChecked && hasCheckedSession) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-purple-50 to-pink-50">
                 <div className="bg-white rounded-[24px] p-10 shadow-lg max-w-md text-center space-y-4">
-                    <h2 className="text-[24px] font-semibold text-black">Access Restricted</h2>
-                    <p className="text-[16px] text-zinc-500">Your dining registration must be approved by the admin before you can create listings.</p>
-                    <button onClick={() => router.back()} className="bg-black text-white px-6 h-10 rounded-[12px] text-[14px] font-medium">Go Back</button>
+                    <h2 className="text-[24px] font-semibold text-black">Loading...</h2>
+                    <p className="text-[16px] text-zinc-500">Please wait while we verify your access.</p>
                 </div>
             </div>
         );

@@ -28,6 +28,7 @@ export interface CreateBookingPayload {
     payment_gateway?: string;
     status?: string;
     use_ticpass?: boolean; // New field for Ticpass discount
+    reservation_id?: string;
 }
 
 export interface CreateDiningPayload {
@@ -291,6 +292,39 @@ export const bookingApi = {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to cancel booking');
+        return data;
+    },
+
+    checkActiveReservation: async (eventId: string, userId: string): Promise<any> => {
+        const res = await fetch(`${BASE}/bookings/events/active-reservation?event_id=${encodeURIComponent(eventId)}&user_id=${encodeURIComponent(userId)}`, {
+            credentials: 'include',
+        });
+        const data = await res.json();
+        if (!res.ok) return { active: false };
+        return data;
+    },
+
+    createReservation: async (eventId: string, userId: string, tickets: Array<{ category: string, quantity: number }>): Promise<any> => {
+        const res = await fetch(`${BASE}/bookings/events/reserve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ event_id: eventId, user_id: userId, tickets }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to create reservation');
+        return data;
+    },
+
+    unlockReservation: async (reservationId: string): Promise<any> => {
+        const res = await fetch(`${BASE}/bookings/events/unlock-reservation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reservation_id: reservationId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to unlock reservation');
         return data;
     },
 };

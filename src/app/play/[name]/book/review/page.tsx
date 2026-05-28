@@ -429,8 +429,11 @@ export default function PlayReviewPage() {
                 }
             } catch { /* ignore */ }
         }
-        const savedStep = sessionStorage.getItem('ticpin_play_step');
-        if (savedStep === 'billing') setStep('billing');
+        // Only restore step to billing if the current cart exists (not a fresh booking)
+        if (saved) {
+            const savedStep = sessionStorage.getItem('ticpin_play_step');
+            if (savedStep === 'billing') setStep('billing');
+        }
 
         /* const urlParams = new URLSearchParams(window.location.search);
         const cfOrderId = urlParams.get('order_id');

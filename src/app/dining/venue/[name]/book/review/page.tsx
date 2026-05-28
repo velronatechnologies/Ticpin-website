@@ -130,8 +130,12 @@ export default function DiningReviewPage() {
             try { setBilling(JSON.parse(savedBilling)); } catch { /* ignore */ }
         }
 
-        const savedStep = sessionStorage.getItem('ticpin_dining_step');
-        if (savedStep === 'billing') setStep('billing');
+        // Only restore step to billing if the current cart exists (not a fresh booking)
+        const existingCart = sessionStorage.getItem('dining_cart');
+        if (existingCart) {
+            const savedStep = sessionStorage.getItem('ticpin_dining_step');
+            if (savedStep === 'billing') setStep('billing');
+        }
 
         if (session?.id) {
             import('@/lib/api/pass').then(({ passApi }) => {

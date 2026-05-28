@@ -19,17 +19,32 @@ export default function BookingDetailsPage() {
     const session = useUserSession();
     const ticketRef = useRef<HTMLDivElement>(null);
 
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const [booking, setBooking] = useState<any>(null);
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-    const [cancelStep, setCancelStep] = useState<'reason' | 'donation'>('reason');
+    const [cancelStep, setCancelStep] = useState<'reason' | 'donation' | 'success'>('reason');
     const [selectedReason, setSelectedReason] = useState<string | null>(null);
     const [donationChoice, setDonationChoice] = useState<'full_refund' | 'full_donate' | 'split' | null>(null);
     const [splitAmount, setSplitAmount] = useState('');
     const [cancelling, setCancelling] = useState(false);
     const [downloading, setDownloading] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (!hasCheckedSession) return;
+        if (!session) {
+            router.replace('/bookings');
+        }
+    }, [hasCheckedSession, session, router]);
 
     const reasons = [
         "Plan change",
@@ -73,7 +88,7 @@ export default function BookingDetailsPage() {
             });
             const data = await res.json();
             setBooking(data);
-            setIsCancelModalOpen(false);
+            setCancelStep('success');
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Failed to cancel booking');
         } finally {
@@ -138,7 +153,7 @@ export default function BookingDetailsPage() {
         }
     };
 
-    if (loading) {
+    if (loading || !hasCheckedSession || !session) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
@@ -213,7 +228,7 @@ export default function BookingDetailsPage() {
                 </div>
             </header>
 
-            <main className="max-w-[787px] mx-auto px-4 mt-6 md:mt-[45px] pb-0 mb-0 space-y-6">
+            <main className="max-w-[787px] mx-auto px-4 mt-4 md:mt-8 pb-0 mb-0 space-y-6">
 
                 {/* Main Booking Card (Confirm/Cancel state) */}
                 <div className="relative bg-white border-[0.5px] border-[#686868] rounded-[25px] overflow-hidden">
@@ -229,9 +244,9 @@ export default function BookingDetailsPage() {
                         }}
                     />
 
-                    <div className="relative p-7 md:p-10 space-y-8">
+                    <div className="relative pt-4 pb-8 px-7 md:pt-4 md:pb-10 md:px-11 space-y-1">
                         {/* Header Box */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-row items-start justify-between gap-4">
                             <div>
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-[28px] md:text-[34px] font-semibold text-black leading-none">
@@ -247,17 +262,29 @@ export default function BookingDetailsPage() {
                                         )}
                                     </div>
                                 </div>
-                                <p className="text-[17px] font-medium text-[#686868] mt-2">
+                                <p className="text-[17px] font-medium text-[#686868] mt-1">
                                     {isRefunded ? 'Refund has been processed' :
                                         isCancelled ? 'The refund if any will be processed soon' :
                                             isExpired ? 'This booking has passed and is no longer active' :
                                                 'Reach the venue 10 mins before your slot'}
                                 </p>
                             </div>
+
+                            {/* Compact QR Code positioned on the right corner straight to green tick */}
+                            {(booking.type === 'event' || (booking.type !== 'play' && booking.type !== 'dining')) && !isCancelled && !isExpired && !isRefunded && (
+                                <div className="flex flex-col items-center justify-center p-3 bg-[#EBEBEB] border border-[#686868]/30 rounded-[16px] shrink-0 w-[150px] h-[150px] select-none">
+                                    <img
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/qr-verify/${booking.booking_id || booking.id}` : '')}`}
+                                        alt="Ticket QR Code"
+                                        className="w-[110px] h-[110px] object-contain"
+                                    />
+                                    <p className="text-[10px] font-extrabold text-black uppercase tracking-widest text-center mt-2.5" style={{ fontFamily: 'Anek Latin' }}>Scan to Verify</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Divider */}
-                        <div className="h-[0.5px] bg-[#686868] w-full" />
+                        <div className="h-[0.5px] bg-[#686868] w-1/2" />
 
                         {/* Turf Image */}
                         {booking.type === 'play' && (booking.event_image_url || booking.venue_image_url || booking.play_image || booking.image_url) && (
@@ -270,78 +297,74 @@ export default function BookingDetailsPage() {
                             </div>
                         )}
 
-                        <div className="h-[0.5px] bg-[#686868] w-full" />
+                        {/* <div className="h-[0.5px] bg-[#686868] w-full" /> */}
 
                         {/* Booking Details Grid */}
-                        <div className="space-y-6">
-                            {/* Date & Time */}
-                            <div className="space-y-1">
-                                <p className="text-[17px] font-medium text-[#686868] leading-none">Date & Time</p>
-                                <p className="text-[20px] font-medium text-black uppercase">
-                                    {new Date(booking.date || Date.now()).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {booking.time || booking.time_slot}
-                                </p>
-                            </div>
+                        <div className="flex flex-col md:flex-row justify-between items-stretch gap-0 !mt-4">
+                            <div className="flex-grow space-y-4">
+                                {/* Date & Time */}
+                                <div className="space-y-1">
+                                    <p className="text-[17px] font-medium text-[#686868] leading-none">Date & Time</p>
+                                    <p className="text-[20px] font-medium text-black uppercase">
+                                        {new Date(booking.date || Date.now()).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {booking.time || booking.time_slot}
+                                    </p>
+                                </div>
 
-                            <div className="h-[0.5px] bg-[#686868] w-full" />
+                                <div className="h-[0.5px] bg-[#686868] w-full" />
 
-                            {/* Play duration / Capacity */}
-                            <div className="space-y-1">
-                                <p className="text-[17px] font-medium text-[#686868] leading-none">
-                                    {booking.type === 'play' ? 'Play duration' : booking.type === 'dining' ? 'Guests' : 'Quantity'}
-                                </p>
-                                <p className="text-[20px] font-medium text-black uppercase">
-                                    {booking.type === 'play' ? `${booking.duration ? (booking.duration * 30) : '60'} mins` :
-                                        booking.type === 'dining' ? `${booking.guests} Guests` :
-                                            `${booking.tickets?.reduce((acc: number, t: any) => acc + (t.quantity || 0), 0) || 1} tickets`}
-                                </p>
-                            </div>
+                                {/* Play duration / Capacity */}
+                                <div className="space-y-1">
+                                    <p className="text-[17px] font-medium text-[#686868] leading-none">
+                                        {booking.type === 'play' ? 'Play duration' : booking.type === 'dining' ? 'Guests' : 'Quantity'}
+                                    </p>
+                                    <p className="text-[20px] font-medium text-black uppercase">
+                                        {booking.type === 'play' ? `${booking.duration ? (booking.duration * 30) : '60'} mins` :
+                                            booking.type === 'dining' ? `${booking.guests} Guests` :
+                                                `${booking.tickets?.reduce((acc: number, t: any) => acc + (t.quantity || 0), 0) || 1} tickets`}
+                                    </p>
+                                </div>
 
-                            <div className="h-[0.5px] bg-[#686868] w-full" />
+                                <div className="h-[0.5px] bg-[#686868] w-full" />
 
-                            {/* Location */}
-                            <div className="space-y-1 relative pr-12">
-                                <p className="text-[17px] font-medium text-[#686868] leading-none">Location</p>
-                                <p className="text-[20px] font-medium text-black uppercase leading-tight">
-                                    {booking.venue_address || booking.event_location || 'Venue Location'}
-                                </p>
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 bg-zinc-100 rounded-full">
-                                    <Navigation size={20} className="text-black" />
+                                {/* Location */}
+                                <div className="space-y-1 relative pr-12">
+                                    <p className="text-[17px] font-medium text-[#686868] leading-none">Location</p>
+                                    <p className="text-[20px] font-medium text-black uppercase leading-tight">
+                                        {booking.venue_address || booking.event_location || 'Venue Location'}
+                                    </p>
+                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 bg-zinc-100 rounded-full">
+                                        <Navigation size={20} className="text-black" />
+                                    </div>
+                                </div>
+
+                                <div className="h-[0.5px] bg-[#686868] w-full" />
+
+                                {/* Offer */}
+                                <div className="space-y-1">
+                                    <p className="text-[17px] font-medium text-[#686868] leading-none">Discount</p>
+                                    <p className="text-[20px] font-medium text-black uppercase">
+                                        {booking.ticpass_applied ? `Ticpass Applied - ₹${booking.discount_amount} off` :
+                                            booking.offer_id ? `Offer Applied - ₹${booking.discount_amount} off` :
+                                                booking.coupon_code ? `Coupon: ${booking.coupon_code} - ₹${booking.discount_amount} off` :
+                                                    booking.grand_total === 0 ? 'Total Free' :
+                                                        booking.discount_amount > 0 ? `₹${booking.discount_amount} Savings` : 'No offer applied'}
+                                    </p>
+                                </div>
+
+                                {/* Cancel Link */}
+                                <div className="pt-2">
+                                    {!isCancelled && !isExpired && (
+                                        <button
+                                            onClick={openCancelModal}
+                                            className="text-[22px] font-semibold text-[#ED4D1B] border-b-2 border-dotted border-[#ED4D1B] leading-none"
+                                        >
+                                            Cancel booking
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="h-[0.5px] bg-[#686868] w-full" />
 
-                            {/* Offer */}
-                            <div className="space-y-1">
-                                <p className="text-[17px] font-medium text-[#686868] leading-none">Discount</p>
-                                <p className="text-[20px] font-medium text-black uppercase">
-                                    {booking.ticpass_applied ? `Ticpass Applied - ₹${booking.discount_amount} off` :
-                                        booking.offer_id ? `Offer Applied - ₹${booking.discount_amount} off` :
-                                            booking.coupon_code ? `Coupon: ${booking.coupon_code} - ₹${booking.discount_amount} off` :
-                                                booking.grand_total === 0 ? 'Total Free' :
-                                                    booking.discount_amount > 0 ? `₹${booking.discount_amount} Savings` : 'No offer applied'}
-                                </p>
-                            </div>
-
-                            {/* Cancel Link / Download Link */}
-                            <div className="pt-4 flex flex-wrap gap-6 items-center">
-                                {!isCancelled && !isExpired && (
-                                    <button
-                                        onClick={openCancelModal}
-                                        className="text-[22px] font-semibold text-[#ED4D1B] underline underline-offset-4 decoration-1 decoration-[#ED4D1B]"
-                                    >
-                                        Cancel booking
-                                    </button>
-                                )}
-                                <button
-                                    onClick={handleDownloadBill}
-                                    disabled={downloading}
-                                    className="text-[22px] font-semibold text-black underline underline-offset-4 decoration-1 decoration-black flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {downloading ? 'Downloading...' : 'Download Ticket'}
-                                    <Download size={20} />
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -566,7 +589,7 @@ export default function BookingDetailsPage() {
                                         </button>
                                     </div>
                                 </>
-                            ) : (
+                            ) : cancelStep === 'donation' ? (
                                 <>
                                     {/* Modal Header (Step 2) */}
                                     <div className="flex items-center justify-between p-6 md:p-8">
@@ -730,6 +753,84 @@ export default function BookingDetailsPage() {
                                             ) : (
                                                 'Submit'
                                             )}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* Modal Header (Success Step) */}
+                                    <div className="flex items-center justify-between p-6 md:p-8">
+                                        <h2 className="text-[24px] md:text-[26px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Cancellation Request Successful</h2>
+                                        <button
+                                            onClick={() => {
+                                                setIsCancelModalOpen(false);
+                                                setCancelStep('reason');
+                                            }}
+                                            className="text-black hover:opacity-70 cursor-pointer"
+                                        >
+                                            <X size={28} strokeWidth={2.5} />
+                                        </button>
+                                    </div>
+
+                                    {/* Divider */}
+                                    <div className="h-[0.5px] border-t border-[#686868]/20 w-full" />
+
+                                    {/* Modal Body (Success Step) */}
+                                    <div className="p-6 md:p-8 flex flex-col items-center text-center space-y-6 animate-in zoom-in-95 duration-500">
+                                        {/* Elegant Refund Success Icon */}
+                                        <div className="w-[76px] h-[76px] bg-[#EAFDF1] rounded-full flex items-center justify-center border border-[#65B54E]/30 shrink-0">
+                                            <CheckCircle className="w-[44px] h-[44px] text-[#0AC655]" />
+                                        </div>
+
+                                        <div className="space-y-3 max-w-[480px]">
+                                            <h3 className="text-[22px] font-bold text-[#0AC655] uppercase tracking-wider" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>Refund Initiated!</h3>
+                                            <p className="text-[16px] text-[#686868] font-medium leading-relaxed" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                Once cancellation is done, the refund amount will be credited back to your original payment method within <span className="font-bold text-black text-[17px]">12-24 hours</span>.
+                                            </p>
+                                        </div>
+
+                                        {/* Premium Styled Refund Summary Card */}
+                                        <div 
+                                            className="w-full border-[0.5px] border-[#686868]/30 rounded-[20px] p-5 space-y-3.5 shadow-sm"
+                                            style={{ background: 'radial-gradient(52.97% 102.98% at 0% -7.55%, #EAFDF1 0%, #FFFFFF 100%)' }}
+                                        >
+                                            <div className="flex justify-between items-center text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                <span>Total booking amount</span>
+                                                <span className="text-black font-semibold">₹{bookingTotal.toLocaleString('en-IN')}</span>
+                                            </div>
+                                            {donationChoice === 'full_donate' ? (
+                                                <div className="flex justify-between items-center text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                    <span>Donation to NGO partner</span>
+                                                    <span className="text-[#DB5244] font-semibold">₹{bookingTotal.toLocaleString('en-IN')}</span>
+                                                </div>
+                                            ) : donationChoice === 'split' ? (
+                                                <>
+                                                    <div className="flex justify-between items-center text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                        <span>Donation to NGO partner</span>
+                                                        <span className="text-[#DB5244] font-semibold">₹{(bookingTotal - (parseFloat(splitAmount) || 0)).toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[16px] font-semibold text-[#0AC655] pt-3.5 border-t border-dashed border-[#AEAEAE]/50" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                        <span>Estimated Refund</span>
+                                                        <span>₹{Math.max(0, parseFloat(splitAmount) || 0).toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="flex justify-between items-center text-[16px] font-semibold text-[#0AC655] pt-3.5 border-t border-dashed border-[#AEAEAE]/50" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                                    <span>Estimated Refund</span>
+                                                    <span>₹{bookingTotal.toLocaleString('en-IN')}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setIsCancelModalOpen(false);
+                                                setCancelStep('reason');
+                                            }}
+                                            className="w-full h-[48px] bg-black text-white rounded-[10px] text-[18px] font-semibold hover:bg-zinc-800 transition-all flex items-center justify-center shadow-md shadow-black/10 cursor-pointer uppercase tracking-wider"
+                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
+                                        >
+                                            Done
                                         </button>
                                     </div>
                                 </>

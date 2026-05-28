@@ -16,16 +16,33 @@ export default function PassUsagePage() {
     const session = useUserSession();
     const [pass, setPass] = useState<TicpinPass | null>(null);
     const [loading, setLoading] = useState(true);
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
+    // Session check on mount (SSR-safe)
     useEffect(() => {
-        if (session?.id) {
-            passApi.getLatestPass(session.id)
-                .then(setPass)
-                .finally(() => setLoading(false));
-        } else if (session === null) {
-            router.push('/');
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!hasCheckedSession) return;
+        if (!session) {
+            router.replace('/');
+            return;
         }
-    }, [session, router]);
+    }, [hasCheckedSession, session, router]);
+
+    // Fetch pass data
+    useEffect(() => {
+        if (!hasCheckedSession || !session?.id) return;
+        
+        passApi.getLatestPass(session.id)
+            .then(setPass)
+            .finally(() => setLoading(false));
+    }, [session?.id, hasCheckedSession]);
 
     if (loading) {
         return (

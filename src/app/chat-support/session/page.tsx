@@ -37,6 +37,7 @@ const ChatSessionContent = () => {
     const userSession = useUserSession();
     const organizerSession = getOrganizerSession();
     
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState("");
     const [loading, setLoading] = useState(true);
@@ -48,12 +49,30 @@ const ChatSessionContent = () => {
     const userId = organizerSession?.id || userSession?.id;
     const userEmail = organizerSession?.email || userSession?.email || "";
 
-    if (!userId) {
-        return <div className="p-6 text-red-500">No valid session found. Please login again.</div>;
-    }
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!hasCheckedSession) return;
+        if (!userId) {
+            router.replace('/chat-support');
+            return;
+        }
+    }, [hasCheckedSession, userId, router]);
 
     // Fetch messages and session - ensure users can only access their own sessions
     useEffect(() => {
+        if (!hasCheckedSession) return;
+        if (!userId) {
+            setLoading(false);
+            return;
+        }
+
         const fetchData = async () => {
             if (!sessionId) {
                 setLoading(false);
@@ -186,6 +205,18 @@ const ChatSessionContent = () => {
         const date = new Date(dateString);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
+
+    if (!hasCheckedSession) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="animate-pulse text-[#5331EA]">Loading...</div>
+            </div>
+        );
+    }
+
+    if (!userId) {
+        return <div className="p-6 text-red-500">No valid session found. Please login again.</div>;
+    }
 
     if (loading) {
         return (

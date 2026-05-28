@@ -9,6 +9,7 @@ import Image from 'next/image';
 export default function ProfileSettings() {
     const router = useRouter();
     const session = useUserSession();
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [formData, setFormData] = useState({
@@ -17,6 +18,23 @@ export default function ProfileSettings() {
         email: '',
         profilePhoto: ''
     });
+
+    // Session check on mount (SSR-safe)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!hasCheckedSession) return;
+        if (!session) {
+            router.replace('/');
+            return;
+        }
+    }, [hasCheckedSession, session, router]);
 
     useEffect(() => {
         if (session) {

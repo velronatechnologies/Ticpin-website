@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export const runtime = "edge";
 
-const GROQ_API_KEY = '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';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // System prompt for Ticpin assistant
 const SYSTEM_PROMPT = `You are "Ticpin AI" - the ultimate premium expert guide for the Ticpin booking platform.
@@ -64,8 +65,20 @@ Context data from our current database:`;
 
 export async function POST(request: NextRequest) {
     try {
+        // Basic session check to prevent unauthorized use of the API
+        const sessionCookie = cookies().get('ticpin_user_session');
+        const organizerCookie = cookies().get('ticpin_organizer_session');
+        
+        if (!sessionCookie && !organizerCookie) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await request.json();
         const { message, conversationHistory, sessionId, userData } = body;
+
+        if (!GROQ_API_KEY) {
+            return NextResponse.json({ error: 'Groq API Key not configured' }, { status: 500 });
+        }
 
         // Fetch current data from all collections - use the correct backend URL
         const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:9000';

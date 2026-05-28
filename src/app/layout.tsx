@@ -8,7 +8,6 @@ import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import Providers from "@/components/providers/Providers";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import FloatingChatWidget from "@/components/FloatingChatWidget";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -85,7 +84,6 @@ export default function RootLayout({
             <ErrorBoundary>
               <NavbarWrapper />
               {children}
-              <FloatingChatWidget />
             </ErrorBoundary>
           </Providers>
         </ToastProvider>
