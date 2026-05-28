@@ -282,17 +282,19 @@ function AccountSetupContent() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                                     <div className="flex flex-col gap-3">
                                         <label className="text-[16px] font-medium text-[#686868]">
-                                            PAN card number
+                                            PAN Number
                                         </label>
                                         <input type="text" placeholder="ABCDE1234F" value={pan}
+                                            name="panNumber" autoComplete="off"
                                             onChange={e => setPan(e.target.value.toUpperCase())} disabled={prefilled || panVerified}
                                             className={`w-full h-12 px-4 border rounded-[14px] text-[15px] font-medium focus:outline-none transition-colors placeholder:text-zinc-400 ${(prefilled || panVerified) ? 'border-zinc-200 bg-zinc-100 text-zinc-600 cursor-not-allowed' : 'border-[#AEAEAE] text-zinc-800 focus:border-zinc-500'}`} />
                                     </div>
                                     <div className="flex flex-col gap-3">
                                         <label className="text-[16px] font-medium text-[#686868]">
-                                            Name on PAN card
+                                            Name (as on PAN)
                                         </label>
-                                        <input type="text" placeholder="Name as on PAN card" value={panName}
+                                        <input type="text" placeholder="Name as on PAN" value={panName}
+                                            name="panName" autoComplete="off"
                                             onChange={e => setPanName(e.target.value)} disabled={prefilled || panVerified}
                                             className={`w-full h-12 px-4 border rounded-[14px] text-[15px] font-medium focus:outline-none transition-colors placeholder:text-zinc-400 ${(prefilled || panVerified) ? 'border-zinc-200 bg-zinc-100 text-zinc-600 cursor-not-allowed' : 'border-[#AEAEAE] text-zinc-800 focus:border-zinc-500'}`} />
                                     </div>
