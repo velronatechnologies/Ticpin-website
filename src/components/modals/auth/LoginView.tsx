@@ -105,6 +105,7 @@ const LoginView: React.FC<LoginViewProps> = ({
                                     <span className="text-zinc-400 font-medium cursor-pointer hover:text-zinc-600 transition-colors">Privacy Policy</span>
                                 </p>
                             </div>
+                            <div id="recaptcha-container"></div>
                         </div>
                     </>
                 ) : (

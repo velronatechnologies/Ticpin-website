@@ -17,8 +17,7 @@ import { useIdentityStore } from '@/store/useIdentityStore';
 import { useProfile, useUpdateProfile, useUploadPhoto } from '@/lib/hooks/useProfile';
 import { useUserBookings, useCancelBooking } from '@/lib/hooks/useBookings';
 import { getOrganizerSession } from '@/lib/auth/organizer';
-
-
+import { auth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from '@/lib/firebase';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -37,6 +36,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+    const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
     
     // TanStack Query Hooks
     const { data: profile, isLoading: isProfileLoading } = useProfile(userSession?.id);
@@ -129,37 +130,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             setError('Please enter a valid 10-digit number');
             return;
         }
+
+        if (!auth) {
+            setError('Authentication is currently unavailable');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
-        // Start background request immediately
-        const apiCall = fetch('/backend/api/user/send-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: number, category: 'events' }),
-        }).then(async (res) => {
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to send OTP');
-            }
-            return data;
-        });
-
-        // Set up optimistic timeout of 1.5s
-        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1500));
-
         try {
-            await timeoutPromise;
-            setView('otp');
-            setLoading(false);
+            // Initialize Recaptcha if not already initialized
+            if (!recaptchaVerifierRef.current) {
+                recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    size: 'invisible',
+                    callback: () => {
+                        console.log('recaptcha solved');
+                    }
+                });
+            }
 
-            // Await or catch error in background
-            apiCall.catch((err) => {
-                setError(err.message || 'Failed to send OTP. Reverting...');
-                setView('number');
-            });
+            const phoneNumber = `+91${number}`;
+            const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifierRef.current);
+            setConfirmationResult(result);
+            setView('otp');
         } catch (err: any) {
+            console.error("Firebase Auth Error:", err);
             setError(err.message || 'Failed to send OTP. Please try again.');
+        } finally {
             setLoading(false);
         }
     };
@@ -201,12 +199,25 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             return;
         }
 
+        if (!confirmationResult) {
+            setError('Session expired. Please request a new OTP.');
+            setLoading(false);
+            return;
+        }
+
         try {
+            // 1. Verify OTP with Firebase
+            const result = await confirmationResult.confirm(otpCode);
+            
+            // 2. Get Firebase ID Token
+            const token = await result.user.getIdToken();
+
+            // 3. Send token to backend for session creation
             const res = await fetch('/backend/api/user/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ phone: number, otp: otpCode }),
+                body: JSON.stringify({ token: token }),
             });
             
             const data = await res.json();
@@ -225,8 +236,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             } else {
                 setView('profile');
             }
-        } catch (err) {
-            setError('Verification failed. Please try again.');
+        } catch (err: any) {
+            console.error("Verification Error:", err);
+            setError(err.message || 'Verification failed. Please try again.');
         } finally {
             setLoading(false);
         }
