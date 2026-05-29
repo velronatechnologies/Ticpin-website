@@ -38,7 +38,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-    
+
     // TanStack Query Hooks
     const { data: profile, isLoading: isProfileLoading } = useProfile(userSession?.id);
     const { data: bookings = [], isLoading: bookingsLoading } = useUserBookings(profile?.email, userSession?.phone, userSession?.id);
@@ -56,7 +56,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             import('@/lib/api/organizer').then(({ organizerApi }) => {
                 organizerApi.getProfile(orgSession.id).then(p => {
                     if (p) setOrganizerProfile(p);
-                }).catch(() => {});
+                }).catch(() => { });
             });
         }
     }, [view]);
@@ -103,6 +103,50 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         }
     }, [userSession, isOpen, initialView, onClose]);
 
+    // Preload reCAPTCHA on modal open/number view for instant 1-3s OTP speeds
+    useEffect(() => {
+        if (!isOpen || !auth || view !== 'number') return;
+
+        const initRecaptcha = async () => {
+            try {
+                if (!(window as any).recaptchaVerifier) {
+                    let container = document.getElementById('recaptcha-container');
+                    if (!container) {
+                        container = document.createElement('div');
+                        container.id = 'recaptcha-container';
+                        document.body.appendChild(container);
+                    }
+
+                    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                        size: 'invisible',
+                        callback: (response: any) => {
+                            console.log('reCAPTCHA solved successfully');
+                        },
+                        'expired-callback': () => {
+                            console.log('reCAPTCHA expired');
+                        }
+                    });
+
+                    // Render immediately to warm up Google's recaptcha iframe in the background
+                    await verifier.render();
+                    (window as any).recaptchaVerifier = verifier;
+                    console.log('reCAPTCHA preloaded and rendered in background');
+                }
+            } catch (err) {
+                console.error("reCAPTCHA Preload Error:", err);
+            }
+        };
+
+        initRecaptcha();
+    }, [isOpen, view]);
+
+    // Warm up the Vercel Serverless Go backend on modal open to eliminate cold starts
+    useEffect(() => {
+        if (isOpen) {
+            fetch('/backend/api/health').catch(() => {});
+        }
+    }, [isOpen]);
+
     const handleUpdateProfile = async () => {
         if (!userSession?.id) return;
         updateProfileMutation.mutate({
@@ -140,10 +184,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setError('');
 
         try {
-            // Get or create a persistent invisible RecaptchaVerifier
+            // Retrieve preloaded invisible RecaptchaVerifier reference
             let verifier = (window as any).recaptchaVerifier;
+            
+            // Safe fallback if preloading failed or wasn't completed in time
             if (!verifier) {
-                // Ensure recaptcha container exists
                 let container = document.getElementById("recaptcha-container");
                 if (!container) {
                     container = document.createElement("div");
@@ -160,6 +205,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                         console.log('reCAPTCHA expired');
                     }
                 });
+                await verifier.render();
                 (window as any).recaptchaVerifier = verifier;
             }
 
@@ -172,23 +218,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             setView('otp');
         } catch (err: any) {
             console.error("Firebase Auth Error:", err);
-            
-            const errCode = err.code || '';
-            const errMessage = err.message || '';
-
-            if (errCode === 'auth/too-many-requests' || errMessage.includes('too-many-requests')) {
-                setError(`Too many requests. Please wait a minute before requesting another. (Error: ${errCode || 'too-many-requests'})`);
-            } else if (errCode === 'auth/invalid-phone-number' || errMessage.includes('invalid-phone-number')) {
-                setError(`Please enter a valid 10-digit mobile number. (Error: ${errCode || 'invalid-phone-number'})`);
-            } else if (errCode === 'auth/quota-exceeded' || errMessage.includes('quota-exceeded')) {
-                setError(`SMS limit reached for today. Please try again later. (Error: ${errCode || 'quota-exceeded'})`);
-            } else if (errMessage.includes('Hostname match not found')) {
-                setError(`Domain not whitelisted. Please check your Google Cloud reCAPTCHA settings. (Error: Hostname match not found)`);
-            } else if (errCode === 'auth/invalid-app-credential') {
-                setError(`Invalid application credentials. Please contact support. (Error: ${errCode})`);
-            } else {
-                setError(`Failed to send verification code. Please try again. Details: ${errMessage || errCode || 'Unknown error'}`);
-            }
+            setError(getFirebaseErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -240,7 +270,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         try {
             // 1. Verify OTP with Firebase
             const result = await confirmationResult.confirm(otpCode);
-            
+
             // 2. Get Firebase ID Token
             const token = await result.user.getIdToken();
 
@@ -251,14 +281,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 credentials: 'include',
                 body: JSON.stringify({ token: token }),
             });
-            
+
             const data = await res.json();
             if (!res.ok) {
                 setError(data.error || 'Verification failed');
                 setLoading(false);
                 return;
             }
-            
+
             const userData = data.user || data;
             loginUser({ id: userData.id || userData._id || number, phone: number, name: userData.name || '' });
 
@@ -270,7 +300,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             }
         } catch (err: any) {
             console.error("Verification Error:", err);
-            setError(err.message || 'Verification failed. Please try again.');
+            setError(getFirebaseErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -301,7 +331,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                         otpRefs={otpRefs} loading={loading} error={error}
                         handleSendOtp={handleLogin} handleVerifyOtp={handleOtpSubmit} handleResend={handleLogin}
                         onClose={onClose}
-                        onNumberChange={() => { setView('number'); setOtp(['', '', '', '', '', '']); setError(''); }}
+                        onNumberChange={() => { 
+                            setView('number'); 
+                            setOtp(['', '', '', '', '', '']); 
+                            setError(''); 
+                            // Safely clear old recaptcha to avoid duplicate/stale state
+                            try {
+                                const verifier = (window as any).recaptchaVerifier;
+                                if (verifier) {
+                                    if (typeof verifier.clear === 'function') {
+                                        verifier.clear();
+                                    }
+                                    (window as any).recaptchaVerifier = null;
+                                }
+                            } catch (e) {}
+                        }}
                     />
                 ) : (
                     <div className="min-h-full flex flex-col bg-[#F6F6F6] animate-in slide-in-from-right duration-500">
@@ -354,15 +398,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                                         onViewDiningBookings={() => { router.push('/profile/bookings/dining'); onClose(); }}
                                         onViewEventTickets={() => { router.push('/profile/bookings/events'); onClose(); }}
                                         onViewPlayBookings={() => { router.push('/profile/bookings/play'); onClose(); }}
-                                        onEditProfile={() => { 
-                                            if (userSession?.id) { 
-                                                router.push('/profile/edit'); 
-                                                onClose(); 
+                                        onEditProfile={() => {
+                                            if (userSession?.id) {
+                                                router.push('/profile/edit');
+                                                onClose();
                                             } else if (organizerSession?.id) {
                                                 router.push('/organizer/profile');
                                                 onClose();
                                             }
-                                        } }
+                                        }}
                                         onLogout={() => setShowLogoutConfirm(true)}
                                         onClose={onClose}
                                     />
@@ -381,3 +425,103 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         </div>
     );
 }
+
+// Reusable Ultimate Production Error Handler for Firebase Auth
+const getFirebaseErrorMessage = (err: any): string => {
+    const code = err?.code || '';
+    const message = err?.message || '';
+
+    switch (code) {
+        case 'auth/invalid-phone-number':
+            return 'Please enter a valid mobile number.';
+        case 'auth/missing-phone-number':
+            return 'Mobile number is required.';
+        case 'auth/quota-exceeded':
+            return 'SMS limit reached. Please try again later.';
+        case 'auth/too-many-requests':
+            return 'Too many attempts. Please wait before trying again.';
+        case 'auth/captcha-check-failed':
+            return 'Security verification failed. Please refresh and try again.';
+        case 'auth/invalid-app-credential':
+            return 'Verification service unavailable. Please try again later.';
+        case 'auth/missing-app-credential':
+            return 'Verification failed. Please refresh the page.';
+        case 'auth/app-not-authorized':
+            return 'Application is not authorized for authentication.';
+        case 'auth/web-storage-unsupported':
+            return 'Your browser does not support secure login.';
+        case 'auth/network-request-failed':
+            return 'Network error. Please check your internet connection.';
+        case 'auth/popup-blocked':
+            return 'Popup blocked by browser. Please allow popups.';
+        case 'auth/popup-closed-by-user':
+            return 'Authentication was cancelled.';
+        case 'auth/timeout':
+            return 'Request timed out. Please try again.';
+        case 'auth/internal-error':
+            return 'Something went wrong. Please try again later.';
+        case 'auth/operation-not-allowed':
+            return 'Phone authentication is currently disabled.';
+        case 'auth/user-disabled':
+            return 'This account has been disabled.';
+        case 'auth/session-expired':
+        case 'auth/code-expired':
+            return 'OTP expired. Please request a new one.';
+        case 'auth/invalid-verification-code':
+            return 'Incorrect OTP entered.';
+        case 'auth/invalid-verification-id':
+            return 'Verification session expired. Please retry.';
+        case 'auth/missing-verification-code':
+            return 'Please enter the OTP code.';
+        case 'auth/missing-verification-id':
+            return 'Verification session missing. Please retry login.';
+        case 'auth/credential-already-in-use':
+            return 'This mobile number is already linked to another account.';
+        case 'auth/user-token-expired':
+            return 'Your session expired. Please login again.';
+        case 'auth/requires-recent-login':
+            return 'Please login again to continue.';
+        case 'auth/unauthorized-domain':
+            return 'This domain is not authorized for login.';
+        case 'auth/invalid-api-key':
+            return 'Authentication configuration error.';
+        case 'auth/api-key-not-valid':
+            return 'Authentication service unavailable.';
+        case 'auth/argument-error':
+            return 'Invalid authentication request.';
+        case 'auth/missing-client-type':
+            return 'Authentication configuration missing.';
+        case 'auth/recaptcha-not-enabled':
+            return 'Security verification unavailable.';
+        case 'auth/invalid-recaptcha-token':
+            return 'Security verification failed. Please retry.';
+        case 'auth/missing-recaptcha-token':
+            return 'Security verification missing.';
+        case 'auth/invalid-recaptcha-action':
+            return 'Invalid security verification action.';
+        case 'auth/multi-factor-auth-required':
+            return 'Additional verification required.';
+        case 'auth/maximum-second-factor-count-exceeded':
+            return 'Maximum verification methods reached.';
+        case 'auth/unsupported-first-factor':
+            return 'Unsupported login method.';
+        case 'auth/email-already-in-use':
+            return 'This email is already registered.';
+        case 'auth/invalid-email':
+            return 'Please enter a valid email address.';
+        case 'auth/user-not-found':
+            return 'Account not found.';
+        case 'auth/wrong-password':
+            return 'Incorrect password entered.';
+        case 'auth/weak-password':
+            return 'Password is too weak.';
+        default:
+            if (message.includes('Hostname match not found')) {
+                return 'Login service configuration issue.';
+            }
+            if (message.includes('reCAPTCHA')) {
+                return 'Security verification failed. Please retry.';
+            }
+            return err?.message || 'Authentication failed. Please try again.';
+    }
+};

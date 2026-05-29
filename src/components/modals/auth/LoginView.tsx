@@ -45,6 +45,9 @@ const LoginView: React.FC<LoginViewProps> = ({
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
+            {/* Permanent recaptcha-container so it never gets unmounted */}
+            <div id="recaptcha-container"></div>
+
             {/* Banner Section */}
             <div className="relative h-[320px] flex flex-col items-center justify-center p-0 overflow-hidden shrink-0">
                 <Image
@@ -105,7 +108,6 @@ const LoginView: React.FC<LoginViewProps> = ({
                                     <span className="text-zinc-400 font-medium cursor-pointer hover:text-zinc-600 transition-colors">Privacy Policy</span>
                                 </p>
                             </div>
-                            <div id="recaptcha-container"></div>
                         </div>
                     </>
                 ) : (
