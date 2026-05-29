@@ -140,15 +140,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setError('');
 
         try {
-            // Clean up old verifier if exists to avoid "container already has content" errors
+            // 1. Clean up stale reCAPTCHA instances to avoid "already rendered" errors
             if (recaptchaVerifierRef.current) {
                 try {
                     recaptchaVerifierRef.current.clear();
-                } catch (e) {}
+                } catch (e) {
+                    console.error("Error clearing verifier:", e);
+                }
                 recaptchaVerifierRef.current = null;
             }
 
-            // Initialize Recaptcha
+            // Force reset the container element if necessary
+            const container = document.getElementById("recaptcha-container");
+            if (container) {
+                container.innerHTML = ""; 
+            }
+
+            // 2. Initialize a fresh verifier instance
             const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
                 size: 'invisible',
                 callback: (response: any) => {
@@ -156,24 +164,35 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 },
                 'expired-callback': () => {
                     setError('reCAPTCHA expired. Please try again.');
+                    if (recaptchaVerifierRef.current) {
+                        recaptchaVerifierRef.current.clear();
+                        recaptchaVerifierRef.current = null;
+                    }
                 }
             });
             
             recaptchaVerifierRef.current = verifier;
 
             const phoneNumber = `+91${number}`;
+            // 3. Attempt to sign in
             const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
             setConfirmationResult(result);
             setView('otp');
         } catch (err: any) {
             console.error("Firebase Auth Error:", err);
+            
+            // 4. CRITICAL: Clear verifier on error so the next attempt starts fresh
             if (recaptchaVerifierRef.current) {
-                try { recaptchaVerifierRef.current.clear(); } catch(e) {}
+                try {
+                    recaptchaVerifierRef.current.clear();
+                } catch (e) {}
                 recaptchaVerifierRef.current = null;
             }
-            // Better error handling for reCAPTCHA issues
-            if (err.code === 'auth/invalid-app-credential') {
-                setError('Authentication failed. The site key might be invalid or not whitelisted.');
+
+            if (err.message?.includes('Hostname match not found')) {
+                setError('Domain not whitelisted. Please check your Google Cloud reCAPTCHA settings.');
+            } else if (err.code === 'auth/invalid-app-credential') {
+                setError('Invalid credentials. The site key might be restricted.');
             } else {
                 setError(err.message || 'Failed to send OTP. Please try again.');
             }
