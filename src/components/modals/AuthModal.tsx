@@ -140,61 +140,54 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setError('');
 
         try {
-            // 1. Clean up stale reCAPTCHA instances to avoid "already rendered" errors
-            if (recaptchaVerifierRef.current) {
-                try {
-                    recaptchaVerifierRef.current.clear();
-                } catch (e) {
-                    console.error("Error clearing verifier:", e);
+            // Get or create a persistent invisible RecaptchaVerifier
+            let verifier = (window as any).recaptchaVerifier;
+            if (!verifier) {
+                // Ensure recaptcha container exists
+                let container = document.getElementById("recaptcha-container");
+                if (!container) {
+                    container = document.createElement("div");
+                    container.id = "recaptcha-container";
+                    document.body.appendChild(container);
                 }
-                recaptchaVerifierRef.current = null;
-            }
 
-            // Force reset the container element if necessary
-            const container = document.getElementById("recaptcha-container");
-            if (container) {
-                container.innerHTML = ""; 
-            }
-
-            // 2. Initialize a fresh verifier instance
-            const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                size: 'invisible',
-                callback: (response: any) => {
-                    console.log('recaptcha solved');
-                },
-                'expired-callback': () => {
-                    setError('reCAPTCHA expired. Please try again.');
-                    if (recaptchaVerifierRef.current) {
-                        recaptchaVerifierRef.current.clear();
-                        recaptchaVerifierRef.current = null;
+                verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    size: 'invisible',
+                    callback: (response: any) => {
+                        console.log('reCAPTCHA solved successfully');
+                    },
+                    'expired-callback': () => {
+                        console.log('reCAPTCHA expired');
                     }
-                }
-            });
-            
+                });
+                (window as any).recaptchaVerifier = verifier;
+            }
+
             recaptchaVerifierRef.current = verifier;
 
             const phoneNumber = `+91${number}`;
-            // 3. Attempt to sign in
+            // Attempt to sign in
             const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
             setConfirmationResult(result);
             setView('otp');
         } catch (err: any) {
             console.error("Firebase Auth Error:", err);
             
-            // 4. CRITICAL: Clear verifier on error so the next attempt starts fresh
-            if (recaptchaVerifierRef.current) {
-                try {
-                    recaptchaVerifierRef.current.clear();
-                } catch (e) {}
-                recaptchaVerifierRef.current = null;
-            }
+            const errCode = err.code || '';
+            const errMessage = err.message || '';
 
-            if (err.message?.includes('Hostname match not found')) {
+            if (errCode === 'auth/too-many-requests' || errMessage.includes('too-many-requests')) {
+                setError('We have sent a verification code to your number. Please wait a minute before requesting another.');
+            } else if (errCode === 'auth/invalid-phone-number' || errMessage.includes('invalid-phone-number')) {
+                setError('Please enter a valid 10-digit mobile number.');
+            } else if (errCode === 'auth/quota-exceeded' || errMessage.includes('quota-exceeded')) {
+                setError('SMS limit reached for today. Please try again later.');
+            } else if (errMessage.includes('Hostname match not found')) {
                 setError('Domain not whitelisted. Please check your Google Cloud reCAPTCHA settings.');
-            } else if (err.code === 'auth/invalid-app-credential') {
-                setError('Invalid credentials. The site key might be restricted.');
+            } else if (errCode === 'auth/invalid-app-credential') {
+                setError('Invalid application credentials. Please contact support.');
             } else {
-                setError(err.message || 'Failed to send OTP. Please try again.');
+                setError('Failed to send verification code. Please try again.');
             }
         } finally {
             setLoading(false);
