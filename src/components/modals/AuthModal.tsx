@@ -177,17 +177,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             const errMessage = err.message || '';
 
             if (errCode === 'auth/too-many-requests' || errMessage.includes('too-many-requests')) {
-                setError('We have sent a verification code to your number. Please wait a minute before requesting another.');
+                setError(`Too many requests. Please wait a minute before requesting another. (Error: ${errCode || 'too-many-requests'})`);
             } else if (errCode === 'auth/invalid-phone-number' || errMessage.includes('invalid-phone-number')) {
-                setError('Please enter a valid 10-digit mobile number.');
+                setError(`Please enter a valid 10-digit mobile number. (Error: ${errCode || 'invalid-phone-number'})`);
             } else if (errCode === 'auth/quota-exceeded' || errMessage.includes('quota-exceeded')) {
-                setError('SMS limit reached for today. Please try again later.');
+                setError(`SMS limit reached for today. Please try again later. (Error: ${errCode || 'quota-exceeded'})`);
             } else if (errMessage.includes('Hostname match not found')) {
-                setError('Domain not whitelisted. Please check your Google Cloud reCAPTCHA settings.');
+                setError(`Domain not whitelisted. Please check your Google Cloud reCAPTCHA settings. (Error: Hostname match not found)`);
             } else if (errCode === 'auth/invalid-app-credential') {
-                setError('Invalid application credentials. Please contact support.');
+                setError(`Invalid application credentials. Please contact support. (Error: ${errCode})`);
             } else {
-                setError('Failed to send verification code. Please try again.');
+                setError(`Failed to send verification code. Please try again. Details: ${errMessage || errCode || 'Unknown error'}`);
             }
         } finally {
             setLoading(false);
