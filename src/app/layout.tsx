@@ -77,7 +77,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-        <script src="https://www.google.com/recaptcha/enterprise.js?render=6Ld05QEtAAAAAK20kaVHO-t9dagY3hG879PluY8c" async defer></script>
       </head>
       <body className={`${anekLatin.variable} ${inter.variable} ${anekTamil.variable} ${anekTamilCondensed.variable} font-sans antialiased text-black`}>
         <ToastProvider>

@@ -140,33 +140,43 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setError('');
 
         try {
-            // Initialize Recaptcha if not already initialized
-            if (!recaptchaVerifierRef.current) {
-                recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    size: 'invisible',
-                    callback: () => {
-                        console.log('recaptcha solved');
-                    },
-                    'expired-callback': () => {
-                        setError('reCAPTCHA expired. Please try again.');
-                        if (recaptchaVerifierRef.current) recaptchaVerifierRef.current.clear();
-                        recaptchaVerifierRef.current = null;
-                    }
-                });
+            // Clean up old verifier if exists to avoid "container already has content" errors
+            if (recaptchaVerifierRef.current) {
+                try {
+                    recaptchaVerifierRef.current.clear();
+                } catch (e) {}
+                recaptchaVerifierRef.current = null;
             }
 
+            // Initialize Recaptcha
+            const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                size: 'invisible',
+                callback: (response: any) => {
+                    console.log('recaptcha solved');
+                },
+                'expired-callback': () => {
+                    setError('reCAPTCHA expired. Please try again.');
+                }
+            });
+            
+            recaptchaVerifierRef.current = verifier;
+
             const phoneNumber = `+91${number}`;
-            const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifierRef.current);
+            const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
             setConfirmationResult(result);
             setView('otp');
         } catch (err: any) {
             console.error("Firebase Auth Error:", err);
-            // Reset reCAPTCHA on error as per documentation
             if (recaptchaVerifierRef.current) {
-                recaptchaVerifierRef.current.clear();
+                try { recaptchaVerifierRef.current.clear(); } catch(e) {}
                 recaptchaVerifierRef.current = null;
             }
-            setError(err.message || 'Failed to send OTP. Please try again.');
+            // Better error handling for reCAPTCHA issues
+            if (err.code === 'auth/invalid-app-credential') {
+                setError('Authentication failed. The site key might be invalid or not whitelisted.');
+            } else {
+                setError(err.message || 'Failed to send OTP. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
