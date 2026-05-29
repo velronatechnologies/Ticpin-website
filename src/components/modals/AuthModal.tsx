@@ -146,6 +146,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                     size: 'invisible',
                     callback: () => {
                         console.log('recaptcha solved');
+                    },
+                    'expired-callback': () => {
+                        setError('reCAPTCHA expired. Please try again.');
+                        if (recaptchaVerifierRef.current) recaptchaVerifierRef.current.clear();
+                        recaptchaVerifierRef.current = null;
                     }
                 });
             }
@@ -156,6 +161,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             setView('otp');
         } catch (err: any) {
             console.error("Firebase Auth Error:", err);
+            // Reset reCAPTCHA on error as per documentation
+            if (recaptchaVerifierRef.current) {
+                recaptchaVerifierRef.current.clear();
+                recaptchaVerifierRef.current = null;
+            }
             setError(err.message || 'Failed to send OTP. Please try again.');
         } finally {
             setLoading(false);
