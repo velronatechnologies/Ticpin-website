@@ -129,6 +129,7 @@ export default function ReviewBookingPage() {
     const hasPrefilledRef = useRef(false);
     const timerWarningShownRef = useRef(false);
     const razorpayRef = useRef<any>(null);
+    const isBookingCompletedRef = useRef(false);
 
     const reservationStore = useReservationStore();
     const [timeRemaining, setTimeRemaining] = useState<number>(0);
@@ -137,6 +138,10 @@ export default function ReviewBookingPage() {
     // Validate reservation on mount
     useEffect(() => {
         const validateReservation = async () => {
+            if (isBookingCompletedRef.current) {
+                setIsValidating(false);
+                return;
+            }
             if (!session?.id) {
                 setIsValidating(false);
                 return;
@@ -738,6 +743,7 @@ export default function ReviewBookingPage() {
                 });
             }
             setBookingId(result.booking_id);
+            isBookingCompletedRef.current = true;
             reservationStore.clearReservation();
             sessionStorage.removeItem('ticpin_cart');
             sessionStorage.removeItem('ticpin_billing_email');
