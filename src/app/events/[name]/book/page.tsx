@@ -31,7 +31,30 @@ interface EventData {
     ticket_categories?: TicketCategory[];
     price_starts_from?: number;
     ticket_layout_type?: string;
+    ticket_open_date?: string;
+    ticket_close_date?: string;
+    event_end_date?: string;
+    is_sales_paused?: boolean;
+    is_canceled?: boolean;
 }
+
+const isBookingClosed = (evt: EventData) => {
+    if (!evt) return false;
+    if (evt.is_sales_paused || evt.is_canceled) return true;
+    if (evt.ticket_close_date) {
+        const closeDate = new Date(evt.ticket_close_date);
+        if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
+            return true;
+        }
+    }
+    if (evt.event_end_date) {
+        const endDate = new Date(evt.event_end_date);
+        if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
+            return true;
+        }
+    }
+    return false;
+};
 
 export default function TicketSelectionPage() {
     const router = useRouter();
@@ -41,6 +64,7 @@ export default function TicketSelectionPage() {
     const [event, setEvent] = useState<EventData | null>(null);
     const [loading, setLoading] = useState(true);
     const [counts, setCounts] = useState<Record<number, number>>({});
+    const [initialCounts, setInitialCounts] = useState<Record<number, number>>({});
     const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
     const [coupons, setCoupons] = useState<any[]>([]);
     const [pass, setPass] = useState<TicpinPass | null>(null);
@@ -55,6 +79,18 @@ export default function TicketSelectionPage() {
     
     const session = useUserSession();
     const reservationStore = useReservationStore();
+
+    const hasSelectionChanged = useMemo(() => {
+        const allKeys = Array.from(new Set([...Object.keys(counts).map(Number), ...Object.keys(initialCounts).map(Number)]));
+        for (const key of allKeys) {
+            const currentVal = counts[key] ?? 0;
+            const initialVal = initialCounts[key] ?? 0;
+            if (currentVal !== initialVal) {
+                return true;
+            }
+        }
+        return false;
+    }, [counts, initialCounts]);
 
     useEffect(() => {
         if (!event) return;
@@ -101,6 +137,11 @@ export default function TicketSelectionPage() {
         fetch(`/backend/api/events/${encodeURIComponent(name)}`, { credentials: 'include' })
             .then(r => r.json())
             .then(async (eventData) => {
+                if (isBookingClosed(eventData)) {
+                    toast.error('Booking for this event is closed!');
+                    router.push(`/events/${name}`);
+                    return;
+                }
                 setEvent(eventData);
 
                 // If user came back from review intentionally, start fresh selection.
@@ -115,9 +156,54 @@ export default function TicketSelectionPage() {
                     return;
                 }
 
-                // 1. Check Zustand store first
-                if (reservationStore.hasActiveReservation() && reservationStore.eventId === eventData.id) {
-                    router.replace(`/events/${name}/book/review`);
+                // 1. Check Zustand store or sessionStorage cart first
+                const cartData = sessionStorage.getItem('ticpin_cart');
+                const hasStoreRes = reservationStore.hasActiveReservation() && reservationStore.eventId === eventData.id;
+                let parsedCart: any = null;
+                if (cartData) {
+                    try {
+                        parsedCart = JSON.parse(cartData);
+                    } catch (e) {
+                        console.error('Failed to parse cart data:', e);
+                    }
+                }
+
+                if (hasStoreRes || (parsedCart && parsedCart.eventId === eventData.id)) {
+                    if (parsedCart && parsedCart.tickets) {
+                        // If store doesn't have it but session does, restore store first
+                        if (!hasStoreRes) {
+                            const expiresAt = sessionStorage.getItem('ticpin_expires_at') || new Date(Date.now() + 10 * 60 * 1000).toISOString();
+                            const resId = sessionStorage.getItem('ticpin_reservation_id') || '';
+                            reservationStore.setReservation(
+                                resId,
+                                eventData.id,
+                                parsedCart.tickets,
+                                expiresAt
+                            );
+                        }
+
+                        const initialCountsMap: Record<number, number> = {};
+                        parsedCart.tickets.forEach((ticket: any) => {
+                            const index = eventData.ticket_categories?.findIndex((c: any) => c.name.trim().toLowerCase() === ticket.name.trim().toLowerCase());
+                            if (index !== undefined && index !== -1) {
+                                initialCountsMap[index] = ticket.quantity;
+                            }
+                        });
+                        setCounts(initialCountsMap);
+                        setInitialCounts(initialCountsMap);
+
+                        // Auto-select the first zone with non-zero tickets to display in visual map panel
+                        const firstActiveIndex = Object.keys(initialCountsMap).find(idx => initialCountsMap[Number(idx)] > 0);
+                        if (firstActiveIndex !== undefined) {
+                            const cat = eventData.ticket_categories?.[Number(firstActiveIndex)];
+                            if (cat) {
+                                setSelectedZoneName(cat.name);
+                            }
+                        }
+                    }
+                    const availability = await bookingApi.getEventAvailability(eventData.id);
+                    setBookedMap(availability.booked ?? {});
+                    setLoading(false);
                     return;
                 }
 
@@ -128,7 +214,7 @@ export default function TicketSelectionPage() {
                         if (activeRes.active) {
                             const mappedTickets = activeRes.tickets.map((t: any) => ({
                                 name: t.category,
-                                price: eventData.ticket_categories?.find((c: any) => c.name === t.category)?.price ?? eventData.price_starts_from ?? 0,
+                                price: eventData.ticket_categories?.find((c: any) => c.name.trim().toLowerCase() === t.category.trim().toLowerCase())?.price ?? eventData.price_starts_from ?? 0,
                                 quantity: t.quantity
                             }));
 
@@ -139,7 +225,28 @@ export default function TicketSelectionPage() {
                                 activeRes.expires_at
                             );
 
-                            router.replace(`/events/${name}/book/review`);
+                            const initialCountsMap: Record<number, number> = {};
+                            mappedTickets.forEach((ticket: any) => {
+                                const index = eventData.ticket_categories?.findIndex((c: any) => c.name.trim().toLowerCase() === ticket.name.trim().toLowerCase());
+                                if (index !== undefined && index !== -1) {
+                                    initialCountsMap[index] = ticket.quantity;
+                                }
+                            });
+                            setCounts(initialCountsMap);
+                            setInitialCounts(initialCountsMap);
+
+                            // Auto-select the first zone with non-zero tickets to display in visual map panel
+                            const firstActiveIndex = Object.keys(initialCountsMap).find(idx => initialCountsMap[Number(idx)] > 0);
+                            if (firstActiveIndex !== undefined) {
+                                const cat = eventData.ticket_categories?.[Number(firstActiveIndex)];
+                                if (cat) {
+                                    setSelectedZoneName(cat.name);
+                                }
+                            }
+
+                            const availability = await bookingApi.getEventAvailability(eventData.id);
+                            setBookedMap(availability.booked ?? {});
+                            setLoading(false);
                             return;
                         }
                     } catch (e) {
@@ -200,10 +307,18 @@ export default function TicketSelectionPage() {
     const totalPrice = useMemo(() => categories.reduce((s, cat, i) => s + (counts[i] ?? 0) * (cat.price ?? 0), 0), [categories, counts]);
 
     const formattedDateVenue = useMemo(() => {
+        const venueFirstSegment = event?.venue_address
+            ? event.venue_address.split(',')[0].trim()
+            : '';
+        const venuePart = venueFirstSegment || event?.venue_name;
+        const locationPart = venuePart && event?.city
+            ? `${venuePart} | ${event.city}`
+            : (venuePart || event?.city || null);
+
         return [
             event?.date ? new Date(event.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : null,
             event?.time ?? null,
-            event?.venue_name ?? event?.city ?? null,
+            locationPart,
         ].filter(Boolean).join(' | ');
     }, [event]);
 
@@ -229,6 +344,22 @@ export default function TicketSelectionPage() {
                    (zName === 'MIP' && cName === 'MIP PASS');
         });
         return cat ? `₹${cat.price}` : '';
+    };
+
+    const getZoneQuantity = (zoneName: string) => {
+        const foundIndex = categories.findIndex(c => {
+            const cName = c.name.toUpperCase();
+            const zName = zoneName.toUpperCase();
+            return cName.includes(zName) || zName.includes(cName) || 
+                   (zName === 'VIP' && cName === 'VIP PASS') ||
+                   (zName === 'PLATINUM' && cName === 'PLATINUM PASS') ||
+                   (zName === 'GOLD' && cName === 'GOLD PASS') ||
+                   (zName === 'MIP' && cName === 'MIP PASS');
+        });
+        if (foundIndex !== -1) {
+            return counts[foundIndex] ?? 0;
+        }
+        return 0;
     };
 
     return (
@@ -298,7 +429,14 @@ export default function TicketSelectionPage() {
                                     }`}
                                     style={{ color: '#006400' }}
                                 >
-                                    <span>VIP FANPIT {getZonePrice('VIP FANPIT')}</span>
+                                    <span className="flex items-center gap-1">
+                                        VIP FANPIT {getZonePrice('VIP FANPIT')}
+                                        {getZoneQuantity('VIP FANPIT') > 0 && (
+                                            <span className="bg-green-700 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                                {getZoneQuantity('VIP FANPIT')}
+                                            </span>
+                                        )}
+                                    </span>
                                     <span className="text-[10px] font-normal opacity-80">(Standing)</span>
                                 </button>
                                 
@@ -309,7 +447,14 @@ export default function TicketSelectionPage() {
                                     }`}
                                     style={{ color: '#8B0000' }}
                                 >
-                                    <span>RAMP</span>
+                                    <span className="flex items-center gap-1">
+                                        RAMP
+                                        {getZoneQuantity('RAMP') > 0 && (
+                                            <span className="bg-red-700 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                                {getZoneQuantity('RAMP')}
+                                            </span>
+                                        )}
+                                    </span>
                                     <span className="text-[10px] font-bold opacity-80">{getZonePrice('RAMP')}</span>
                                 </button>
 
@@ -320,7 +465,14 @@ export default function TicketSelectionPage() {
                                     }`}
                                     style={{ color: '#006400' }}
                                 >
-                                    <span>VIP FANPIT {getZonePrice('VIP FANPIT')}</span>
+                                    <span className="flex items-center gap-1">
+                                        VIP FANPIT {getZonePrice('VIP FANPIT')}
+                                        {getZoneQuantity('VIP FANPIT') > 0 && (
+                                            <span className="bg-green-700 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                                {getZoneQuantity('VIP FANPIT')}
+                                            </span>
+                                        )}
+                                    </span>
                                     <span className="text-[10px] font-normal opacity-80">(Standing)</span>
                                 </button>
                             </div>
@@ -334,6 +486,11 @@ export default function TicketSelectionPage() {
                                 style={{ color: '#8B008B' }}
                             >
                                 <span>MIP {getZonePrice('MIP')}</span>
+                                {getZoneQuantity('MIP') > 0 && (
+                                    <span className="bg-[#8B008B] text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] font-black">
+                                        {getZoneQuantity('MIP')}
+                                    </span>
+                                )}
                                 <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                             </button>
 
@@ -347,6 +504,11 @@ export default function TicketSelectionPage() {
                                     style={{ color: '#4B0082' }}
                                 >
                                     <span>VIP {getZonePrice('VIP')}</span>
+                                    {getZoneQuantity('VIP') > 0 && (
+                                        <span className="bg-[#4B0082] text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                            {getZoneQuantity('VIP')}
+                                        </span>
+                                    )}
                                     <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                                 </button>
                                 <button 
@@ -357,6 +519,11 @@ export default function TicketSelectionPage() {
                                     style={{ color: '#4B0082' }}
                                 >
                                     <span>VIP {getZonePrice('VIP')}</span>
+                                    {getZoneQuantity('VIP') > 0 && (
+                                        <span className="bg-[#4B0082] text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                            {getZoneQuantity('VIP')}
+                                        </span>
+                                    )}
                                     <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                                 </button>
                             </div>
@@ -371,6 +538,11 @@ export default function TicketSelectionPage() {
                                     style={{ color: '#008B8B' }}
                                 >
                                     <span>PLATINUM LEFT {getZonePrice('PLATINUM')}</span>
+                                    {getZoneQuantity('PLATINUM') > 0 && (
+                                        <span className="bg-[#008B8B] text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                            {getZoneQuantity('PLATINUM')}
+                                        </span>
+                                    )}
                                     <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                                 </button>
                                 <button 
@@ -381,6 +553,11 @@ export default function TicketSelectionPage() {
                                     style={{ color: '#008B8B' }}
                                 >
                                     <span>PLATINUM RIGHT {getZonePrice('PLATINUM')}</span>
+                                    {getZoneQuantity('PLATINUM') > 0 && (
+                                        <span className="bg-[#008B8B] text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                            {getZoneQuantity('PLATINUM')}
+                                        </span>
+                                    )}
                                     <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                                 </button>
                             </div>
@@ -395,6 +572,11 @@ export default function TicketSelectionPage() {
                                     style={{ color: '#8B8000' }}
                                 >
                                     <span>GOLD LEFT {getZonePrice('GOLD')}</span>
+                                    {getZoneQuantity('GOLD') > 0 && (
+                                        <span className="bg-[#8B8000] text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                            {getZoneQuantity('GOLD')}
+                                        </span>
+                                    )}
                                     <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                                 </button>
                                 <button 
@@ -405,6 +587,11 @@ export default function TicketSelectionPage() {
                                     style={{ color: '#8B8000' }}
                                 >
                                     <span>GOLD RIGHT {getZonePrice('GOLD')}</span>
+                                    {getZoneQuantity('GOLD') > 0 && (
+                                        <span className="bg-[#8B8000] text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[10px] font-black">
+                                            {getZoneQuantity('GOLD')}
+                                        </span>
+                                    )}
                                     <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18v3h3v-3h10v3h3v-3h1v-6H3v6h1zM2 10V6h20v4h-2V6H4v4H2z"/></svg>
                                 </button>
                             </div>
@@ -601,6 +788,12 @@ export default function TicketSelectionPage() {
                             return;
                         }
 
+                        // If selection has not changed, just route back to review directly!
+                        if (!hasSelectionChanged) {
+                            router.push(`/events/${name}/book/review`);
+                            return;
+                        }
+
                         if (isReservingRef.current) return;
                         isReservingRef.current = true;
                         setIsCreatingReservation(true);
@@ -610,8 +803,8 @@ export default function TicketSelectionPage() {
                                 quantity: counts[i] ?? 0
                             })).filter(t => t.quantity > 0);
 
-                            // Call backend API to create reservation lock (10 minutes)
-                            const res = await bookingApi.createReservation(event!.id, session.id, ticketReqs);
+                            // Call backend API to create/update reservation lock
+                            const res = await bookingApi.createReservation(event!.id, session.id, ticketReqs, reservationStore.reservationId || undefined);
 
                             if (res.success) {
                                 // Save to Zustand store
@@ -669,7 +862,7 @@ export default function TicketSelectionPage() {
                         }}
                         className="text-[18px] md:text-[24px] text-black uppercase leading-none"
                     >
-                        {isCreatingReservation ? 'CHECKING...' : 'CONTINUE'}
+                        {isCreatingReservation ? 'CHECKING...' : hasSelectionChanged ? 'UPDATE TICKETS' : 'CONTINUE'}
                     </span>
                 </button>
             </footer>

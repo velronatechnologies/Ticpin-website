@@ -13,6 +13,7 @@ interface ReservationState {
   selectedSeats: SelectedTicket[];
   expiresAt: string | null;
   setReservation: (reservationId: string, eventId: string, selectedSeats: SelectedTicket[], expiresAt: string) => void;
+  setExpiresAt: (expiresAt: string) => void;
   clearReservation: () => void;
   hasActiveReservation: () => boolean;
 }
@@ -26,6 +27,8 @@ export const useReservationStore = create<ReservationState>()(
       expiresAt: null,
       setReservation: (reservationId, eventId, selectedSeats, expiresAt) =>
         set({ reservationId, eventId, selectedSeats, expiresAt }),
+      setExpiresAt: (expiresAt) =>
+        set({ expiresAt }),
       clearReservation: () =>
         set({ reservationId: null, eventId: null, selectedSeats: [], expiresAt: null }),
       hasActiveReservation: () => {

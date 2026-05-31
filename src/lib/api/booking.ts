@@ -29,6 +29,7 @@ export interface CreateBookingPayload {
     status?: string;
     use_ticpass?: boolean; // New field for Ticpass discount
     reservation_id?: string;
+    donation_amount?: number;
 }
 
 export interface CreateDiningPayload {
@@ -295,8 +296,12 @@ export const bookingApi = {
         return data;
     },
 
-    checkActiveReservation: async (eventId: string, userId: string): Promise<any> => {
-        const res = await fetch(`${BASE}/bookings/events/active-reservation?event_id=${encodeURIComponent(eventId)}&user_id=${encodeURIComponent(userId)}`, {
+    checkActiveReservation: async (eventId: string, userId: string, reservationId?: string): Promise<any> => {
+        let url = `${BASE}/bookings/events/active-reservation?event_id=${encodeURIComponent(eventId)}&user_id=${encodeURIComponent(userId)}`;
+        if (reservationId) {
+            url += `&reservation_id=${encodeURIComponent(reservationId)}`;
+        }
+        const res = await fetch(url, {
             credentials: 'include',
         });
         const data = await res.json();
@@ -304,12 +309,16 @@ export const bookingApi = {
         return data;
     },
 
-    createReservation: async (eventId: string, userId: string, tickets: Array<{ category: string, quantity: number }>): Promise<any> => {
+    createReservation: async (eventId: string, userId: string, tickets: Array<{ category: string, quantity: number }>, previousReservationId?: string): Promise<any> => {
+        const payload: any = { event_id: eventId, user_id: userId, tickets };
+        if (previousReservationId) {
+            payload.previous_reservation_id = previousReservationId;
+        }
         const res = await fetch(`${BASE}/bookings/events/reserve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ event_id: eventId, user_id: userId, tickets }),
+            body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to create reservation');

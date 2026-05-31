@@ -23,6 +23,8 @@ interface ProfileDrawerProps {
 }
 
 import { passApi, type TicpinPass } from '@/lib/api/pass';
+import { useIdentityStore } from '@/store/useIdentityStore';
+import { organizerApi } from '@/lib/api/organizer';
 
 const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     isOpen,
@@ -33,15 +35,55 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     onOrganizerLogout,
     router
 }) => {
+    const { activeRole, switchRole } = useIdentityStore();
     const [isMounted, setIsMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [pass, setPass] = useState<TicpinPass | null>(null);
+    const [organizerProfile, setOrganizerProfile] = useState<any>(null);
 
     useEffect(() => {
         if (isOpen && userSession?.id) {
             passApi.getLatestPass(userSession.id).then(setPass);
         }
     }, [isOpen, userSession?.id]);
+
+    useEffect(() => {
+        const loadOrganizerProfile = async () => {
+            try {
+                if (activeRole === 'organizer' && session?.id) {
+                    const profile = await organizerApi.getProfile(session.id);
+                    if (profile) {
+                        setOrganizerProfile(profile);
+                    }
+                }
+            } catch (err) {
+                console.error('[ProfileDrawer] Failed to load organizer profile:', err);
+            }
+        };
+
+        if (isOpen) {
+            loadOrganizerProfile();
+        }
+    }, [isOpen, activeRole, session?.id]);
+
+    useEffect(() => {
+        const handlePhotoUpdate = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            setOrganizerProfile((prev: any) => prev ? { ...prev, profilePhoto: customEvent.detail } : { profilePhoto: customEvent.detail });
+            // Also refetch from backend to ensure consistency
+            if (session?.id) {
+                organizerApi.getProfile(session.id).then(profile => {
+                    if (profile) {
+                        setOrganizerProfile(profile);
+                    }
+                }).catch(() => {});
+            }
+        };
+        window.addEventListener('profilePhotoUpdated', handlePhotoUpdate as EventListener);
+        return () => {
+            window.removeEventListener('profilePhotoUpdated', handlePhotoUpdate as EventListener);
+        };
+    }, [session?.id]);
 
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
@@ -72,7 +114,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     if (!isMounted) return null;
 
     const handleLogout = () => {
-        if (session) {
+        if (activeRole === 'organizer') {
             onOrganizerLogout();
         } else {
             onUserLogout();
@@ -120,7 +162,19 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                     {/* User Profile Section */}
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-full bg-[#866BFF] flex items-center justify-center text-white text-[24px] font-bold overflow-hidden shrink-0">
-                            {userSession?.profilePhoto ? (
+                            {activeRole === 'organizer' ? (
+                                organizerProfile?.profilePhoto ? (
+                                    <Image 
+                                        src={organizerProfile.profilePhoto} 
+                                        alt="Profile" 
+                                        width={64} 
+                                        height={64} 
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    (organizerProfile?.name || session?.email || 'O').charAt(0).toUpperCase()
+                                )
+                            ) : userSession?.profilePhoto ? (
                                 <Image 
                                     src={userSession.profilePhoto} 
                                     alt="Profile" 
@@ -134,13 +188,15 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="text-[20px] font-bold text-zinc-900 truncate">
-                                {isAdmin ? 'Admin' : (userSession?.name || (session ? 'Organizer' : 'User'))}
+                                {isAdmin ? 'Admin' : (activeRole === 'organizer' ? (organizerProfile?.name || 'Organizer') : (userSession?.name || 'User'))}
                             </h3>
                             <p className="text-zinc-500 text-[14px] truncate">
-                                {userSession?.phone || userSession?.email || session?.email || '+91 9887654356'}
+                                {activeRole === 'organizer' ? (session?.email || '+91 9887654356') : (userSession?.phone || userSession?.email || '+91 9887654356')}
                             </p>
                         </div>
                     </div>
+
+
 
                     {/* Menu Items Container */}
                     <div className="space-y-6">
@@ -169,7 +225,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                     <ChevronRight size={18} className="text-zinc-400" />
                                 </button>
                             </div>
-                        ) : session ? (
+                        ) : activeRole === 'organizer' ? (
                             /* Organizer View: Dashboard, Chat with us, View Profile, Logout */
                             <div className="space-y-4 pt-4">
                                 <button 

@@ -75,7 +75,7 @@ const categories = [
 
 export default function ExploreCard() {
   return (
-    <div className="flex flex-wrap gap-4 md:gap-5 px-1 max-w-[1280px]">
+    <div className="flex flex-wrap gap-2.5 md:gap-5 px-1 max-w-[1280px]">
       {categories.map((cat, index) => (
         <Link
           key={index}
@@ -83,19 +83,19 @@ export default function ExploreCard() {
           className="group block"
         >
           <div
-            className="w-[140px] shrink-0 h-auto aspect-[152/215] rounded-[26px] border border-transparent p-3 flex flex-col items-center justify-between cursor-pointer group"
+            className="w-[100px] md:w-[135px] shrink-0 h-auto aspect-[152/215] rounded-[18px] md:rounded-[26px] border border-[#e1e1e1] p-2 md:p-3 flex flex-col items-center justify-between cursor-pointer group"
             style={{
-              background: `linear-gradient(180deg, #FFFFFF 50%, ${cat.color} 159.52%) padding-box, linear-gradient(135deg, #686868 0%, #D0D0D0 100%) border-box`
+              background: `linear-gradient(180deg, #FFFFFF 50%, ${cat.color} 159.52%) padding-box, linear-gradient(135deg, #686868 0%, #e1e1e1 100%) border-box`
             }}
           >
-            <h3 className="text-sm md:text-base font-semibold text-black text-center break-words leading-tight font-[family-name:var(--font-anek-latin)] uppercase">
+            <h3 className="text-[11px] md:text-sm font-semibold text-black text-center break-words leading-tight font-[family-name:var(--font-anek-latin)] uppercase mt-1 md:mt-3">
               {cat.title}
             </h3>
             <div className="relative w-full aspect-square flex items-center justify-center mt-1 overflow-hidden">
               <img
                 src={cat.icon}
                 alt={cat.title}
-                className="w-full h-full object-contain scale-105"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>

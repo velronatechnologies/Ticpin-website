@@ -143,7 +143,7 @@ export default function Navbar() {
 
     return (
         <header
-            className={`${(isHome || isEventDetail || isDiningDetail || isEvents) ? 'hidden md:flex' : 'flex'} sticky top-0 z-50 w-full border-b border-zinc-200 h-[70px] items-center`}
+            className="hidden md:flex sticky top-0 z-50 w-full border-b border-zinc-200 h-[70px] items-center"
             style={{
                 zoom: isSettingsPage ? '0.8' : '1.0',
                 background: '#FFFFFF'

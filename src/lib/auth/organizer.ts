@@ -97,12 +97,19 @@ export function clearOrganizerSession(): void {
   localStorage.removeItem('organizer_preferences');
   console.debug('[Auth] Cleared organizer_preferences from localStorage');
   
-  // Fire-and-forget — clears the HttpOnly ticpin_token on the server
-  fetch('/backend/api/organizer/logout', { method: 'POST', credentials: 'include' })
-    .catch(err => console.error('[Auth] Logout API call failed:', err));
+  // Fire-and-forget — clears the HttpOnly token on the server
+  fetch('/backend/api/auth/logout/organizer', { method: 'POST', credentials: 'include' })
+    .catch(err => console.error('[Auth] Organizer Logout API call failed:', err));
   
-  // Clear everything (cookies, remaining storage, etc)
-  clearAllData();
+  // Clear organizer cookies
+  deleteCookie('ticpin_token');
+  deleteCookie('ticpin_session');
+  
+  window.dispatchEvent(new Event('organizer-auth-change'));
+  
+  setTimeout(() => {
+    window.location.reload();
+  }, 100);
 }
 
 /** Updates a single category status inside the stored session cookie */

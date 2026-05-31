@@ -19,6 +19,7 @@ interface SearchResult {
     type: 'event' | 'play' | 'dining';
     category?: string;
     location?: string;
+    landscape_image_url?: string;
 }
 
 const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClose }) => {
@@ -67,21 +68,24 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
                     name: item.name,
                     type: 'event' as const,
                     category: item.category,
-                    location: item.venue_name || item.city
+                    location: item.venue_name || item.city,
+                    landscape_image_url: item.landscape_image_url
                 })),
                 ...(plays.data || []).map((item: any) => ({
                     id: item.id,
                     name: item.name,
                     type: 'play' as const,
                     category: item.category,
-                    location: item.city
+                    location: item.city,
+                    landscape_image_url: item.landscape_image_url
                 })),
                 ...(dinings.data || []).map((item: any) => ({
                     id: item.id,
                     name: item.name,
                     type: 'dining' as const,
                     category: item.category,
-                    location: item.city
+                    location: item.city,
+                    landscape_image_url: item.landscape_image_url
                 }))
             ];
             allData.current = combined;
@@ -168,10 +172,20 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
                                     onClick={() => handleResultClick(result)}
                                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
                                 >
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                                        {result.type === 'event' && <Calendar size={16} />}
-                                        {result.type === 'play' && <PlayCircle size={16} />}
-                                        {result.type === 'dining' && <Utensils size={16} />}
+                                    <div className="flex-shrink-0 w-12 h-12 rounded-[8px] bg-[#FAF6F6] border border-[#AEAEAE]/20 overflow-hidden flex items-center justify-center">
+                                        {result.landscape_image_url ? (
+                                            <img 
+                                                src={result.landscape_image_url} 
+                                                alt={result.name} 
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="text-gray-500">
+                                                {result.type === 'event' && <Calendar size={20} />}
+                                                {result.type === 'play' && <PlayCircle size={20} />}
+                                                {result.type === 'dining' && <Utensils size={20} />}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="text-sm font-semibold text-black truncate uppercase tracking-tight">

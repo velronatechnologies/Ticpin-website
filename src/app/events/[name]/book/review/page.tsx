@@ -2,13 +2,13 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronRight, Trash2, X, Tag, CheckCircle2, ChevronDown, Clock, User } from 'lucide-react';
+import { ChevronRight, Trash2, X, Tag, CheckCircle2, ChevronDown, Clock, User, ChevronLeft, Percent, Info, Heart, Edit2, Check } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useReservationStore } from '@/store/useReservationStore';
 import { bookingApi, OfferItem, PaymentOrderResponse } from '@/lib/api/booking';
 import { profileApi } from '@/lib/api/profile';
 import Link from 'next/link';
-import { useUserSession } from '@/lib/auth/user';
+import { useUserSession, clearUserSession } from '@/lib/auth/user';
 import { useOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import { getBookingStatus } from '@/lib/utils/booking-status';
 import { toast } from '@/components/ui/Toast';
@@ -19,6 +19,10 @@ const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: 
 const OrganizerLogoutModal = dynamic(() => import('@/components/modals/OrganizerLogoutModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
 const SuccessView = dynamic(() => import('./SuccessView'), { ssr: false });
+
+import OrderSummary from './OrderSummary';
+import OffersCoupons from './OffersCoupons';
+import BillingDetailsForm from './BillingDetailsForm';
 
 
 interface CartData {
@@ -69,7 +73,7 @@ export default function ReviewBookingPage() {
     const organizerSession = useOrganizerSession();
     const billingRef = useRef<HTMLDivElement>(null);
     const [cart, setCart] = useState<CartData | null>(null);
-    const [eventData, setEventData] = useState<{id: string; name: string} | null>(null);
+    const [eventData, setEventData] = useState<{id: string; name: string; portrait_image_url?: string; landscape_image_url?: string} | null>(null);
 
 
     
@@ -119,7 +123,6 @@ export default function ReviewBookingPage() {
     const [bookingError, setBookingError] = useState('');
     const [bookingId, setBookingId] = useState('');
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [pass, setPass] = useState<any>(null);
     const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
     const [previousBookings, setPreviousBookings] = useState<any[]>([]);
@@ -134,6 +137,11 @@ export default function ReviewBookingPage() {
     const reservationStore = useReservationStore();
     const [timeRemaining, setTimeRemaining] = useState<number>(0);
     const [isValidating, setIsValidating] = useState(true);
+    
+    // Donation States
+    const [donationAmount, setDonationAmount] = useState(5);
+    const [isDonationAdded, setIsDonationAdded] = useState(false);
+    const [isDonationEdited, setIsDonationEdited] = useState(false);
 
     // Validate reservation on mount
     useEffect(() => {
@@ -147,18 +155,64 @@ export default function ReviewBookingPage() {
                 return;
             }
 
-            const savedCart = sessionStorage.getItem('ticpin_cart');
-            if (!savedCart) {
+            let savedCart = sessionStorage.getItem('ticpin_cart');
+            let parsedCart: any = null;
+            let eventId = '';
+
+            if (savedCart) {
+                parsedCart = JSON.parse(savedCart);
+                eventId = parsedCart.eventId;
+            } else {
+                // Self-healing: if cart is missing (e.g. copied/duplicated tab),
+                // fetch the event details to get eventId and verify active reservation
+                try {
+                    const eRes = await fetch(`/backend/api/events/${encodeURIComponent(name)}`, { credentials: 'include' });
+                    if (!eRes.ok) throw new Error("Failed to fetch event");
+                    const eventData = await eRes.json();
+                    
+                    const activeRes = await bookingApi.checkActiveReservation(eventData.id, session.id);
+                    if (activeRes.active) {
+                        const mappedTickets = activeRes.tickets.map((t: any) => {
+                            const cat = eventData.ticket_categories?.find((c: any) => c.name === t.category);
+                            return {
+                                name: t.category,
+                                price: cat?.price || eventData.price_starts_from || 0,
+                                quantity: t.quantity
+                            };
+                        });
+                        const reconstructedCart = {
+                            eventId: eventData.id,
+                            eventName: eventData.name,
+                            city: eventData.city,
+                            tickets: mappedTickets,
+                            totalPrice: mappedTickets.reduce((sum: number, t: any) => sum + t.price * t.quantity, 0),
+                            type: 'event' as const
+                        };
+                        sessionStorage.setItem('ticpin_cart', JSON.stringify(reconstructedCart));
+                        setCart(reconstructedCart);
+                        setEventData({ id: eventData.id, name: eventData.name });
+                        
+                        reservationStore.setReservation(
+                            activeRes.reservation_id,
+                            activeRes.event_id,
+                            mappedTickets,
+                            activeRes.expires_at
+                        );
+                        setIsValidating(false);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Self-healing failed to reconstruct cart:", e);
+                }
+
+                // If not found or failed, redirect back to booking
                 router.replace(`/events/${name}/book`);
                 return;
             }
 
-            const parsedCart = JSON.parse(savedCart);
-            const eventId = parsedCart.eventId;
-
             try {
-                // Check if backend has active reservation
-                const activeRes = await bookingApi.checkActiveReservation(eventId, session.id);
+                // Check if backend has active reservation specifically for this tab's reservation ID
+                const activeRes = await bookingApi.checkActiveReservation(eventId, session.id, reservationStore.reservationId || undefined);
                 if (activeRes.active) {
                     // Update Zustand
                     reservationStore.setReservation(
@@ -188,10 +242,55 @@ export default function ReviewBookingPage() {
         validateReservation();
     }, [session?.id, name, router]);
 
+    useEffect(() => {
+        if (!name) return;
+        fetch(`/backend/api/events/${encodeURIComponent(name)}`, { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    // Check if event booking is closed
+                    const isClosed = (() => {
+                        if (data.is_sales_paused || data.is_canceled) return true;
+                        if (data.ticket_close_date) {
+                            const closeDate = new Date(data.ticket_close_date);
+                            if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
+                                return true;
+                            }
+                        }
+                        if (data.event_end_date) {
+                            const endDate = new Date(data.event_end_date);
+                            if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
+                                return true;
+                            }
+                        }
+                        if (data.date) {
+                            const eventDate = new Date(data.date);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            if (eventDate < today) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    })();
+
+                    if (isClosed) {
+                        toast.error("Bookings for this event are closed.");
+                        router.replace(`/events/${name}`);
+                        return;
+                    }
+                    setEventData(data);
+                }
+            })
+            .catch(err => console.error("Error fetching event details:", err));
+    }, [name, router]);
+
     // Timer countdown with 3-min warning + 5-min auto-unlock
     useEffect(() => {
         const expiresAt = reservationStore.expiresAt;
         if (!expiresAt || step === 'success') return;
+
+        let interval: any;
 
         const updateTimer = () => {
             if (isPayingRef.current) return;
@@ -210,7 +309,7 @@ export default function ReviewBookingPage() {
             // Auto-unlock and redirect at 5 minutes remaining (300 seconds = 5 min, so unlock at expiry - 5min)
             // Actually auto-unlock when time reaches 0
             if (diff <= 0) {
-                clearInterval(interval);
+                if (interval) clearInterval(interval);
                 toast.error("Your ticket reservation has expired. Redirecting...");
                 
                 // Close Razorpay popup if open
@@ -236,7 +335,7 @@ export default function ReviewBookingPage() {
         };
 
         updateTimer();
-        const interval = setInterval(updateTimer, 1000);
+        interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [reservationStore.expiresAt, reservationStore.reservationId, name, router, step]);
 
@@ -304,7 +403,8 @@ export default function ReviewBookingPage() {
                                 p.grandTotal,
                                 p.appliedCoupon || '',
                                 p.offerId,
-                                p.cart.use_pass
+                                p.cart.use_pass,
+                                p.donationAmount
                             );
                         }, 200);
                     }
@@ -380,6 +480,36 @@ export default function ReviewBookingPage() {
         }
     }, [billing]);
 
+    // Backend Polling Status Check (Fallback & Safety Source of truth per tab session)
+    useEffect(() => {
+        const checkId = cart?.eventId;
+        const userId = session?.id;
+        const reservationId = reservationStore.reservationId;
+        if (!checkId || !userId || !reservationId || step === 'success') return;
+
+        const interval = setInterval(async () => {
+            // Stop polling if booking is done or payment is in progress
+            if (isBookingCompletedRef.current || isPayingRef.current || step === 'success') return;
+            try {
+                const res = await bookingApi.checkActiveReservation(checkId, userId, reservationId);
+                if (!res?.active) {
+                    // Double-check: skip if booking just completed
+                    if (isBookingCompletedRef.current || isPayingRef.current) return;
+                    // Clear state locally for this tab
+                    reservationStore.clearReservation();
+                    sessionStorage.removeItem('ticpin_cart');
+                    sessionStorage.removeItem('ticpin_booking_step');
+                    sessionStorage.removeItem('ticpin_pending_payment');
+                    toast.info("Your reservation has expired or was cancelled.");
+                    router.replace(`/events/${name}/book`);
+                }
+            } catch (err) {
+                console.error("Error polling reservation status:", err);
+            }
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [cart?.eventId, session?.id, reservationStore.reservationId, step, name, router, reservationStore]);
+
     const clearReservationAndFlow = (clearCart: boolean = true, markForceRestart: boolean = false) => {
         if (reservationStore.reservationId && step !== 'success') {
             bookingApi.unlockReservation(reservationStore.reservationId).catch(console.error);
@@ -438,7 +568,17 @@ export default function ReviewBookingPage() {
         : 0;
         
     const totalDiscount = offerDiscount + couponDiscount + passDiscount;
-    const grandTotal = Math.max(0, orderAmount + bookingFee - totalDiscount);
+    const baseAmount = orderAmount + bookingFee - totalDiscount;
+    const defaultDonation = baseAmount % 5 === 0 ? 5 : 5 - (baseAmount % 5);
+
+    // Keep donationAmount in sync with defaultDonation unless user has edited it
+    useEffect(() => {
+        if (!isDonationEdited) {
+            setDonationAmount(defaultDonation);
+        }
+    }, [baseAmount, defaultDonation, isDonationEdited]);
+
+    const grandTotal = Math.max(0, baseAmount + (isDonationAdded ? donationAmount : 0));
 
     const removeTicket = async (i: number) => {
         if (!cart || !session?.id) return;
@@ -466,7 +606,7 @@ export default function ReviewBookingPage() {
         }));
 
         try {
-            const res = await bookingApi.createReservation(cart.eventId, session.id, ticketReqs);
+            const res = await bookingApi.createReservation(cart.eventId, session.id, ticketReqs, reservationStore.reservationId || undefined);
             if (res.success) {
                 // Update Zustand
                 reservationStore.setReservation(
@@ -513,7 +653,7 @@ export default function ReviewBookingPage() {
 
         try {
             // Re-reserve with new quantities. This deletes the old reservation and locks new seats
-            const res = await bookingApi.createReservation(cart.eventId, session.id, ticketReqs);
+            const res = await bookingApi.createReservation(cart.eventId, session.id, ticketReqs, reservationStore.reservationId || undefined);
 
             if (res.success) {
                 // Update Zustand
@@ -606,25 +746,8 @@ export default function ReviewBookingPage() {
         }
     };
 
-    // Browser back: release lock and reset flow.
-    // Keep refresh intact so lock/cart persist on same page refresh.
-    useEffect(() => {
-        const handlePopState = () => {
-            clearReservationAndFlow(true, true);
-        };
-
-        window.addEventListener('popstate', handlePopState);
-        return () => {
-            window.removeEventListener('popstate', handlePopState);
-        };
-    }, [reservationStore.reservationId, step]);
 
     const handleContinue = () => {
-        if (organizerSession) {
-            setShowLogoutModal(true);
-            return;
-        }
-
         if (!session) {
             setShowAuthModal(true);
             return;
@@ -661,6 +784,7 @@ export default function ReviewBookingPage() {
         coupon: string,
         offerId: string | undefined,
         usePass?: boolean,
+        donationAmt?: number,
     ) => {
         setBookingLoading(true);
         setBookingError('');
@@ -740,10 +864,13 @@ export default function ReviewBookingPage() {
                     status: 'booked',
                     use_ticpass: usePass,
                     reservation_id: reservationStore.reservationId || undefined,
+                    donation_amount: donationAmt !== undefined ? donationAmt : (isDonationAdded ? donationAmount : 0),
                 });
             }
             setBookingId(result.booking_id);
+            // Mark completed BEFORE clearing reservation so polling/timer see it immediately
             isBookingCompletedRef.current = true;
+            isPayingRef.current = true; // keep this true so timer also stops
             reservationStore.clearReservation();
             sessionStorage.removeItem('ticpin_cart');
             sessionStorage.removeItem('ticpin_billing_email');
@@ -789,12 +916,31 @@ export default function ReviewBookingPage() {
                 0, // booking fee
                 0, // grand total
                 appliedCoupon || '',
-                appliedOffer?.id
+                appliedOffer?.id,
+                isPassApplied,
+                0
             );
             return;
         }
 
         try {
+            // Lock reservation status to PENDING_PAYMENT on backend and receive grace extension timer
+            if (reservationStore.reservationId) {
+                const lockRes = await fetch('/backend/api/bookings/events/start-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservation_id: reservationStore.reservationId }),
+                });
+                if (!lockRes.ok) {
+                    const errorData = await lockRes.json();
+                    throw new Error(errorData.error || 'Your ticket reservation lock has expired. Please select tickets again.');
+                }
+                const lockData = await lockRes.json();
+                if (lockData.payment_expires_at) {
+                    reservationStore.setExpiresAt(lockData.payment_expires_at);
+                }
+            }
+
             // Step 1: Create a payment order (picks Cashfree or Razorpay via traffic weight)
             const orderRes: PaymentOrderResponse = await bookingApi.createPaymentOrder({
                 amount: grandTotal,
@@ -817,6 +963,7 @@ export default function ReviewBookingPage() {
                 grandTotal,
                 appliedCoupon,
                 offerId: appliedOffer?.id,
+                donationAmount: isDonationAdded ? donationAmount : 0,
             }));
 
             if (orderRes.gateway === 'cashfree') {
@@ -866,15 +1013,43 @@ export default function ReviewBookingPage() {
                             appliedCoupon,
                             appliedOffer?.id,
                             isPassApplied,
+                            isDonationAdded ? donationAmount : 0
                         );
                     },
                     modal: {
-                        ondismiss: () => {
+                        ondismiss: async () => {
                             razorpayRef.current = null;
                             sessionStorage.removeItem('ticpin_pending_payment');
                             setBookingLoading(false);
                             isPayingRef.current = false;
                             setBookingError('Payment was cancelled. Please try again.');
+
+                            // Safely revert reservation back to standard PENDING state
+                            if (reservationStore.reservationId) {
+                                try {
+                                    const revertRes = await fetch('/backend/api/bookings/events/fail-payment', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ reservation_id: reservationStore.reservationId }),
+                                    });
+                                    if (revertRes.ok) {
+                                        const checkRes = await fetch(`/backend/api/bookings/events/active-reservation?event_id=${encodeURIComponent(cart.eventId)}&user_id=${encodeURIComponent(session?.id || '')}&reservation_id=${encodeURIComponent(reservationStore.reservationId)}`);
+                                        if (checkRes.ok) {
+                                            const activeData = await checkRes.json();
+                                            if (activeData.active && activeData.expires_at) {
+                                                reservationStore.setExpiresAt(activeData.expires_at);
+                                            } else {
+                                                reservationStore.clearReservation();
+                                                sessionStorage.removeItem('ticpin_cart');
+                                                toast.error("Your reservation duration has elapsed.");
+                                                router.replace(`/events/${name}`);
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Reverting payment status failed:", e);
+                                }
+                            }
                         },
                     },
                 };
@@ -898,6 +1073,28 @@ export default function ReviewBookingPage() {
         setShowAuthModal(true);
     };
 
+    const handleUserLogout = () => {
+        clearUserSession();
+        setIsProfileDrawerOpen(false);
+        router.push('/');
+    };
+
+    if (isValidating) {
+        return (
+            <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-[#FDFDFD]">
+                <div className="flex flex-col items-center gap-4 animate-in fade-in duration-500">
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full border-4 border-[#5331EA]/10 border-t-[#5331EA] animate-spin" />
+                        <Clock className="w-6 h-6 text-[#5331EA] animate-pulse" />
+                    </div>
+                    <p className="text-[15px] font-semibold text-zinc-500 tracking-wide animate-pulse" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                        Securing your booking session...
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (step === 'success') {
         return (
             <SuccessView
@@ -914,6 +1111,429 @@ export default function ReviewBookingPage() {
 
     return (
         <div className="min-h-screen flex flex-col font-[family-name:var(--font-anek-latin)] overflow-x-hidden" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
+            {/* ====== MOBILE VIEW (md:hidden) ====== */}
+            <div className="md:hidden min-h-screen bg-white relative flex flex-col pb-[120px] select-none" style={{ fontFamily: "'Anek Latin', sans-serif" }}>
+                {/* Header Section */}
+                <div className="w-full pt-[17px] px-[15px] relative h-[60px] shrink-0 flex items-center justify-center">
+                    <button 
+                        onClick={() => { router.back(); }}
+                        className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-sm absolute left-[15px] top-[17px] border border-[#EFEFEF] active:scale-95 transition-transform"
+                    >
+                        <ChevronLeft size={20} className="text-black" />
+                    </button>
+                    
+                    <h1 className="text-[18px] font-semibold text-black uppercase tracking-tight" style={{ fontFamily: "'Anek Latin'" }}>
+                        Review your booking
+                    </h1>
+                </div>
+
+                {/* Complete your booking in TIME mins banner (Rectangle 524) */}
+                {timeRemaining > 0 && (
+                    <div className="mx-[15px] mt-[10px] h-[29px] bg-[#E1E1E1] rounded-[8px] flex items-center justify-center gap-2 px-3 shrink-0">
+                        <Clock size={13} className="text-black" />
+                        <span className="text-[12px] font-medium text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                            Complete your booking in <span className="font-bold text-[#5331EA]">{formatTimer(timeRemaining)}</span> mins
+                        </span>
+                    </div>
+                )}
+
+                {/* Scrollable Container */}
+                <div className="flex-1 overflow-y-auto px-[15px] pt-4 space-y-[22px]">
+                    {/* Event summary with thumbnail */}
+                    <div className="flex gap-[15px] items-center">
+                        <div className="w-[80px] h-[63px] bg-[#110D2C] rounded-[10px] overflow-hidden shrink-0 relative flex items-center justify-center shadow-sm border border-[#E1E1E1]">
+                            {eventData?.landscape_image_url || eventData?.portrait_image_url ? (
+                                <Image
+                                    src={eventData.landscape_image_url || eventData.portrait_image_url || ''}
+                                    alt={cart?.eventName || 'Event Poster'}
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                />
+                            ) : (
+                                <>
+                                    <div className="absolute inset-0 bg-black/10 z-10" />
+                                    <span className="text-[10px] text-[#5331EA] font-extrabold italic uppercase tracking-wider text-center z-20">TICPIN</span>
+                                </>
+                            )}
+                        </div>
+                        <div className="flex flex-col">
+                            <h2 className="text-[15px] font-semibold text-black uppercase tracking-tight leading-tight" style={{ fontFamily: "'Anek Latin'" }}>
+                                {cart?.eventName || 'EVENT NAME'}
+                            </h2>
+                            <p className="text-[13px] font-normal text-[#686868] mt-0.5 uppercase tracking-wide" style={{ fontFamily: "'Anek Latin'" }}>
+                                {cart?.city || 'LOCATION'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Ticket details (Rectangle 525) */}
+                    <div className="w-full border border-[#D9D9D9] rounded-[9px] bg-white overflow-hidden shadow-sm">
+                        {/* Event Date & Time */}
+                        <div className="px-4 py-3 bg-zinc-50 border-b border-[#D9D9D9] flex justify-between items-center">
+                            <span className="text-[15px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Sat, 23 May'}
+                            </span>
+                            <span className="text-[15px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                                {cart?.timeSlot || '7 PM'}
+                            </span>
+                        </div>
+
+                        {/* Selected Tickets */}
+                        <div className="p-4 space-y-4">
+                            {cart?.tickets?.map((t, i) => (
+                                <div key={i} className="flex flex-col">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="text-[18px] font-medium text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                                                {t.quantity} x {t.name}
+                                            </span>
+                                            <span className="text-[15px] font-normal text-[#686868] mt-1" style={{ fontFamily: "'Anek Latin'" }}>
+                                                ₹{t.price.toLocaleString('en-IN')} cover
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            <span className="text-[18px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                                                ₹{(t.price * t.quantity).toLocaleString('en-IN')}
+                                            </span>
+                                            <button 
+                                                onClick={() => removeTicket(i)}
+                                                className="text-[12px] font-semibold text-[#686868] underline active:scale-95 transition-transform" 
+                                                style={{ fontFamily: "'Anek Latin'" }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* OFFERS section */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-[#3B3B3B] tracking-[0.1em] uppercase" style={{ fontFamily: "'Anek Latin'" }}>OFFERS</span>
+                            <div className="flex-1 h-[0.7px] bg-[#D9D9D9] ml-4" />
+                        </div>
+
+                        <div className="w-full border border-[#D9D9D9] rounded-[9px] bg-white divide-y divide-[#D9D9D9] shadow-sm">
+                            <button 
+                                onClick={() => toggleSection('offers')}
+                                className="w-full h-[55px] flex items-center justify-between px-4 hover:bg-zinc-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-[#5331EA]/10 flex items-center justify-center text-[#5331EA]">
+                                        <Percent size={14} />
+                                    </div>
+                                    <span className="text-[18px] font-medium text-black text-left" style={{ fontFamily: "'Anek Latin'" }}>
+                                        View all event offers
+                                    </span>
+                                </div>
+                                <ChevronRight size={18} className={`text-[#686868] transition-transform ${expandedSection === 'offers' ? 'rotate-90' : ''}`} />
+                            </button>
+
+                            <button 
+                                onClick={() => toggleSection('coupons')}
+                                className="w-full h-[55px] flex items-center justify-between px-4 hover:bg-zinc-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-[#5331EA]/10 flex items-center justify-center text-[#5331EA]">
+                                        <Tag size={14} />
+                                    </div>
+                                    <span className="text-[18px] font-medium text-black text-left" style={{ fontFamily: "'Anek Latin'" }}>
+                                        View all coupon codes
+                                    </span>
+                                </div>
+                                <ChevronRight size={18} className={`text-[#686868] transition-transform ${expandedSection === 'coupons' ? 'rotate-90' : ''}`} />
+                            </button>
+                        </div>
+
+                        {/* Offers/Coupons Expanded panel */}
+                        {expandedSection !== 'none' && (
+                            <div className="border border-[#D9D9D9] rounded-[9px] p-4 bg-zinc-50 space-y-3 animate-in fade-in duration-200">
+                                {expandedSection === 'coupons' ? (
+                                    <div className="space-y-3">
+                                        <div className="flex gap-2">
+                                            <input 
+                                                className="flex-1 border border-[#AEAEAE] rounded-[8px] px-3 h-[40px] text-[14px] font-medium outline-none bg-white"
+                                                placeholder="Enter coupon code"
+                                                value={couponInput}
+                                                onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                                            />
+                                            <button 
+                                                onClick={validateCoupon}
+                                                disabled={couponLoading}
+                                                className="px-4 bg-black text-white rounded-[8px] text-[13px] font-bold active:scale-95 transition-transform"
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
+                                        {couponError && <p className="text-red-500 text-[12px]">{couponError}</p>}
+                                        {couponSuccess && <p className="text-green-600 text-[12px]">{couponSuccess}</p>}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {offers.length > 0 ? (
+                                            offers.map(o => (
+                                                <div key={o.id} className="flex justify-between items-center p-2 bg-white rounded border border-[#D9D9D9]">
+                                                    <div>
+                                                        <p className="font-bold text-[13px]">{o.code}</p>
+                                                        <p className="text-[11px] text-[#686868]">{o.description}</p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => applyOffer(o)}
+                                                        className="px-2.5 py-1 bg-black text-white rounded text-[11px] font-bold"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-[12px] text-[#686868] italic text-center">No offers available for this event</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* PAYMENT DETAILS (Rectangle 527) */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-[#3B3B3B] tracking-[0.1em] uppercase" style={{ fontFamily: "'Anek Latin'" }}>PAYMENT DETAILS</span>
+                            <div className="flex-1 h-[0.7px] bg-[#D9D9D9] ml-4" />
+                        </div>
+
+                        <div className="w-full border border-[#D9D9D9] rounded-[9px] bg-white p-4 shadow-sm space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[17px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>Order amount</span>
+                                <span className="text-[17px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>₹{orderAmount.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-[12px] font-normal text-black flex items-center gap-1.5" style={{ fontFamily: "'Anek Latin'" }}>
+                                    Fees and chargers <ChevronDown size={14} className="text-zinc-500" />
+                                </span>
+                                <span className="text-[12px] font-normal text-black" style={{ fontFamily: "'Anek Latin'" }}>₹{bookingFee.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            {totalDiscount > 0 && (
+                                <div className="flex justify-between items-center text-green-600">
+                                    <span className="text-[12px] font-medium" style={{ fontFamily: "'Anek Latin'" }}>Discount Applied</span>
+                                    <span className="text-[12px] font-bold" style={{ fontFamily: "'Anek Latin'" }}>-₹{totalDiscount.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+
+                            <div className="w-full h-[0.7px] bg-[#D9D9D9]" />
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-[15px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>Grand Total</span>
+                                <span className="text-[17px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* DONATE TO EXPERIENCE INDIA (Rectangle 528 & Rectangle 529) */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-[#3B3B3B] tracking-[0.1em] uppercase" style={{ fontFamily: "'Anek Latin'" }}>DONATE TO EXPERIENCE INDIA</span>
+                            <div className="flex-1 h-[0.7px] bg-[#D9D9D9] ml-4" />
+                        </div>
+
+                        <div className="w-full rounded-[9px] overflow-hidden border border-[#D9D9D9] shadow-sm flex flex-col bg-white">
+                            {/* Rectangle 528 ( rgba(83, 49, 234, 0.15) ) */}
+                            <div className="w-full bg-[#5331EA]/15 p-5 relative min-h-[105px] flex items-center justify-between">
+                                <div className="max-w-[70%] z-10 flex flex-col">
+                                    <span className="text-[18px] font-semibold text-[#5331EA] leading-tight" style={{ fontFamily: "'Anek Latin'" }}>
+                                        Helping children
+                                    </span>
+                                    <span className="text-[18px] font-semibold text-[#5331EA] leading-tight" style={{ fontFamily: "'Anek Latin'" }}>
+                                        access nutritious food
+                                    </span>
+                                </div>
+
+                                {/* Firefly avatar */}
+                                <div className="w-[78px] h-[78px] shrink-0 rounded-full bg-white flex items-center justify-center shadow-inner relative overflow-hidden border border-[#5331EA]/25">
+                                    <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-[#FAF9FF]">
+                                        <Heart size={34} fill="#5331EA" className="text-[#5331EA] animate-pulse" />
+                                        <span className="text-[8px] font-extrabold text-[#5331EA] tracking-tighter mt-1">FEED INDIA</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Rectangle 529 ( white bottom strip ) */}
+                            <div className="w-full bg-white h-[56px] border-t border-[#AEAEAE]/40 flex items-center justify-between px-4 shrink-0">
+                                <span className="text-[12px] font-normal text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                                    Donate with every order
+                                </span>
+
+                                <div className="flex items-center gap-2">
+                                    {/* Edit amount Rectangle 530 */}
+                                    <div className="w-[69px] h-[27px] border border-[#AEAEAE] rounded-[7px] flex items-center justify-center px-1 bg-white relative">
+                                        <span className="text-[12px] font-normal text-black mr-1" style={{ fontFamily: "'Anek Latin'" }}>₹</span>
+                                        <input 
+                                            type="number"
+                                            value={donationAmount}
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value);
+                                                setDonationAmount(isNaN(val) ? 0 : Math.max(0, val));
+                                                setIsDonationEdited(true);
+                                            }}
+                                            disabled={isDonationAdded}
+                                            className="w-8 h-full text-center text-[12px] font-semibold bg-transparent focus:outline-none text-black disabled:opacity-75"
+                                        />
+                                        <Edit2 size={10} className="text-[#686868] ml-0.5 shrink-0" />
+                                    </div>
+
+                                    {/* Add Button Rectangle 531 */}
+                                    <button 
+                                        onClick={() => setIsDonationAdded(!isDonationAdded)}
+                                        className={`w-[56px] h-[27px] rounded-[7px] text-[12px] font-semibold flex items-center justify-center transition-all ${
+                                            isDonationAdded 
+                                            ? 'bg-[#5331EA] text-white border border-[#5331EA]' 
+                                            : 'bg-white text-black border border-black hover:bg-black hover:text-white'
+                                        }`}
+                                    >
+                                        {isDonationAdded ? (
+                                            <span className="flex items-center gap-0.5"><Check size={11} strokeWidth={3} /> Yes</span>
+                                        ) : `+${donationAmount}`}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BILLING DETAILS (Rectangle 532) */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-[#3B3B3B] tracking-[0.1em] uppercase" style={{ fontFamily: "'Anek Latin'" }}>BILLING DETAILS</span>
+                            <div className="flex-1 h-[0.7px] bg-[#D9D9D9] ml-4" />
+                        </div>
+
+                        <div className="w-full border border-[#AEAEAE] rounded-[9px] bg-white p-4 shadow-sm flex flex-col relative">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-[#EFEFEF] flex items-center justify-center text-zinc-500">
+                                        <User size={16} />
+                                    </div>
+                                    <span className="text-[15px] font-semibold text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                                        {billing.name || session?.name || 'User Name'}
+                                    </span>
+                                </div>
+                                <button 
+                                    onClick={() => setStep('billing')} 
+                                    className="text-[12px] font-semibold text-[#5331EA] flex items-center gap-1 active:scale-95 transition-all"
+                                    style={{ fontFamily: "'Anek Latin'" }}
+                                >
+                                    Edit <ChevronRight size={14} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-1 text-[13px] font-normal text-black pl-11" style={{ fontFamily: "'Anek Latin'" }}>
+                                <p className="opacity-90">{billing.phone || session?.phone || 'Phone number'}</p>
+                                <p className="opacity-90">{email || session?.email || 'Email ID'}</p>
+                                <p className="opacity-90">{billing.state || 'State / Region'}</p>
+                            </div>
+
+                            <div className="w-full h-[0.7px] bg-[#D9D9D9] my-4" />
+
+                            <p className="text-[12px] font-normal text-[#686868] leading-snug pl-1" style={{ fontFamily: "'Anek Latin'" }}>
+                                Information mentioned above will be used for generating the invoice and sending out the tickets.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Phone input confirmation if in review step */}
+                    {step === 'review' && (
+                        <div className="space-y-2">
+                            <label className="text-[13px] font-semibold text-[#686868] block" style={{ fontFamily: "'Anek Latin'" }}>
+                                Mobile number for booking confirmation
+                            </label>
+                            <div className="w-full h-[48px] border border-[#AEAEAE] rounded-[10px] px-4 flex items-center bg-white">
+                                <span className="text-[15px] font-semibold text-black mr-2">🇮🇳 +91</span>
+                                <input
+                                    type="text"
+                                    value={phoneInputValue || billing.phone}
+                                    onChange={handlePhoneChange}
+                                    placeholder="Enter 10-digit mobile"
+                                    maxLength={10}
+                                    inputMode="numeric"
+                                    className="flex-1 h-full bg-transparent focus:outline-none text-black font-semibold text-[15px] placeholder:text-[#AEAEAE]"
+                                />
+                            </div>
+                            {bookingError && <p className="text-red-500 text-[13px] font-semibold leading-tight">{bookingError}</p>}
+                        </div>
+                    )}
+
+                    {/* Billing Form Modal step (step === billing) inline for mobile */}
+                    {step === 'billing' && (
+                        <div className="space-y-3 border border-[#D9D9D9] rounded-[9px] p-4 bg-zinc-50 animate-in slide-in-from-top duration-300">
+                            <div>
+                                <label className="text-[12px] font-semibold text-[#686868] block mb-1">Full Name</label>
+                                <input
+                                    className="w-full h-[44px] border border-[#AEAEAE] rounded-[9px] px-4 text-[14px] font-medium outline-none bg-white"
+                                    value={billing.name}
+                                    onChange={e => setBilling(b => ({ ...b, name: e.target.value }))}
+                                    placeholder="Enter full name"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-semibold text-[#686868] block mb-1">Email</label>
+                                <input
+                                    className="w-full h-[44px] border border-[#AEAEAE] rounded-[9px] px-4 text-[14px] font-medium outline-none bg-white"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    placeholder="Enter email"
+                                    type="email"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-semibold text-[#686868] block mb-1">State</label>
+                                <select
+                                    className="w-full h-[44px] border border-[#AEAEAE] rounded-[9px] px-4 text-[14px] font-medium outline-none bg-white"
+                                    value={billing.state}
+                                    onChange={e => setBilling(b => ({ ...b, state: e.target.value }))}
+                                >
+                                    <option value="">Select state</option>
+                                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <label className="flex items-start gap-2 cursor-pointer mt-1">
+                                <input type="checkbox" className="mt-0.5 accent-black" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} />
+                                <span className="text-[12px] text-[#686868] leading-snug">
+                                    I agree to the <a href="/terms" className="underline text-black">Terms & Conditions</a> and <a href="/privacy" className="underline text-black">Privacy Policy</a>
+                                </span>
+                            </label>
+                            {bookingError && <p className="text-red-500 text-[13px]">{bookingError}</p>}
+                        </div>
+                    )}
+                </div>
+
+                {/* Sticky Footer (Rectangle 519) */}
+                <div className="fixed bottom-0 left-0 right-0 w-full h-[88px] bg-[#EFEFEF] flex items-center justify-between px-[25px] shrink-0 border-t border-[#E5E5E5] z-50">
+                    <div className="flex flex-col">
+                        <span className="text-[12px] font-normal text-black" style={{ fontFamily: "'Anek Latin'" }}>
+                            {cart?.tickets?.reduce((s, t) => s + t.quantity, 0) || 0} ticket{(cart?.tickets?.reduce((s, t) => s + t.quantity, 0) || 0) !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-[20px] font-medium text-black leading-tight" style={{ fontFamily: "'Anek Latin'" }}>
+                            ₹{grandTotal.toLocaleString('en-IN')}
+                        </span>
+                    </div>
+
+                    <button
+                        onClick={step === 'review' ? handleContinue : handlePayNow}
+                        disabled={bookingLoading}
+                        className="w-[148px] h-[44px] bg-black text-white rounded-[14px] font-semibold text-[15px] flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
+                        style={{ fontFamily: "'Anek Latin'" }}
+                    >
+                        {bookingLoading ? 'LOCKING...' : step === 'review' ? 'Checkout' : 'Pay Now'}
+                    </button>
+                </div>
+            </div>
+
+            {/* ====== DESKTOP VIEW (hidden md:block) ====== */}
+            <div className="hidden md:flex flex-col min-h-screen">
             <style>{`
                 /* Hide scrollbars while keeping functionality */
                 .hide-scrollbar {
@@ -928,13 +1548,12 @@ export default function ReviewBookingPage() {
             {/* Header */}
             <header className="w-full h-[60px] md:h-[70px] bg-white flex items-center justify-between px-6 md:px-10 border-b border-[#FFFFFF] shadow-sm relative z-10 shrink-0">
                 <div className="flex-shrink-0 cursor-pointer" onClick={() => {
-                    clearReservationAndFlow(true);
                     router.push('/');
                 }}>
                     <Image src="/ticpin-logo-black.png" alt="TICPIN" width={159} height={25} className="h-[20px] md:h-[25px] w-auto object-contain" />
                 </div>
                 <h1 className="text-[18px] md:text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                    {step === 'billing' ? 'Billing Details' : 'Review your booking'}
+                    {step === 'billing' ? 'Review & Billing' : 'Review your booking'}
                 </h1>
                 <div className="flex items-center gap-3">
                     <div 
@@ -962,538 +1581,104 @@ export default function ReviewBookingPage() {
             )}
 
             <main className="w-full max-w-[1100px] mx-auto px-6 py-4 space-y-4 flex-grow overflow-x-hidden">
+                <OrderSummary
+                    cart={cart}
+                    updateTicketQuantity={updateTicketQuantity}
+                    removeTicket={removeTicket}
+                    orderAmount={orderAmount}
+                    bookingFee={bookingFee}
+                    showGstDetails={showGstDetails}
+                    setShowGstDetails={setShowGstDetails}
+                    passDiscount={passDiscount}
+                    totalDiscount={totalDiscount}
+                    grandTotal={grandTotal}
+                    router={router}
+                />
 
-                <div className="w-full bg-white border border-white rounded-[20px] shadow-sm">
-                    <div className="p-4 md:p-5">
-                        <div className="flex justify-between items-center mb-2 mt-[-10px]">
-                            <h2 style={{ color: 'black', fontSize: '26px', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>
-                                Order Summary
-                            </h2>
-                            <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #1DB954', flexShrink: 0 }} />
-                        </div>
+                <OffersCoupons
+                    cart={cart}
+                    session={session}
+                    expandedSection={expandedSection}
+                    toggleSection={toggleSection}
+                    offers={offers}
+                    appliedOffer={appliedOffer}
+                    offerDiscount={offerDiscount}
+                    applyOffer={applyOffer}
+                    removeOffer={removeOffer}
+                    appliedCoupon={appliedCoupon}
+                    couponDiscount={couponDiscount}
+                    removeCoupon={removeCoupon}
+                    couponInput={couponInput}
+                    setCouponInput={setCouponInput}
+                    validateCoupon={validateCoupon}
+                    couponLoading={couponLoading}
+                    couponError={couponError}
+                    couponSuccess={couponSuccess}
+                    availableCoupons={availableCoupons}
+                />
 
-                        <div className="border-t border-[#AEAEAE] pt-4 space-y-4 mx-[-16px] md:mx-[-20px] px-4 md:px-5">
-
-                            {/* ITEM DETAILS */}
-                            <div>
-                                <div className="flex items-center gap-2 mb-2 mt-[-10px]">
-                                    <h3 style={{ color: 'black', fontSize: '20px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '40px' }} className="uppercase">
-                                        {cart?.type === 'dining' ? 'RESERVATION' : cart?.type === 'play' ? 'SLOTS' : 'TICKETS'}
-                                    </h3>
-                                    <div className="flex-grow h-[0.5px] bg-[#AEAEAE]" />
-                                </div>
-
-                                {cart?.tickets && cart.tickets.length > 0 ? cart.tickets.map((ticket, i) => (
-                                    <div key={i} className="border border-[#AEAEAE] rounded-[10px] p-3 flex justify-between items-start relative mb-3">
-                                        <div className="space-y-1">
-                                            <h4 className="text-[18px] md:text-[22px] font-bold text-black">
-                                                {cart.eventName} <span className="font-normal mx-1">|</span> {cart.city}
-                                            </h4>
-                                            <p className="text-[12px] md:text-[14px] text-[#686868] font-medium uppercase tracking-tight">{ticket.name}</p>
-
-                                            {/* Details for Dining/Play */}
-                                            {(cart.type === 'dining' || cart.type === 'play') && (
-                                                <div className="flex flex-col gap-1 mt-2">
-                                                    {cart.date && (
-                                                        <p className="text-[15px] text-[#686868] font-medium uppercase">
-                                                            {cart.type === 'play' ? `${cart.slot} Feb` : `${cart.date} Feb`}
-                                                            {cart.timeSlot && ` • ${cart.timeSlot}`}
-                                                            {cart.slot && cart.type !== 'play' && ` • ${cart.slot}`}
-                                                        </p>
-                                                    )}
-                                                    {cart.type === 'play' && (
-                                                        <p className="text-[13px] text-[#AEAEAE] font-medium uppercase tracking-wider italic">
-                                                            {ticket.name}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            <div className="flex items-center gap-3 mt-2">
-                                                <div className="flex items-center gap-2 border border-[#AEAEAE] rounded-[6px] px-2 py-1">
-                                                    <button
-                                                        onClick={() => updateTicketQuantity(i, ticket.quantity - 1)}
-                                                        className="w-[24px] h-[24px] flex items-center justify-center text-[16px] font-bold text-black hover:text-[#5331EA] transition-colors"
-                                                    >
-                                                        −
-                                                    </button>
-                                                    <span className="w-[30px] text-center text-[14px] font-semibold text-black">
-                                                        {ticket.quantity}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => updateTicketQuantity(i, ticket.quantity + 1)}
-                                                        className="w-[24px] h-[24px] flex items-center justify-center text-[16px] font-bold text-black hover:text-[#5331EA] transition-colors"
-                                                    >
-                                                        +
-                                                    </button>
-                                                </div>
-                                                <span className="text-[#AEAEAE]">×</span>
-                                                <p className="text-[14px] text-[#686868]">₹{ticket.price.toLocaleString('en-IN')}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-4">
-                                            <Trash2 size={14} className="text-[#AEAEAE] cursor-pointer hover:text-red-500 transition-colors"
-                                                onClick={() => removeTicket(i)}
-                                            />
-                                            <span style={{ color: 'black', fontSize: '20px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>
-                                                ₹{(ticket.price * ticket.quantity).toLocaleString('en-IN')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <div className="text-center py-8 text-[#AEAEAE]">
-                                        <p className="text-[16px]">No selection found.</p>
-                                        <button onClick={() => router.back()} className="text-[14px] text-black underline mt-2">Go back to selection</button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* OFFERS */}
-                            < div >
-                                <div className="flex items-center gap-4 mb-4 mt-[-20px]">
-                                    <h3 style={{ color: 'black', fontSize: '25px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '60px' }} className="uppercase">OFFERS</h3>
-                                    <div className="flex-grow h-[0.5px] bg-[#AEAEAE]" />
-                                </div>
-
-                                {appliedOffer && (
-                                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-[10px] p-3 px-5 mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <Tag size={16} className="text-green-600" />
-                                            <div>
-                                                <p className="text-[14px] font-semibold text-green-700">{appliedOffer.title}</p>
-                                                <p className="text-[12px] text-green-600">-₹{offerDiscount.toLocaleString('en-IN')} discount applied</p>
-                                            </div>
-                                        </div>
-                                        <button onClick={removeOffer} className="text-[#AEAEAE] hover:text-red-500 transition-colors">
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                )}
-
-                                {appliedCoupon && (
-                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-[10px] p-3 px-5 mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <Tag size={16} className="text-blue-600" />
-                                            <div>
-                                                <p className="text-[14px] font-semibold text-blue-700">Code: {appliedCoupon}</p>
-                                                <p className="text-[12px] text-blue-600">-₹{couponDiscount.toLocaleString('en-IN')} discount applied</p>
-                                            </div>
-                                        </div>
-                                        <button onClick={removeCoupon} className="text-[#AEAEAE] hover:text-red-500 transition-colors">
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                )}
-
-                                <div className="border border-[#AEAEAE] rounded-[15px] overflow-hidden mt-[-10px] bg-[#FDFDFD]">
-                                    <div className="border-b border-[#F0F0F0]">
-                                        <div
-                                            className="flex items-center justify-between p-4 px-6 cursor-pointer hover:bg-[#fafafa] transition-colors"
-                                            onClick={() => toggleSection('offers')}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-6 h-6 rounded-full border-[2px] border-black flex items-center justify-center text-[15px] font-bold">%</div>
-                                                <span style={{ color: 'black', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
-                                                    {appliedOffer ? `Offer applied: ${appliedOffer.title}` : `View all ${cart?.type || 'event'} offers`}
-                                                    {offers?.length > 0 && !appliedOffer && (
-                                                        <span className="ml-2 text-[13px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{offers.length} available</span>
-                                                    )}
-                                                </span>
-                                            </div>
-                                            {expandedSection === 'offers' ? <ChevronDown size={18} className="text-black" /> : <ChevronRight size={18} className="text-black" />}
-                                        </div>
-
-                                        {expandedSection === 'offers' && (
-                                            <div className="p-6 pt-0 space-y-4 animate-in fade-in duration-300">
-                                                {!offers || offers.length === 0 ? (
-                                                    <p className="text-[14px] text-[#AEAEAE] pb-4">No offers available for this {cart?.type || 'event'}.</p>
-                                                ) : (
-                                                    offers.map((offer, i) => (
-                                                        <div key={i} className="border border-[#F0F0F0] bg-white rounded-[12px] p-4 flex justify-between items-center transition-all hover:border-[#AEAEAE]">
-                                                            <div className="flex-1 pr-4">
-                                                                <p className="text-[16px] font-bold text-black">{offer.title}</p>
-                                                                <p className="text-[13px] text-[#686868]">{offer.description}</p>
-                                                                <p className="text-[12px] text-green-600 font-semibold mt-1">
-                                                                    {offer.discount_type === 'percent' ? `${offer.discount_value}% OFF` : `₹${offer.discount_value} OFF`}
-                                                                </p>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => applyOffer(offer)}
-                                                                className={`px-4 h-[34px] rounded-[6px] text-[13px] font-bold uppercase transition-all ${appliedOffer?.id === offer.id ? 'bg-green-100 text-green-700' : 'bg-black text-white hover:bg-zinc-800'}`}
-                                                            >
-                                                                {appliedOffer?.id === offer.id ? 'Applied' : 'Apply'}
-                                                            </button>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <div
-                                            className="flex items-center justify-between p-4 px-6 cursor-pointer hover:bg-[#fafafa] transition-colors"
-                                            onClick={() => toggleSection('coupons')}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-6 h-6 flex items-center justify-center relative">
-                                                    <Image src="/events/cupon.svg" alt="Coupons" fill className="object-contain" />
-                                                </div>
-                                                <span style={{ color: 'black', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
-                                                    {appliedCoupon ? `Code applied: ${appliedCoupon}` : 'View coupon codes'}
-                                                    {availableCoupons.length > 0 && !appliedCoupon && (
-                                                        <span className="ml-2 text-[13px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">{availableCoupons.length} available</span>
-                                                    )}
-                                                </span>
-                                            </div>
-                                            {expandedSection === 'coupons' ? <ChevronDown size={18} className="text-black" /> : <ChevronRight size={18} className="text-black" />}
-                                        </div>
-
-                                        {expandedSection === 'coupons' && (
-                                            <div className="p-6 pt-0 space-y-4 animate-in fade-in duration-300">
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={couponInput}
-                                                        onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
-                                                        onKeyDown={e => e.key === 'Enter' && validateCoupon()}
-                                                        placeholder="ENTER CODE"
-                                                        className="flex-1 h-[45px] border border-[#AEAEAE] rounded-[8px] px-4 focus:outline-none focus:border-black text-[14px] font-bold uppercase placeholder:normal-case placeholder:font-medium"
-                                                    />
-                                                    <button
-                                                        onClick={() => validateCoupon()}
-                                                        disabled={couponLoading || !couponInput.trim()}
-                                                        className="px-6 h-[45px] bg-[#AC9BF7] text-white rounded-[8px] text-[13px] font-bold uppercase disabled:opacity-40 transition-all active:scale-[0.98]"
-                                                    >
-                                                        {couponLoading ? '...' : 'APPLY'}
-                                                    </button>
-                                                </div>
-                                                {couponError && <p className="text-red-500 text-[12px] font-medium">{couponError}</p>}
-                                                {couponSuccess && <p className="text-green-600 text-[12px] font-bold">{couponSuccess}</p>}
-
-                                                {/* Available Coupons List — backend already filtered for this user */}
-                                                {availableCoupons.length > 0 && !appliedCoupon && (
-                                                    <div className="space-y-2 mt-4">
-                                                        {availableCoupons.map((c, i) => {
-                                                            const expiry = new Date(c.valid_until);
-                                                            const now = new Date();
-                                                            const hoursLeft = (expiry.getTime() - now.getTime()) / 36e5;
-                                                            const isExpiringSoon = hoursLeft <= 24;
-                                                            const expiryLabel = expiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                                                            const usesLeft = c.max_uses > 0 ? c.max_uses - (c.used_count ?? 0) : null;
-                                                            return (
-                                                                <div key={i} className={`flex items-center justify-between p-3 border rounded-[10px] bg-white ${isExpiringSoon ? 'border-orange-300' : 'border-[#F0F0F0]'}`}>
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-                                                                            <Tag size={14} className={isExpiringSoon ? 'text-orange-400' : 'text-[#AEAEAE]'} />
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="text-[14px] font-bold text-black uppercase">{c.code}</p>
-                                                                            <p className="text-[11px] text-[#686868] uppercase font-medium">
-                                                                                {c.discount_type === 'percent' ? `${c.discount_value}% OFF` : `₹${c.discount_value} OFF`}
-                                                                            </p>
-                                                                            <p className={`text-[10px] font-medium mt-0.5 ${isExpiringSoon ? 'text-orange-500' : 'text-[#AEAEAE]'}`}>
-                                                                                {isExpiringSoon ? `⚠ Expires today (${expiryLabel})` : `Valid till ${expiryLabel}`}
-                                                                                {usesLeft !== null && ` · ${usesLeft} use${usesLeft !== 1 ? 's' : ''} left`}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <button
-                                                                        onClick={() => validateCoupon(c.code)}
-                                                                        className="px-4 py-1.5 bg-[#AC9BF7] text-white rounded-[8px] text-[11px] font-bold uppercase transition-all"
-                                                                    >
-                                                                        Apply
-                                                                    </button>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-
-                                                <div className="bg-[#f9f9f9] p-3 rounded-[8px]">
-                                                    <p className="text-[12px] text-[#686868] font-medium leading-tight">
-                                                        {session?.id
-                                                            ? 'Showing coupons available for your account. Only one coupon can be applied per order.'
-                                                            : 'Login to see personalised coupon codes. Only one coupon can be applied per order.'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* PAYMENT DETAILS */}
-                            <div>
-                                <div className="flex items-center gap-2 mb-2 mt-[-10px]">
-                                    <h3 style={{ color: 'black', fontSize: '20px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 100, lineHeight: '40px' }} className="uppercase">PAYMENT DETAILS</h3>
-                                    <div className="flex-grow h-[0.5px] bg-[#AEAEAE]" />
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center mt-[-10px]" style={{ color: 'black', fontSize: '18px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
-                                        <span>Subtotal</span>
-                                        <span>₹{orderAmount.toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <div
-                                            className="flex justify-between items-center cursor-pointer group"
-                                            onClick={() => setShowGstDetails(!showGstDetails)}
-                                            style={{ color: '#686868', fontSize: '18px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}
-                                        >
-                                            <div className="flex items-center gap-1 group-hover:text-black transition-colors">
-                                                <span>Booking fee (inc. of GST)</span>
-                                                <ChevronRight size={18} className={`transition-transform duration-300 ${showGstDetails ? 'rotate-90' : ''}`} />
-                                            </div>
-                                            <span>₹{bookingFee.toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {showGstDetails && (
-                                            <div className="pl-4 pr-1 mt-2 mb-1 space-y-2 animate-in slide-in-from-top-2 duration-300 overflow-hidden">
-                                                <div className="flex justify-between text-[16px] text-[#686868] font-medium">
-                                                    <span>Base Platform Fee</span>
-                                                    <span>₹{Math.round(bookingFee / 1.18).toLocaleString('en-IN')}</span>
-                                                </div>
-                                                <div className="flex justify-between text-[16px] text-[#686868] font-medium">
-                                                    <span>Integrated GST (18%)</span>
-                                                    <span>₹{(bookingFee - Math.round(bookingFee / 1.18)).toLocaleString('en-IN')}</span>
-                                                </div>
-                                                <div className="h-[0.5px] bg-[#EBEBEB] w-full" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    {passDiscount > 0 && (
-                                        <div className="flex justify-between items-center" style={{ color: '#5331EA', fontSize: '18px', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>
-                                            <span>TicPin Pass Member Discount (10%)</span>
-                                            <span>-₹{passDiscount.toLocaleString('en-IN')}</span>
-                                        </div>
-                                    )}
-                                    {totalDiscount - passDiscount > 0 && (
-                                        <div className="flex justify-between items-center" style={{ color: '#16a34a', fontSize: '18px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
-                                            <span>Other Discounts applied</span>
-                                            <span>-₹{(totalDiscount - passDiscount).toLocaleString('en-IN')}</span>
-                                        </div>
-                                    )}
-                                    <div className="h-[0.5px] bg-[#AEAEAE] mt-2" />
-                                    <div className="pt-2 flex justify-between items-center" style={{ color: 'black', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>
-                                        <span style={{ fontSize: '20px' }}>Grand total</span>
-                                        <span style={{ fontSize: '25px', color: grandTotal === 0 ? '#5331EA' : 'black', fontWeight: 900 }}>
-                                            {grandTotal === 0 ? 'FREE' : `₹${grandTotal.toLocaleString('en-IN')}`}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* PHONE & CONTINUE */}
-                            {step === 'review' && (
-                                <div className="space-y-3 pt-2">
-                                    <div>
-                                        <label className="text-[14px] font-semibold text-[#686868] block mb-1">
-                                            Mobile number for booking confirmation
-                                        </label>
-                                        <div className="w-full h-[50px] border border-[#AEAEAE] rounded-[10px] px-4 flex items-center bg-white">
-                                            <span className="text-[16px] font-semibold text-black mr-2">🇮🇳 +91</span>
-                                            <input
-                                                type="text"
-                                                value={phoneInputValue || billing.phone}
-                                                onChange={handlePhoneChange}
-                                                placeholder="Enter 10-digit mobile"
-                                                maxLength={10}
-                                                inputMode="numeric"
-                                                className="flex-1 h-full bg-transparent focus:outline-none text-black font-semibold text-[15px] placeholder:text-[#AEAEAE]"
-                                                style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
-                                            />
-                                            {(phoneInputValue?.length === 10 || (billing.phone && billing.phone.length === 10)) && (
-                                                <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full uppercase ml-2">
-                                                    Verified
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {bookingError && (
-                                        <p className="text-red-500 text-[14px] font-medium">{bookingError}</p>
-                                    )}
-
-                                    <button
-                                        onClick={handleContinue}
-                                        disabled={!cart?.tickets?.length}
-                                        className="w-full h-[45px] bg-black text-white rounded-[10px] uppercase font-semibold tracking-widest flex items-center justify-center disabled:opacity-40"
-                                        style={{ color: 'white', fontSize: '24px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 500 }}
-                                    >
-                                        CONTINUE
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── BILLING FORM ───────────────────── */}
-                {step === 'billing' && (
-                    <div ref={billingRef} className="w-full bg-white border border-white rounded-[20px] shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500 mb-20">
-                        <div className="p-6 md:p-8">
-
-                            {/* Mini order summary */}
-                            <div className="flex justify-between items-center mb-6 mt-[-10px]">
+                {step === 'review' && (
+                    <div className="w-full bg-white border border-white rounded-[20px] shadow-sm">
+                        <div className="p-4 md:p-5">
+                            <div className="space-y-3 pt-2">
                                 <div>
-                                    <h2 style={{ color: 'black', fontSize: '30px', fontFamily: 'var(--font-anek-latin)', fontWeight: 600 }}>Billing Details</h2>
-                                    <p style={{ fontFamily: 'var(--font-anek-latin)' }} className="text-[14px] text-[#686868] mt-1">{cart?.eventName} &nbsp;·&nbsp; ₹{grandTotal.toLocaleString('en-IN')} total</p>
-                                </div>
-                                {/* Billing step indicator: green circle with tick */}
-                                <div
-                                    style={{
-                                        width: 47,
-                                        height: 47,
-                                        borderRadius: '50%',
-                                        flexShrink: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        transition: 'background 0.25s, border-color 0.25s',
-                                        background: '#0AC655',
-                                        border: 'none',
-                                    }}
-                                >
-                                    <svg
-                                        style={{ width: '83.33%', height: '83.33%' }}
-                                        viewBox="0 0 39 39"
-                                        fill="none"
-                                    >
-                                        <path
-                                            d="M7 20l9 9 16-16"
-                                            stroke="white"
-                                            strokeWidth="3.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
+                                    <label className="text-[14px] font-semibold text-[#686868] block mb-1">
+                                        Mobile number for booking confirmation
+                                    </label>
+                                    <div className="w-full h-[50px] border border-[#AEAEAE] rounded-[10px] px-4 flex items-center bg-white">
+                                        <span className="text-[16px] font-semibold text-black mr-2">🇮🇳 +91</span>
+                                        <input
+                                            type="text"
+                                            value={phoneInputValue || billing.phone}
+                                            onChange={handlePhoneChange}
+                                            placeholder="Enter 10-digit mobile"
+                                            maxLength={10}
+                                            inputMode="numeric"
+                                            className="flex-1 h-full bg-transparent focus:outline-none text-black font-semibold text-[15px] placeholder:text-[#AEAEAE]"
+                                            style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}
                                         />
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <div className="border-t border-[#AEAEAE] pt-6 space-y-6 mx-[-24px] md:mx-[-32px] px-6 md:px-8 mt-[-15px]">
-
-                                <p className="text-[14px] text-[#686868] font-semibold" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                    These details will be shown on your invoice <span className="text-red-500">*</span>
-                                </p>
-
-                                {/* Name */}
-                                <div className="space-y-2">
-                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        Name<span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={billing.name}
-                                        onChange={e => { setBilling(b => ({ ...b, name: e.target.value })); setBookingError(''); }}
-                                        placeholder="Name*"
-                                        className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
-                                    />
-                                </div>
-
-                                {/* Phone */}
-                                <div className="space-y-2">
-                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        Phone Number
-                                    </label>
-                                    <div className="w-full h-[55px] border border-[#E2E2E2] rounded-[10px] px-5 flex items-center bg-[#F8F8F8] gap-2">
-                                        <span className="text-[20px]">🇮🇳</span>
-                                        <span className="text-[16px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                            +91 {(billing.phone || '').replace(/^\+?91/, '')}
-                                        </span>
+                                        {(phoneInputValue?.length === 10 || (billing.phone && billing.phone.length === 10)) && (
+                                            <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full uppercase ml-2">
+                                                Verified
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-
-                                {/* Nationality */}
-                                <div className="space-y-3">
-                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        Select nationality
-                                    </label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {['Indian resident', 'International visitor'].map((opt) => {
-                                            const active = billing.nationality === opt;
-                                            return (
-                                                <button
-                                                    key={opt}
-                                                    type="button"
-                                                    onClick={() => { setBilling(b => ({ ...b, nationality: opt })); setBookingError(''); }}
-                                                    className={`h-[50px] px-4 rounded-[10px] border flex items-center justify-between ${active ? 'border-[#2A2A2A] bg-white' : 'border-[#E2E2E2] bg-[#FAFAFA]'}`}
-                                                >
-                                                    <span className="text-[16px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>{opt}</span>
-                                                    <span className={`w-4 h-4 rounded-full border-2 ${active ? 'border-[#2A2A2A]' : 'border-[#9CA3AF]'} flex items-center justify-center`}>
-                                                        {active && <span className="w-2 h-2 rounded-full bg-[#2A2A2A]" />}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* State */}
-                                <div className="space-y-2">
-                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        Select state
-                                    </label>
-                                    <select
-                                        value={billing.state}
-                                        onChange={e => { setBilling(b => ({ ...b, state: e.target.value })); setBookingError(''); }}
-                                        className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] bg-white appearance-none"
-                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
-                                    >
-                                        <option value="">Select State</option>
-                                        {INDIAN_STATES.map((st) => (
-                                            <option key={st} value={st}>{st}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Email */}
-                                <div className="space-y-2">
-                                    <label className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        Email<span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={e => { setEmail(e.target.value); setBookingError(''); }}
-                                        placeholder="Email*"
-                                        className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE]"
-                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
-                                    />
-                                    <p className="text-[13px] text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        We'll email you ticket confirmation and invoices
-                                    </p>
-                                </div>
-
-                                {/* Terms */}
-                                <div className="flex items-start gap-3 pt-2">
-                                    <div
-                                        onClick={() => setAcceptedTerms(!acceptedTerms)}
-                                        className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded-[4px] border flex items-center justify-center cursor-pointer transition-colors ${acceptedTerms ? 'bg-black border-black' : 'border-[#AEAEAE]'}`}
-                                    >
-                                        {acceptedTerms && <div className="w-2 h-1 border-white border-b-2 border-r-2 rotate-45 mb-1" />}
-                                    </div>
-                                    <span className="text-[13px] md:text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>
-                                        I have read and accepted the <Link href="/terms" target="_blank" className="text-[#5331EA] hover:underline font-semibold">Terms &amp; Conditions</Link> and <Link href="/refund" target="_blank" className="text-[#5331EA] hover:underline font-semibold">Refund Policy</Link>
-                                    </span>
-                                </div>
-
                                 {bookingError && (
-                                    <p className="text-red-500 text-[14px] font-medium" style={{ fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)' }}>{bookingError}</p>
+                                    <p className="text-red-500 text-[14px] font-medium">{bookingError}</p>
                                 )}
 
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={handlePayNow}
-                                        disabled={bookingLoading || isPayingRef.current}
-                                        className="flex-1 h-[55px] bg-black text-white rounded-[10px] font-bold text-[22px] uppercase hover:bg-zinc-800 active:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-wider shadow-lg shadow-black/10"
-                                        style={{ fontFamily: 'Anek Tamil Condensed' }}
-                                    >
-                                        {bookingLoading ? 'Processing...' : (grandTotal === 0 ? 'CONTINUE' : 'PAY NOW')}
-                                    </button>
-                                </div>
-
+                                <button
+                                    onClick={handleContinue}
+                                    disabled={!cart?.tickets?.length}
+                                    className="w-full h-[45px] bg-black text-white rounded-[10px] uppercase font-semibold tracking-widest flex items-center justify-center disabled:opacity-40"
+                                    style={{ color: 'white', fontSize: '24px', fontFamily: 'Anek Tamil Condensed, var(--font-anek-latin)', fontWeight: 500 }}
+                                >
+                                    CONTINUE
+                                </button>
                             </div>
                         </div>
                     </div>
+                )}
+
+                {step === 'billing' && (
+                    <BillingDetailsForm
+                        billingRef={billingRef}
+                        cart={cart}
+                        grandTotal={grandTotal}
+                        billing={billing}
+                        setBilling={setBilling}
+                        email={email}
+                        setEmail={setEmail}
+                        acceptedTerms={acceptedTerms}
+                        setAcceptedTerms={setAcceptedTerms}
+                        bookingError={bookingError}
+                        setBookingError={setBookingError}
+                        bookingLoading={bookingLoading}
+                        isPaying={isPayingRef.current}
+                        handlePayNow={handlePayNow}
+                        INDIAN_STATES={INDIAN_STATES}
+                    />
                 )}
             </main>
 
@@ -1524,16 +1709,19 @@ export default function ReviewBookingPage() {
                     </div>
                 </div>
             )}
+            </div>{/* End Desktop wrapper */}
 
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-            <OrganizerLogoutModal 
-                isOpen={showLogoutModal} 
-                onClose={() => setShowLogoutModal(false)} 
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
-            />
             {isProfileDrawerOpen && (
-                <ProfileDrawer onClose={() => setIsProfileDrawerOpen(false)} />
+                <ProfileDrawer 
+                    isOpen={isProfileDrawerOpen}
+                    onClose={() => setIsProfileDrawerOpen(false)}
+                    userSession={session}
+                    session={organizerSession}
+                    onUserLogout={handleUserLogout}
+                    onOrganizerLogout={handleOrganizerLogout}
+                    router={router}
+                />
             )}
         </div>
     );

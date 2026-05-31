@@ -33,7 +33,7 @@ export default function FilterBar({
     };
 
     return (
-        <div className="flex flex-wrap gap-1.5 md:gap-2 px-2 font-[family-name:var(--font-anek-latin)]">
+        <div className="flex flex-wrap gap-1.5 md:gap-2 font-[family-name:var(--font-anek-latin)]">
             {/* Filters Button */}
             <button
                 onClick={() => setIsFilterModalOpen(true)}

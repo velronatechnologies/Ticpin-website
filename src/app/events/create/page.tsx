@@ -36,6 +36,24 @@ const CreateEventPage = () => {
     const [eventTime, setEventTime] = useState('');
     const [duration, setDuration] = useState('');
 
+    const [ticketOpenDate, setTicketOpenDate] = useState('');
+    const [ticketOpenHour, setTicketOpenHour] = useState('12');
+    const [ticketOpenMinute, setTicketOpenMinute] = useState('00');
+    const [ticketOpenAmpm, setTicketOpenAmpm] = useState('AM');
+
+    const [ticketCloseDate, setTicketCloseDate] = useState('');
+    const [ticketCloseHour, setTicketCloseHour] = useState('12');
+    const [ticketCloseMinute, setTicketCloseMinute] = useState('00');
+    const [ticketCloseAmpm, setTicketCloseAmpm] = useState('AM');
+
+    const [eventEndDate, setEventEndDate] = useState('');
+    const [eventEndHour, setEventEndHour] = useState('12');
+    const [eventEndMinute, setEventEndMinute] = useState('00');
+    const [eventEndAmpm, setEventEndAmpm] = useState('AM');
+
+    const [timezone, setTimezone] = useState('Asia/Kolkata');
+    const [totalTicketsAvailable, setTotalTicketsAvailable] = useState('0');
+
     // Event Guide State
     const [guide, setGuide] = useState({
         languages: [] as string[],
@@ -242,6 +260,60 @@ const CreateEventPage = () => {
     }, [showMap, mapLoaded]);
 
     useEffect(() => {
+        if (!eventDate || !eventTime || !duration) return;
+
+        try {
+            const [year, month, day] = eventDate.split('-').map(num => parseInt(num, 10));
+            const [h24Str, mStr] = eventTime.split(':');
+            const startH24 = parseInt(h24Str, 10);
+            const startMin = parseInt(mStr, 10);
+
+            const startDateObj = new Date(year, month - 1, day, startH24, startMin);
+            if (isNaN(startDateObj.getTime())) return;
+
+            let durationMinutes = 0;
+            const dur = duration.toLowerCase();
+            if (dur.includes('min')) {
+                const match = dur.match(/(\d+)\s*min/);
+                if (match) durationMinutes = parseInt(match[1], 10);
+            } else if (dur.includes('hour')) {
+                const match = dur.match(/([\d.]+)\s*hour/);
+                if (match) {
+                    const hrs = parseFloat(match[1]);
+                    durationMinutes = Math.round(hrs * 60);
+                }
+            } else if (dur.includes('all day')) {
+                durationMinutes = 24 * 60;
+            }
+
+            const endDateObj = new Date(startDateObj.getTime() + durationMinutes * 60 * 1000);
+            
+            const endYear = endDateObj.getFullYear();
+            const endMonth = (endDateObj.getMonth() + 1).toString().padStart(2, '0');
+            const endDay = endDateObj.getDate().toString().padStart(2, '0');
+            const formattedEndDate = `${endYear}-${endMonth}-${endDay}`;
+
+            const endH24 = endDateObj.getHours();
+            let roundedEndMin = endDateObj.getMinutes();
+            roundedEndMin = Math.round(roundedEndMin / 5) * 5;
+            if (roundedEndMin === 60) {
+                endDateObj.setHours(endDateObj.getHours() + 1);
+                roundedEndMin = 0;
+            }
+            const endMin = roundedEndMin.toString().padStart(2, '0');
+            const endAmpm = endH24 >= 12 ? 'PM' : 'AM';
+            const endH12 = (endH24 % 12 || 12).toString();
+
+            setEventEndDate(formattedEndDate);
+            setEventEndHour(endH12);
+            setEventEndMinute(endMin);
+            setEventEndAmpm(endAmpm);
+        } catch (e) {
+            console.error('Error auto-calculating event end date:', e);
+        }
+    }, [eventDate, eventTime, duration]);
+
+    useEffect(() => {
         const checkAuth = async () => {
             let session = getOrganizerSession();
             if (!session) { setAuthChecked(false); return; }
@@ -354,6 +426,43 @@ const CreateEventPage = () => {
         if (!portraitUrl || !landscapeUrl) { setSubmitMsg('Please upload both portrait and landscape card images.'); return; }
         if (pocs.length === 0) { setSubmitMsg('Please add at least one Point of Contact.'); return; }
 
+        const parseDateString = (date: string, hour: string, minute: string, ampm: string) => {
+            if (!date) return null;
+            let h24 = parseInt(hour) % 12;
+            if (ampm === 'PM') h24 += 12;
+            const hourStr = h24.toString().padStart(2, '0');
+            const minuteStr = minute.padStart(2, '0');
+            try {
+                const localISO = `${date}T${hourStr}:${minuteStr}:00`;
+                const d = new Date(localISO);
+                return d.toISOString();
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const tOpen = parseDateString(ticketOpenDate, ticketOpenHour, ticketOpenMinute, ticketOpenAmpm);
+        const tClose = parseDateString(ticketCloseDate, ticketCloseHour, ticketCloseMinute, ticketCloseAmpm);
+        const eEnd = parseDateString(eventEndDate, eventEndHour, eventEndMinute, eventEndAmpm);
+
+        const startDateTime = eventDate ? new Date(`${eventDate}T${timeParts.hours.padStart(2, '0')}:${timeParts.minutes.padStart(2, '0')}:00`) : null;
+        const openTimeObj = tOpen ? new Date(tOpen) : null;
+        const closeTimeObj = tClose ? new Date(tClose) : null;
+        const endTimeObj = eEnd ? new Date(eEnd) : null;
+
+        if (openTimeObj && closeTimeObj && openTimeObj >= closeTimeObj) {
+            setSubmitMsg('Ticket Open Date & Time must be strictly before Ticket Close Date & Time.');
+            return;
+        }
+        if (closeTimeObj && endTimeObj && closeTimeObj > endTimeObj) {
+            setSubmitMsg('Ticket Close Date & Time cannot be after Event End Date & Time.');
+            return;
+        }
+        if (startDateTime && endTimeObj && startDateTime >= endTimeObj) {
+            setSubmitMsg('Event Start Date & Time must be strictly before Event End Date & Time.');
+            return;
+        }
+
         setSubmitLoading(true); setSubmitMsg('');
         try {
             await eventsApi.create({
@@ -373,6 +482,13 @@ const CreateEventPage = () => {
                 landscape_image_url: landscapeUrl,
                 card_video_url: videoUrl,
                 gallery_urls: galleryUrls,
+                ticket_open_date: tOpen,
+                ticket_close_date: tClose,
+                event_end_date: eEnd,
+                timezone: timezone,
+                total_tickets_available: parseInt(totalTicketsAvailable) || 0,
+                is_sales_paused: false,
+                is_canceled: false,
                 guide: {
                     languages: guide.languages,
                     min_age: guide.minAge,
@@ -878,6 +994,125 @@ const CreateEventPage = () => {
                                                 ))}
                                             </select>
                                             <ChevronDown size={20} className="absolute right-6 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Ticket Scheduling & Capacity */}
+                                <div className="border-t border-[#EAEAEA] pt-6 mt-6 space-y-6">
+                                    <h4 className="text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Ticket Scheduling & Capacity</h4>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Timezone & Total Capacity */}
+                                        <div className="space-y-2">
+                                            <label className="text-[20px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Event Timezone</label>
+                                            <div className="relative border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6">
+                                                <select
+                                                    value={timezone}
+                                                    onChange={e => setTimezone(e.target.value)}
+                                                    className="w-full appearance-none bg-transparent outline-none text-[20px] text-black font-anek-latin"
+                                                >
+                                                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                                                    <option value="UTC">UTC</option>
+                                                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                                                    <option value="America/New_York">America/New_York (EST/EDT)</option>
+                                                    <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                                                </select>
+                                                <ChevronDown size={20} className="absolute right-6 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            <label className="text-[20px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Total Tickets Capacity</label>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0 (Unlimited)"
+                                                    value={totalTicketsAvailable}
+                                                    onChange={e => setTotalTicketsAvailable(e.target.value)}
+                                                    className="w-full bg-transparent outline-none text-[20px] text-black placeholder-[#AEAEAE]"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {/* Ticket Open Date & Time */}
+                                        <div className="space-y-2">
+                                            <label className="text-[20px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Ticket Open Date</label>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mb-2">
+                                                <input
+                                                    type="date"
+                                                    value={ticketOpenDate}
+                                                    onChange={e => setTicketOpenDate(e.target.value)}
+                                                    className="w-full bg-transparent outline-none text-[20px] text-black"
+                                                />
+                                            </div>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 gap-3">
+                                                <select value={ticketOpenHour} onChange={e => setTicketOpenHour(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                </select>
+                                                <span className="text-[20px] text-black">:</span>
+                                                <select value={ticketOpenMinute} onChange={e => setTicketOpenMinute(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                </select>
+                                                <select value={ticketOpenAmpm} onChange={e => setTicketOpenAmpm(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    <option value="AM">AM</option>
+                                                    <option value="PM">PM</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Ticket Close Date & Time */}
+                                        <div className="space-y-2">
+                                            <label className="text-[20px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Ticket Close Date</label>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mb-2">
+                                                <input
+                                                    type="date"
+                                                    value={ticketCloseDate}
+                                                    onChange={e => setTicketCloseDate(e.target.value)}
+                                                    className="w-full bg-transparent outline-none text-[20px] text-black"
+                                                />
+                                            </div>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 gap-3">
+                                                <select value={ticketCloseHour} onChange={e => setTicketCloseHour(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                </select>
+                                                <span className="text-[20px] text-black">:</span>
+                                                <select value={ticketCloseMinute} onChange={e => setTicketCloseMinute(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                </select>
+                                                <select value={ticketCloseAmpm} onChange={e => setTicketCloseAmpm(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    <option value="AM">AM</option>
+                                                    <option value="PM">PM</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Event End Date & Time */}
+                                        <div className="space-y-2">
+                                            <label className="text-[20px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Event End Date</label>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mb-2">
+                                                <input
+                                                    type="date"
+                                                    value={eventEndDate}
+                                                    onChange={e => setEventEndDate(e.target.value)}
+                                                    className="w-full bg-transparent outline-none text-[20px] text-black"
+                                                />
+                                            </div>
+                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 gap-3">
+                                                <select value={eventEndHour} onChange={e => setEventEndHour(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                </select>
+                                                <span className="text-[20px] text-black">:</span>
+                                                <select value={eventEndMinute} onChange={e => setEventEndMinute(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                </select>
+                                                <select value={eventEndAmpm} onChange={e => setEventEndAmpm(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                    <option value="AM">AM</option>
+                                                    <option value="PM">PM</option>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

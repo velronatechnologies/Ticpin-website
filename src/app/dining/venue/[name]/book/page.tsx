@@ -5,9 +5,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { Minus, Plus, ChevronLeft } from 'lucide-react';
 import { useUserSession, getUserSession } from '@/lib/auth/user';
-import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
 import AuthModal from '@/components/modals/AuthModal';
-import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
 import { toast } from '@/components/ui/Toast';
 import { passApi, TicpinPass } from '@/lib/api/pass';
 import { Zap } from 'lucide-react';
@@ -68,10 +66,8 @@ const DiningBooking: React.FC = () => {
     const [offers, setOffers] = useState<Offer[]>([]);
     const [nextDays] = useState(getNextDays());
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isAuthChecking, setIsAuthChecking] = useState(true);
     const session = useUserSession();
-    const organizerSession = getOrganizerSession();
     const [pass, setPass] = useState<TicpinPass | null>(null);
     const [usePass, setUsePass] = useState(false);
 
@@ -136,11 +132,6 @@ const DiningBooking: React.FC = () => {
     };
 
     const handleBooking = () => {
-        if (organizerSession) {
-            setShowLogoutModal(true);
-            return;
-        }
-
         if (!session) {
             setShowAuthModal(true);
             return;
@@ -175,11 +166,6 @@ const DiningBooking: React.FC = () => {
 
         sessionStorage.setItem('dining_cart', JSON.stringify(cartItem));
         router.push(`/dining/venue/${encodeURIComponent(String(name))}/book/review`);
-    };
-
-    const handleOrganizerLogout = () => {
-        clearOrganizerSession();
-        setShowAuthModal(true);
     };
 
     const handleSlotClick = async (slot: string) => {
@@ -543,13 +529,6 @@ const DiningBooking: React.FC = () => {
                     setShowAuthModal(false);
                     handleBooking();
                 }}
-            />
-            
-            <OrganizerLogoutModal
-                isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
             />
         </div>
     );

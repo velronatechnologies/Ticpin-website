@@ -83,7 +83,6 @@ export default function DiningReviewPage() {
 
     // Modals
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const { timeRemaining, loading: lockLoading, locks } = useSlotLock('dining');
     
@@ -233,11 +232,6 @@ export default function DiningReviewPage() {
     const handleContinue = () => {
         if (!billing.phone || billing.phone.length < 10) {
             setBookingError('Please enter a valid 10-digit mobile number');
-            return;
-        }
-
-        if (organizerSession) {
-            setShowLogoutModal(true);
             return;
         }
 
@@ -681,12 +675,6 @@ export default function DiningReviewPage() {
             </main>
 
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-            <OrganizerLogoutModal
-                isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
-            />
 
             <style jsx global>{`
                 @import url('https://fonts.googleapis.com/css2?family=Anek+Tamil+Condensed:wght@100;200;300;400;500;600;700;800&display=swap');

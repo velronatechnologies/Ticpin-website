@@ -395,7 +395,6 @@ export default function PlayReviewPage() {
     };
 
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const [bookingLoading, setBookingLoading] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -1691,12 +1690,6 @@ export default function PlayReviewPage() {
                 isOpen={showAuthModal}
                 onClose={() => setShowAuthModal(false)}
                 initialView={authView}
-            />
-            <OrganizerLogoutModal
-                isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
             />
         </div>
     );

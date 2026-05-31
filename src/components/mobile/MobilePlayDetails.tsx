@@ -3,13 +3,12 @@
 import { ChevronLeft, Share2, ChevronRight, Star, ChevronDown, MapPin, Clock, PhoneCall, Sparkles, Navigation } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
-import { useOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
+import { useOrganizerSession } from '@/lib/auth/organizer';
 import { useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 
 const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
-const OrganizerLogoutModal = dynamic(() => import('@/components/modals/OrganizerLogoutModal'), { ssr: false });
 
 interface OfferRecord {
     id: string;
@@ -66,26 +65,14 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
     const organizerSession = useOrganizerSession();
 
     const handleBook = () => {
-        // 1. If Organizer is logged in, they CANNOT book
-        if (organizerSession) {
-            setIsOrgLogoutModalOpen(true);
-            return;
-        }
-
-        // 2. If no User session, show generic login
+        // 1. If no User session, show generic login
         if (!session) {
             setIsLoginModalOpen(true);
             return;
         }
 
-        // 3. Proceed to booking
+        // 2. Proceed to booking
         router.push(`/play/${encodeURIComponent(venue.name)}/book`);
-    };
-
-    const handleOrganizerLogout = () => {
-        clearOrganizerSession();
-        setIsOrgLogoutModalOpen(false);
-        setIsLoginModalOpen(true);
     };
 
     const toggleAccordion = (section: string) => {
@@ -295,12 +282,6 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
                 onSuccess={() => router.push(`/play/${encodeURIComponent(venue.name)}/book`)}
-            />
-            <OrganizerLogoutModal
-                isOpen={isOrgLogoutModalOpen}
-                onClose={() => setIsOrgLogoutModalOpen(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
             />
         </div>
     );

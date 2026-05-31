@@ -7,6 +7,8 @@ interface RealEvent {
     id: string;
     name: string;
     city?: string;
+    venue_name?: string;
+    venue_address?: string;
     date?: string;
     time?: string;
     price_starts_from?: number;
@@ -33,12 +35,14 @@ const EventsGrid = React.memo(function EventsGrid({ events }: EventsGridProps) {
     }
 
     return (
-        <div className="flex flex-wrap gap-6 justify-center sm:justify-start transition-all">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center sm:justify-items-start transition-all">
             {events.map((event) => (
                 <EventCard
                     key={event.id}
                     id={event.id}
                     name={event.name}
+                    venueName={event.venue_name ?? ''}
+                    venueAddress={event.venue_address ?? ''}
                     location={event.city ?? ''}
                     date={formatDate(event.date)}
                     time={event.time ?? ''}

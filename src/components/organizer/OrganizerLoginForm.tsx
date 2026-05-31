@@ -282,14 +282,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
     const bgClass = isPlay ? 'bg-gradient-to-b from-[#FFFCED] via-white to-white' : '';
     const bgStyle = !isPlay ? { background: 'rgba(211, 203, 245, 0.1)' } : {};
 
-    // Check if regular user is logged in
-    useEffect(() => {
-        const userSession = getUserSession();
-        if (userSession) {
-            toast.error('Please logout from your user account first to access organizer login', 5000);
-            router.push('/');
-        }
-    }, [router]);
+
 
     return (
         <div className={`overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] ${bgClass}`} style={{ ...bgStyle, height: 'calc(100vh - 80px)' }}>

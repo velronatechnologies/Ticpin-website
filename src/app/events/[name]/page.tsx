@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
     const event = await getEventData(name);
     if (!event) return { title: 'Not Found | Ticpin' };
     return {
-        title: `${event.name} | Events | Ticpin`,
+        title: `Book Tickects to ${event.name}`,
         description: event.description ?? `Book tickets for ${event.name} on Ticpin.`,
         openGraph: {
             title: event.name,
@@ -93,7 +93,7 @@ async function getMobileEventData(id: string) {
 export default async function EventDetailPage({ params }: { params: Promise<{ name: string }> }) {
     const { name } = await params;
     const decodedName = decodeURIComponent(name);
-    
+
     const headersList = await headers();
     const userAgent = headersList.get('user-agent') || '';
     const isMobile = /mobile/i.test(userAgent);

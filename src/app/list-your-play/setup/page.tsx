@@ -172,12 +172,8 @@ function AccountSetupContent() {
 
     const handleContinue = async () => {
         if (!prefilled && !panVerified) {
-            if (!pan || !panName || !phone) {
-                toast.error('Please fill in PAN, Name and Mobile Number first');
-                return;
-            }
-            if (!/^\d{10}$/.test(phone)) {
-                toast.error('Please enter a valid 10-digit mobile number');
+            if (!pan || !panName) {
+                toast.error('Please fill in PAN and Name first');
                 return;
             }
             if (panName.trim().length < 3) {
@@ -190,7 +186,7 @@ function AccountSetupContent() {
                 await organizerApi.verifyPAN(pan, panName);
                 setPanVerified(true);
                 const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
-                sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, orgType: selectedCategory, pan, panName, phone, panVerified: true }));
+                sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, orgType: selectedCategory, pan, panName, panVerified: true }));
             } catch (err: any) {
                 setVerifying(false);
                 const errMsg = err.message || '';
@@ -223,11 +219,11 @@ function AccountSetupContent() {
         }
 
         const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, orgType: selectedCategory, pan, panName, phone, panCardUrl, panFileName, panVerified: true }));
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, orgType: selectedCategory, pan, panName, panCardUrl, panFileName, panVerified: true }));
         router.push('/list-your-play/setup/gst');
     };
 
-    const canContinue = prefilled || (pan && panName && phone && !!panCardUrl);
+    const canContinue = prefilled || (pan && panName && !!panCardUrl);
 
     if (pageLoading) return <div className="h-[calc(100vh-80px)] animate-pulse bg-zinc-50" />;
 
@@ -297,14 +293,6 @@ function AccountSetupContent() {
                                             name="panName" autoComplete="off"
                                             onChange={e => setPanName(e.target.value)} disabled={prefilled || panVerified}
                                             className={`w-full h-12 px-4 border rounded-[14px] text-[15px] font-medium focus:outline-none transition-colors placeholder:text-zinc-400 ${(prefilled || panVerified) ? 'border-zinc-200 bg-zinc-100 text-zinc-600 cursor-not-allowed' : 'border-[#AEAEAE] text-zinc-800 focus:border-zinc-500'}`} />
-                                    </div>
-                                    <div className="flex flex-col gap-3">
-                                        <label className="text-[16px] font-medium text-[#686868]">
-                                            Mobile number
-                                        </label>
-                                        <input type="text" placeholder="10-digit mobile number" value={phone}
-                                            onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} disabled={prefilled}
-                                            className={`w-full h-12 px-4 border rounded-[14px] text-[15px] font-medium focus:outline-none transition-colors placeholder:text-zinc-400 ${prefilled ? 'border-zinc-200 bg-zinc-100 text-zinc-600 cursor-not-allowed' : 'border-[#AEAEAE] text-zinc-800 focus:border-zinc-500'}`} />
                                     </div>
                                 </div>
 

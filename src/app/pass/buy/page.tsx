@@ -212,11 +212,6 @@ export default function BuyPassPage() {
     };
 
     const handlePayment = async () => {
-        if (organizer) {
-            setShowLogoutModal(true);
-            return;
-        }
-
         if (!user) {
             toast.error('Please login to continue');
             router.push(`/login?redirect=${encodeURIComponent('/pass/buy')}`);

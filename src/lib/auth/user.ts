@@ -52,7 +52,25 @@ export function saveUserSession(session: UserSession): void {
 
 /** Clear user session */
 export function clearUserSession(): void {
-    clearAllData();
+    if (typeof window === 'undefined') return;
+
+    // Call backend to log out user and reset active_role
+    fetch('/backend/api/auth/logout/user', { method: 'POST', credentials: 'include' })
+        .catch(err => console.error('[Auth] User Logout API call failed:', err));
+
+    deleteCookie('ticpin_user_session');
+    deleteCookie('ticpin_user_token');
+    
+    // Clear user-specific storage keys
+    sessionStorage.removeItem('dining_cart');
+    sessionStorage.removeItem('event_cart');
+    sessionStorage.removeItem('play_cart');
+    
+    window.dispatchEvent(new Event('user-auth-change'));
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 100);
 }
 
 /** React hook to get and track user session */

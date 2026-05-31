@@ -12,6 +12,8 @@ interface RealEvent {
     id: string;
     name: string;
     city?: string;
+    venue_name?: string;
+    venue_address?: string;
     date?: string;
     time?: string;
     price_starts_from?: number;
@@ -126,6 +128,8 @@ export default function EventCategoryClient({
                                     key={event.id}
                                     id={event.id}
                                     name={event.name}
+                                    venueName={event.venue_name ?? ''}
+                                    venueAddress={event.venue_address ?? ''}
                                     location={event.city ?? ''}
                                     date={formatDate(event.date)}
                                     time={event.time ?? ''}

@@ -1,15 +1,16 @@
 'use client';
 
-import { ChevronLeft, Share2, ChevronRight, Star, ChevronDown, MapPin, Clock, Users, Ticket, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
+import DOMPurify from 'isomorphic-dompurify';
 import dynamic from 'next/dynamic';
+import { toast } from '@/components/ui/Toast';
 
 const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
-import { getOrganizerSession, clearOrganizerSession } from '@/lib/auth/organizer';
-const OrganizerLogoutModal = dynamic(() => import('@/components/modals/OrganizerLogoutModal'), { ssr: false });
+
 
 interface OfferRecord {
     id: string;
@@ -27,19 +28,38 @@ interface MobileEventDetailsProps {
         description?: string;
         date?: string;
         time?: string;
+        duration?: string;
         venue_name?: string;
         venue_address?: string;
         city?: string;
         portrait_image_url?: string;
         landscape_image_url?: string;
         gallery_urls?: string[];
-        ticket_starts_from?: number;
+        price_starts_from?: number;
         artist_details?: { name: string; profession?: string; image_url?: string }[];
+        artists?: { name: string; image_url?: string; description?: string }[];
         event_category?: string;
+        category?: string;
         age_limit?: string;
         language?: string;
+        guide?: {
+            languages?: string[];
+            min_age?: number;
+            ticket_required_above_age?: number;
+            venue_type?: string;
+            audience_type?: string;
+            is_kid_friendly?: boolean;
+            is_pet_friendly?: boolean;
+            gates_open_before?: boolean;
+            gates_open_before_value?: number;
+            gates_open_before_unit?: string;
+        };
         faqs?: { question: string; answer: string }[];
         terms?: string;
+        ticket_close_date?: string;
+        event_end_date?: string;
+        is_sales_paused?: boolean;
+        is_canceled?: boolean;
     };
     offers: OfferRecord[];
 }
@@ -47,14 +67,104 @@ interface MobileEventDetailsProps {
 export default function MobileEventDetails({ event, offers }: MobileEventDetailsProps) {
     const router = useRouter();
     const session = useUserSession();
+
+    const closedBooking = useMemo(() => {
+        if (!event) return false;
+        if (event.is_sales_paused || event.is_canceled) return true;
+        
+        if (event.ticket_close_date) {
+            const closeDate = new Date(event.ticket_close_date);
+            if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
+                return true;
+            }
+        }
+        
+        if (event.event_end_date) {
+            const endDate = new Date(event.event_end_date);
+            if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
+                return true;
+            }
+        }
+        
+        return false;
+    }, [event]);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
-    const organizerSession = getOrganizerSession();
+    const [showFullDesc, setShowFullDesc] = useState(false);
+    const [isLiked, setIsLiked] = useState(false);
+
+    // Check if liked on mount
+    useEffect(() => {
+        try {
+            const liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
+            setIsLiked(liked.some((e: any) => e.id === event.id));
+        } catch (e) {
+            console.error('Error reading liked events from localStorage:', e);
+        }
+    }, [event.id]);
+
+    const handleLikeToggle = () => {
+        try {
+            let liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
+            const isAlreadyLiked = liked.some((e: any) => e.id === event.id);
+            if (isAlreadyLiked) {
+                liked = liked.filter((e: any) => e.id !== event.id);
+                setIsLiked(false);
+                toast.success('Removed from saved events');
+            } else {
+                liked.push({
+                    id: event.id,
+                    name: event.name,
+                    date: event.date,
+                    time: event.time,
+                    price_starts_from: event.price_starts_from,
+                    portrait_image_url: event.portrait_image_url,
+                    landscape_image_url: event.landscape_image_url,
+                    venue_name: event.venue_name,
+                    city: event.city
+                });
+                setIsLiked(true);
+                toast.success('Saved to liked events');
+            }
+            localStorage.setItem('liked_events', JSON.stringify(liked));
+        } catch (e) {
+            console.error('Error writing liked events to localStorage:', e);
+            toast.error('Failed to update saved events.');
+        }
+    };
+
+    const handleShare = async () => {
+        const shareUrl = window.location.href;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: event.name,
+                    text: `Check out ${event.name} on Ticpin!`,
+                    url: shareUrl
+                });
+            } catch (err: any) {
+                if (err.name !== 'AbortError') {
+                    copyToClipboard(shareUrl);
+                }
+            }
+        } else {
+            copyToClipboard(shareUrl);
+        }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                toast.success('Link copied to clipboard!');
+            })
+            .catch(() => {
+                toast.error('Failed to copy link.');
+            });
+    };
 
     const handleBook = () => {
-        if (organizerSession) {
-            setShowLogoutModal(true);
+        if (closedBooking) {
+            toast.error('Booking for this event is closed!');
             return;
         }
         if (!session) {
@@ -64,18 +174,43 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         router.push(`/events/${encodeURIComponent(event.name)}/book/tickets`);
     };
 
-    const handleOrganizerLogout = () => {
-        clearOrganizerSession();
-        setIsLoginModalOpen(true);
-    };
-
     const toggleAccordion = (section: string) => {
         setOpenAccordion(openAccordion === section ? null : section);
     };
 
-    const displayDate = event.date || 'Date TBA';
+    // Format date nicely
+    const formattedDate = useMemo(() => {
+        if (!event.date) return 'Date TBA';
+        try {
+            const d = new Date(event.date);
+            if (isNaN(d.getTime())) return event.date;
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${days[d.getDay()]} , ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        } catch {
+            return event.date;
+        }
+    }, [event.date]);
+
     const displayTime = event.time || 'Time TBA';
-    const displayPrice = event.ticket_starts_from ? `₹${event.ticket_starts_from}` : '{PRICE}';
+    const displayPrice = event.price_starts_from ? `₹${event.price_starts_from}` : 'Free';
+
+    // Get languages from guide
+    const languages = event.guide?.languages?.join(', ') || event.language || null;
+    // Get min age from guide
+    const minAge = event.guide?.min_age || event.guide?.ticket_required_above_age || event.age_limit || null;
+
+    // Process description - render HTML properly
+    const processedDesc = useMemo(() => {
+        if (!event.description) return { html: '', plain: '', isLong: false };
+        const sanitized = DOMPurify.sanitize(event.description);
+        const plainText = sanitized.replace(/<[^>]+>/g, '');
+        return {
+            html: sanitized,
+            plain: plainText,
+            isLong: plainText.length > 200
+        };
+    }, [event.description]);
 
     return (
         <div className="md:hidden min-h-screen w-full bg-[#EAEAEA] font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
@@ -113,10 +248,15 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 <div className="absolute top-6 right-4 flex gap-3">
-                    <button className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md">
-                        <img src="/mobile_icons/event clicking/Vector 1.svg" className="w-4 h-4" alt="Hub" />
+                    <button onClick={handleLikeToggle} className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                        <img
+                            src="/mobile_icons/event clicking/Vector 1.svg"
+                            alt="Like"
+                            className="w-4 h-4 transition-all"
+                            style={{ filter: isLiked ? 'invert(27%) sepia(100%) saturate(7000%) hue-rotate(0deg) brightness(95%) contrast(110%)' : 'none' }}
+                        />
                     </button>
-                    <button className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md">
+                    <button onClick={handleShare} className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform">
                         <img src="/mobile_icons/event clicking/share.svg" className="w-4 h-4" alt="Share" />
                     </button>
                 </div>
@@ -136,7 +276,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                         {event.name}
                     </h1>
                     <p className="text-[15px] font-medium text-[#5331EA]" style={{ lineHeight: '16px' }}>
-                        {displayDate} {displayTime}
+                        {formattedDate} · {displayTime}
                     </p>
                 </div>
 
@@ -148,7 +288,15 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                 <MapPin size={20} className="text-black opacity-70" />
                             </div>
                             <div>
-                                <p className="text-[15px] font-medium text-black leading-tight">{event.venue_name || event.city || 'Venue TBA'}</p>
+                                <p className="text-[15px] font-medium text-black leading-tight">
+                                    {(() => {
+                                        const firstPart = event.venue_address ? event.venue_address.split(',')[0].trim() : event.venue_name;
+                                        if (firstPart && event.city) {
+                                            return `${firstPart} | ${event.city}`;
+                                        }
+                                        return firstPart || event.city || 'Venue TBA';
+                                    })()}
+                                </p>
                                 <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">{event.venue_address || 'Location TBA'}</p>
                             </div>
                         </div>
@@ -164,83 +312,133 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                             </div>
                             <div>
                                 <p className="text-[15px] font-medium text-black leading-tight">{displayTime}</p>
-                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">View full schedule & timeline</p>
+                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">
+                                    {event.duration ? `Duration: ${event.duration}` : 'View full schedule & timeline'}
+                                </p>
                             </div>
                         </div>
                         <ChevronRight size={18} className="text-[#686868]" />
                     </div>
                 </div>
 
-                {/* Offers Section */}
-                <div className="mb-10">
-                    <h2 className="text-[20px] font-semibold text-black mb-4">Offers for you</h2>
-                    <div className="w-full h-[120px] bg-[#AC9BF7] rounded-[8px] p-4 flex flex-col justify-center">
-                        {offers.length > 0 ? (
+                {/* Offers Section — only show if offers exist */}
+                {offers.length > 0 && (
+                    <div className="mb-10">
+                        <h2 className="text-[20px] font-semibold text-black mb-4">Offers for you</h2>
+                        <div className="w-full h-[120px] bg-[#AC9BF7] rounded-[8px] p-4 flex flex-col justify-center">
                             <div>
                                 <p className="text-white font-bold">{offers[0].title}</p>
                                 <p className="text-white/80 text-sm">{offers[0].description}</p>
                             </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full">
-                                <p className="text-white/50">No offers currently available</p>
-                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* About the event — render HTML properly */}
+                {processedDesc.plain && (
+                    <div className="mb-12">
+                        <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
+                        <div
+                            className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-4 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
+                            dangerouslySetInnerHTML={{ __html: processedDesc.html }}
+                        />
+                        {processedDesc.isLong && (
+                            <button
+                                onClick={() => setShowFullDesc(!showFullDesc)}
+                                className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
+                            >
+                                {showFullDesc ? 'Show less' : 'Read more'}
+                                <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
+                            </button>
                         )}
                     </div>
-                </div>
+                )}
 
-                {/* About the event */}
-                <div className="mb-12">
-                    <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
-                    <p className="text-[14px] text-zinc-600 font-medium leading-relaxed mb-4">
-                        {event.description || 'Join us for an unforgettable experience. More details coming soon!'}
-                    </p>
-                    <button className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none">
-                        Read more
-                        <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
-                    </button>
-                </div>
-
-                {/* Things to Know */}
-                <div className="mb-12 mt-[-15px]">
-                    <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
-                    <div className="space-y-4 mb-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                <img src="/mobile_icons/event clicking/language.svg" className="w-[23px] h-[23px]" alt="Language" />
+                {/* Things to Know — from backend guide data */}
+                {(languages || minAge) && (
+                    <div className="mb-12 mt-[-15px]">
+                        <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
+                        <div className="space-y-4 mb-4">
+                            {languages && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                        <img src="/mobile_icons/event clicking/language.svg" className="w-[23px] h-[23px]" alt="Language" />
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">{languages}</p>
+                                </div>
+                            )}
+                            {minAge && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                        <img src="/mobile_icons/event clicking/users-alt.svg" className="w-[23px] h-[23px]" alt="Age" />
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">{typeof minAge === 'number' ? `${minAge}+ years` : minAge}</p>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                    <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Entry" />
+                                </div>
+                                <p className="text-[15px] font-medium text-black">Ticket Required for Entry</p>
                             </div>
-                            <p className="text-[15px] font-medium text-black uppercase">{event.language || '{EVENT LANGUAGE}'}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                <img src="/mobile_icons/event clicking/users-alt.svg" className="w-[23px] h-[23px]" alt="Age" />
-                            </div>
-                            <p className="text-[15px] font-medium text-black uppercase">{event.age_limit || '{MIN AGE TICKET REQUIRED}'}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Entry" />
-                            </div>
-                            <p className="text-[15px] font-medium text-black uppercase">{`Ticket Required for Entry`}</p>
+                            {event.guide?.venue_type && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                        <MapPin size={20} className="text-black opacity-70" />
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">{event.guide.venue_type} · {event.guide?.audience_type || 'General'}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <button className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none">
-                        Read more
-                        <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
-                    </button>
-                </div>
+                )}
 
-                {/* More Section */}
+                {/* More Section — FAQs & Terms with expand/collapse */}
                 <div className="space-y-4 mb-12 mt-[-15px]">
                     <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
                     <div className="space-y-4">
-                        <div className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5">
-                            <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
-                            <ChevronDown size={20} className="text-[#686868]" />
-                        </div>
-                        <div className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5">
-                            <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
-                            <ChevronDown size={20} className="text-[#686868]" />
-                        </div>
+                        {/* FAQs */}
+                        {event.faqs && event.faqs.length > 0 && (
+                            <div>
+                                <button
+                                    onClick={() => toggleAccordion('faqs')}
+                                    className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
+                                >
+                                    <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
+                                    {openAccordion === 'faqs' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                                </button>
+                                {openAccordion === 'faqs' && (
+                                    <div className="mt-2 px-2 space-y-3">
+                                        {event.faqs.map((faq, idx) => (
+                                            <div key={idx} className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                                <p className="text-[14px] font-semibold text-black mb-1">{faq.question}</p>
+                                                <p className="text-[13px] text-zinc-600">{faq.answer}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Terms */}
+                        {event.terms && (
+                            <div>
+                                <button
+                                    onClick={() => toggleAccordion('terms')}
+                                    className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
+                                >
+                                    <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
+                                    {openAccordion === 'terms' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                                </button>
+                                {openAccordion === 'terms' && (
+                                    <div className="mt-2 px-2">
+                                        <div className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                            <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -263,9 +461,14 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
                 <button 
                     onClick={handleBook}
-                    className="w-[138px] h-[51px] bg-black text-white rounded-[40px] font-medium text-[18px] active:scale-95 transition-all flex items-center justify-center"
+                    disabled={closedBooking}
+                    className={`w-[138px] h-[51px] rounded-[40px] font-medium text-[18px] active:scale-95 transition-all flex items-center justify-center ${
+                        closedBooking
+                        ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed'
+                        : 'bg-black text-white'
+                    }`}
                 >
-                    Book tickets
+                    {closedBooking ? 'Tickets closed' : 'Book tickets'}
                 </button>
             </div>
 
@@ -275,13 +478,6 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 onSuccess={() => router.push(`/events/${encodeURIComponent(event.name)}/book/tickets`)}
             />
 
-            <OrganizerLogoutModal
-                isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
-            />
         </div>
     );
 }
-

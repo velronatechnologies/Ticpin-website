@@ -9,13 +9,17 @@ import {
     Edit3, User, Mail, Phone, MapPin, Globe, 
     Calendar, UserCircle, Bell, Languages, Map,
     CheckCircle2, ArrowLeft, Shield, Ticket, Star,
-    LayoutDashboard
+    LayoutDashboard, ChevronRight, MessageCircle, FileText,
+    LogOut, Pencil, HelpCircle, FileQuestion, Utensils,
+    Music, Trophy
 } from 'lucide-react';
 import { passApi, TicpinPass } from '@/lib/api/pass';
+import { useIdentityStore } from '@/store/useIdentityStore';
 
 function UserProfileContent() {
     const router = useRouter();
     const userSession = useUserSession();
+    const { logoutUser } = useIdentityStore();
 
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -77,8 +81,129 @@ function UserProfileContent() {
     if (!profile) return null;
 
     return (
-        <div className="min-h-screen bg-[#F8F9FA] font-[family-name:var(--font-anek-latin)] py-8 px-4 md:px-8">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="min-h-screen bg-[#F5F5F5] font-[family-name:var(--font-anek-latin)]">
+            
+            {/* --- MOBILE VIEW --- */}
+            <div className="block md:hidden pb-10">
+                {/* Header */}
+                <header className="px-6 py-5 flex items-center gap-4 bg-[#F5F5F5] sticky top-0 z-10">
+                    <button onClick={() => router.push('/')} className="p-1 hover:bg-zinc-200 rounded-full transition-colors">
+                        <ArrowLeft size={20} className="text-black" />
+                    </button>
+                    <h1 className="text-[17px] font-bold text-black">Profile</h1>
+                </header>
+
+                <div className="px-5 space-y-6">
+                    {/* User Info Block */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-[#E0E0E0] rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                                {profile.profilePhoto ? (
+                                    <img src={profile.profilePhoto} alt={profile.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <UserCircle size={40} className="text-zinc-400" />
+                                )}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[16px] font-bold text-black leading-tight uppercase tracking-tight">{profile.name}</span>
+                                <span className="text-[12px] font-medium text-zinc-500 uppercase">{profile.phone}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bookings Section */}
+                    <div className="space-y-3">
+                        <h2 className="text-[14px] font-bold text-black">Your bookings</h2>
+                        <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+                            <button onClick={() => router.push('/bookings?type=dining')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
+                                <Utensils size={20} className="text-zinc-700" />
+                                <span className="text-[11px] font-semibold text-black tracking-tight">Dining bookings</span>
+                            </button>
+                            <button onClick={() => router.push('/bookings?type=events')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
+                                <Music size={20} className="text-zinc-700" />
+                                <span className="text-[11px] font-semibold text-black tracking-tight">Event tickets</span>
+                            </button>
+                            <button onClick={() => router.push('/bookings?type=play')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
+                                <Trophy size={20} className="text-zinc-700" />
+                                <span className="text-[11px] font-semibold text-black tracking-tight">Play book</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Menu Groups */}
+                    <div className="bg-white border border-[#E5E5E5] rounded-[20px] overflow-hidden">
+                        <button onClick={() => router.push('/my-pass')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <Ticket size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Ticlists</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                        <button onClick={() => router.push('/bookings?type=dining')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <Utensils size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Dining reminders</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                        <button onClick={() => router.push('/bookings?type=events')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <Music size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Event reminders</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                        <button onClick={() => router.push('/bookings?type=play')} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <Trophy size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Play reminders</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                    </div>
+
+                    <div className="bg-white border border-[#E5E5E5] rounded-[20px] overflow-hidden">
+                        <button onClick={() => router.push('/terms')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <FileQuestion size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Frequently asked questions</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                        <button onClick={() => router.push('/chat-support')} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <MessageCircle size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Chat with us</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                    </div>
+
+                    <div className="bg-white border border-[#E5E5E5] rounded-[20px] overflow-hidden">
+                        <button onClick={() => router.push('/terms')} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <Shield size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">About us</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                    </div>
+
+                    <div className="bg-white border border-[#E5E5E5] rounded-[20px] overflow-hidden">
+                        <button onClick={() => { logoutUser(); router.push('/'); }} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
+                            <div className="flex items-center gap-3">
+                                <LogOut size={18} className="text-zinc-600" />
+                                <span className="text-[13px] font-semibold text-black">Logout</span>
+                            </div>
+                            <ChevronRight size={16} className="text-zinc-400" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- DESKTOP VIEW --- */}
+            <div className="hidden md:block py-8 px-4 md:px-8">
+                <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header Card */}
                 <div className="bg-white rounded-[40px] p-8 md:p-12 shadow-sm border border-zinc-100 relative overflow-hidden">
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-400/5 blur-[80px] rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -127,13 +252,6 @@ function UserProfileContent() {
                             </div>
 
                             <div className="pt-4 flex flex-wrap gap-4 justify-center md:justify-start">
-                                <Link 
-                                    href="/profile/edit"
-                                    className="inline-flex items-center gap-3 bg-zinc-900 text-white px-8 h-12 rounded-2xl font-bold hover:bg-black transition-all hover:scale-105 active:scale-95"
-                                >
-                                    <Edit3 size={18} />
-                                    Edit Profile
-                                </Link>
                                 {pass && pass.status === 'active' && (
                                     <Link 
                                         href="/profile/pass"
@@ -195,6 +313,7 @@ function UserProfileContent() {
                             <PreferenceCard active={profile.notificationPreferences?.sms} label="SMS Updates" />
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
         </div>

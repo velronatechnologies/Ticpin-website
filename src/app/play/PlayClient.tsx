@@ -49,9 +49,14 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
     const [activeFilter, setActiveFilter] = useState('All');
     const [modalFilters, setModalFilters] = useState<Record<string, string[]>>({});
     const [mounted, setMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        setIsMobile(window.innerWidth < 768);
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     useEffect(() => {
@@ -137,8 +142,8 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
         });
     }
 
-    // Mobile view
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    // Mobile view - only after mount to prevent hydration mismatch
+    if (mounted && isMobile) {
         const venuesForMobile = venues.map(v => ({
             ...v,
             id: v.id || v._id || v.name

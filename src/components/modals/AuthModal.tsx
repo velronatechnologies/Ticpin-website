@@ -17,7 +17,7 @@ import { useIdentityStore } from '@/store/useIdentityStore';
 import { useProfile, useUpdateProfile, useUploadPhoto } from '@/lib/hooks/useProfile';
 import { useUserBookings, useCancelBooking } from '@/lib/hooks/useBookings';
 import { getOrganizerSession } from '@/lib/auth/organizer';
-import { auth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from '@/lib/firebase';
+// import { auth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from '@/lib/firebase';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -36,8 +36,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-    const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-    const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+    const [confirmationResult, setConfirmationResult] = useState<any>(null);
+    const recaptchaVerifierRef = useRef<any>(null);
+
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // TanStack Query Hooks
     const { data: profile, isLoading: isProfileLoading } = useProfile(userSession?.id);
@@ -104,7 +114,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
     }, [userSession, isOpen, initialView, onClose]);
 
     // Preload reCAPTCHA on modal open/number view for instant 1-3s OTP speeds
-    useEffect(() => {
+    // Commented out since Firebase phone auth is disabled/mocked
+    /* useEffect(() => {
         if (!isOpen || !auth || view !== 'number') return;
 
         const initRecaptcha = async () => {
@@ -138,7 +149,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         };
 
         initRecaptcha();
-    }, [isOpen, view]);
+    }, [isOpen, view]); */
 
     // Warm up the Vercel Serverless Go backend on modal open to eliminate cold starts
     useEffect(() => {
@@ -175,50 +186,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             return;
         }
 
-        if (!auth) {
-            setError('Authentication is currently unavailable');
-            return;
-        }
-
         setLoading(true);
         setError('');
 
         try {
-            // Retrieve preloaded invisible RecaptchaVerifier reference
-            let verifier = (window as any).recaptchaVerifier;
-            
-            // Safe fallback if preloading failed or wasn't completed in time
-            if (!verifier) {
-                let container = document.getElementById("recaptcha-container");
-                if (!container) {
-                    container = document.createElement("div");
-                    container.id = "recaptcha-container";
-                    document.body.appendChild(container);
-                }
-
-                verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    size: 'invisible',
-                    callback: (response: any) => {
-                        console.log('reCAPTCHA solved successfully');
-                    },
-                    'expired-callback': () => {
-                        console.log('reCAPTCHA expired');
-                    }
-                });
-                await verifier.render();
-                (window as any).recaptchaVerifier = verifier;
-            }
-
-            recaptchaVerifierRef.current = verifier;
-
-            const phoneNumber = `+91${number}`;
-            // Attempt to sign in
-            const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-            setConfirmationResult(result);
+            // Mock auth flow: skip Firebase entirely, directly proceed to OTP view
             setView('otp');
         } catch (err: any) {
-            console.error("Firebase Auth Error:", err);
-            setError(getFirebaseErrorMessage(err));
+            console.error("Auth Error:", err);
+            setError('Authentication failed');
         } finally {
             setLoading(false);
         }
@@ -261,20 +237,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             return;
         }
 
-        if (!confirmationResult) {
-            setError('Session expired. Please request a new OTP.');
-            setLoading(false);
-            return;
-        }
-
         try {
-            // 1. Verify OTP with Firebase
-            const result = await confirmationResult.confirm(otpCode);
+            // Bypass Firebase entirely: directly send phone number to backend as the token!
+            const token = `+91${number}`;
 
-            // 2. Get Firebase ID Token
-            const token = await result.user.getIdToken();
-
-            // 3. Send token to backend for session creation
+            // Send token/phone number to backend for session creation
             const res = await fetch('/backend/api/user/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -300,7 +267,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             }
         } catch (err: any) {
             console.error("Verification Error:", err);
-            setError(getFirebaseErrorMessage(err));
+            setError('Verification failed');
         } finally {
             setLoading(false);
         }
@@ -312,17 +279,33 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
 
     return (
         <div
-            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${view === 'profile' || view === 'bookings' ? 'justify-end pointer-events-none' : 'items-center justify-center p-4'}`}
+            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${
+                view === 'profile' || view === 'bookings' 
+                    ? 'justify-end pointer-events-none' 
+                    : 'items-center justify-center p-0 md:p-4 overflow-hidden'
+            }`}
             style={{ fontFamily: 'var(--font-anek-latin)' }}
         >
-            <div onClick={onClose} className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-500 pointer-events-auto ${isOpen ? 'opacity-100' : 'opacity-0'}`} />
+            <div 
+                onClick={onClose} 
+                className={`fixed inset-0 bg-white md:bg-black/60 md:backdrop-blur-sm transition-opacity duration-500 pointer-events-auto ${
+                    isOpen ? 'opacity-100' : 'opacity-0'
+                }`} 
+            />
 
             <div
-                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${view === 'profile' || view === 'bookings'
-                    ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
-                    : 'rounded-[35px] animate-in zoom-in duration-300'
-                    }`}
-                style={view !== 'profile' && view !== 'bookings' ? { width: '850px', height: '700px' } : {}}
+                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${
+                    view === 'profile' || view === 'bookings'
+                        ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
+                        : 'w-full h-full md:w-[850px] md:h-[700px] rounded-none md:rounded-[35px] md:animate-in md:zoom-in duration-300'
+                }`}
+                style={
+                    view !== 'profile' && view !== 'bookings'
+                        ? isMobile
+                            ? {}
+                            : { width: '850px', height: '700px' }
+                        : {}
+                }
             >
                 {view === 'number' || view === 'otp' ? (
                     <LoginView
@@ -336,7 +319,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                             setOtp(['', '', '', '', '', '']); 
                             setError(''); 
                             // Safely clear old recaptcha to avoid duplicate/stale state
-                            try {
+                            // Commented out since recaptcha preloading is disabled
+                            /* try {
                                 const verifier = (window as any).recaptchaVerifier;
                                 if (verifier) {
                                     if (typeof verifier.clear === 'function') {
@@ -344,7 +328,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                                     }
                                     (window as any).recaptchaVerifier = null;
                                 }
-                            } catch (e) {}
+                            } catch (e) {} */
                         }}
                     />
                 ) : (
@@ -400,7 +384,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                                         onViewPlayBookings={() => { router.push('/profile/bookings/play'); onClose(); }}
                                         onEditProfile={() => {
                                             if (userSession?.id) {
-                                                router.push('/profile/edit');
+                                                router.push('/profile');
                                                 onClose();
                                             } else if (organizerSession?.id) {
                                                 router.push('/organizer/profile');

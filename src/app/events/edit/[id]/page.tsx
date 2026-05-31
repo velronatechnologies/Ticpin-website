@@ -30,11 +30,38 @@ export default function EditEventPage() {
     const [instagramLink, setInstagramLink] = useState('');
     const [eventDate, setEventDate] = useState('');
     const [eventTime, setEventTime] = useState('');
+    const [eventStartHour, setEventStartHour] = useState('12');
+    const [eventStartMinute, setEventStartMinute] = useState('00');
+    const [eventStartAmpm, setEventStartAmpm] = useState('AM');
     const [duration, setDuration] = useState('');
     const [portraitUrl, setPortraitUrl] = useState('');
     const [landscapeUrl, setLandscapeUrl] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
     const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+
+    const [ticketOpenDate, setTicketOpenDate] = useState('');
+    const [ticketOpenHour, setTicketOpenHour] = useState('12');
+    const [ticketOpenMinute, setTicketOpenMinute] = useState('00');
+    const [ticketOpenAmpm, setTicketOpenAmpm] = useState('AM');
+
+    const [ticketCloseDate, setTicketCloseDate] = useState('');
+    const [ticketCloseHour, setTicketCloseHour] = useState('12');
+    const [ticketCloseMinute, setTicketCloseMinute] = useState('00');
+    const [ticketCloseAmpm, setTicketCloseAmpm] = useState('AM');
+
+    const [eventEndDate, setEventEndDate] = useState('');
+    const [eventEndHour, setEventEndHour] = useState('12');
+    const [eventEndMinute, setEventEndMinute] = useState('00');
+    const [eventEndAmpm, setEventEndAmpm] = useState('AM');
+
+    const [timezone, setTimezone] = useState('Asia/Kolkata');
+    const [totalTicketsAvailable, setTotalTicketsAvailable] = useState('0');
+    const [isSalesPaused, setIsSalesPaused] = useState(false);
+    const [isCanceled, setIsCanceled] = useState(false);
+
+    const [originalEventDate, setOriginalEventDate] = useState<Date | null>(null);
+    const [originalEventEndDate, setOriginalEventEndDate] = useState<Date | null>(null);
+    const [isExtending, setIsExtending] = useState(false);
     const [guide, setGuide] = useState({
         languages: [''],
         minAge: 0,
@@ -95,6 +122,76 @@ export default function EditEventPage() {
         }, 100);
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        let h24 = parseInt(eventStartHour, 10);
+        if (eventStartAmpm === 'PM' && h24 !== 12) {
+            h24 += 12;
+        } else if (eventStartAmpm === 'AM' && h24 === 12) {
+            h24 = 0;
+        }
+        const formattedH24 = h24.toString().padStart(2, '0');
+        const formattedMin = eventStartMinute.padStart(2, '0');
+        setEventTime(`${formattedH24}:${formattedMin}`);
+    }, [eventStartHour, eventStartMinute, eventStartAmpm]);
+
+    useEffect(() => {
+        if (!eventDate || !eventStartHour || !eventStartMinute || !eventStartAmpm || !duration) return;
+
+        try {
+            const [year, month, day] = eventDate.split('-').map(num => parseInt(num, 10));
+            let startH24 = parseInt(eventStartHour, 10);
+            if (eventStartAmpm === 'PM' && startH24 !== 12) {
+                startH24 += 12;
+            } else if (eventStartAmpm === 'AM' && startH24 === 12) {
+                startH24 = 0;
+            }
+            const startMin = parseInt(eventStartMinute, 10);
+
+            const startDateObj = new Date(year, month - 1, day, startH24, startMin);
+            if (isNaN(startDateObj.getTime())) return;
+
+            let durationMinutes = 0;
+            const dur = duration.toLowerCase();
+            if (dur.includes('min')) {
+                const match = dur.match(/(\d+)\s*min/);
+                if (match) durationMinutes = parseInt(match[1], 10);
+            } else if (dur.includes('hour')) {
+                const match = dur.match(/([\d.]+)\s*hour/);
+                if (match) {
+                    const hrs = parseFloat(match[1]);
+                    durationMinutes = Math.round(hrs * 60);
+                }
+            } else if (dur.includes('all day')) {
+                durationMinutes = 24 * 60;
+            }
+
+            const endDateObj = new Date(startDateObj.getTime() + durationMinutes * 60 * 1000);
+            
+            const endYear = endDateObj.getFullYear();
+            const endMonth = (endDateObj.getMonth() + 1).toString().padStart(2, '0');
+            const endDay = endDateObj.getDate().toString().padStart(2, '0');
+            const formattedEndDate = `${endYear}-${endMonth}-${endDay}`;
+
+            const endH24 = endDateObj.getHours();
+            let roundedEndMin = endDateObj.getMinutes();
+            roundedEndMin = Math.round(roundedEndMin / 5) * 5;
+            if (roundedEndMin === 60) {
+                endDateObj.setHours(endDateObj.getHours() + 1);
+                roundedEndMin = 0;
+            }
+            const endMin = roundedEndMin.toString().padStart(2, '0');
+            const endAmpm = endH24 >= 12 ? 'PM' : 'AM';
+            const endH12 = (endH24 % 12 || 12).toString();
+
+            setEventEndDate(formattedEndDate);
+            setEventEndHour(endH12);
+            setEventEndMinute(endMin);
+            setEventEndAmpm(endAmpm);
+        } catch (e) {
+            console.error('Error auto-calculating event end date:', e);
+        }
+    }, [eventDate, eventStartHour, eventStartMinute, eventStartAmpm, duration]);
 
     useEffect(() => {
         if (!showMap || mapLoaded) return;
@@ -238,16 +335,78 @@ export default function EditEventPage() {
                 setVenueAddress((d.venue_address as string) ?? '');
                 setGoogleMapLink((d.google_map_link as string) ?? '');
                 setInstagramLink((d.instagram_link as string) ?? '');
-                setEventTime((d.time as string) ?? '');
+                const timeStr = (d.time as string) ?? '';
+                setEventTime(timeStr);
+                if (timeStr) {
+                    const [h24Str, mStr] = timeStr.split(':');
+                    const h24 = parseInt(h24Str, 10);
+                    if (!isNaN(h24)) {
+                        const ampm = h24 >= 12 ? 'PM' : 'AM';
+                        const h12 = (h24 % 12 || 12).toString();
+                        setEventStartHour(h12);
+                        setEventStartMinute(mStr || '00');
+                        setEventStartAmpm(ampm);
+                    }
+                }
                 setDuration((d.duration as string) ?? '');
                 setPortraitUrl((d.portrait_image_url as string) ?? '');
                 setLandscapeUrl((d.landscape_image_url as string) ?? '');
                 setVideoUrl((d.card_video_url as string) ?? '');
                 setGalleryUrls((d.gallery_urls as string[]) ?? []);
+
                 if (d.date) {
                     const dt = new Date(d.date as string);
-                    if (!isNaN(dt.getTime())) setEventDate(dt.toISOString().split('T')[0]);
+                    if (!isNaN(dt.getTime())) {
+                        setEventDate(dt.toISOString().split('T')[0]);
+                        setOriginalEventDate(dt);
+                    }
                 }
+
+                if (d.ticket_open_date) {
+                    const dt = new Date(d.ticket_open_date as string);
+                    if (!isNaN(dt.getTime())) {
+                        setTicketOpenDate(dt.toISOString().split('T')[0]);
+                        const h24 = dt.getHours();
+                        const ampm = h24 >= 12 ? 'PM' : 'AM';
+                        const h12 = (h24 % 12 || 12).toString();
+                        setTicketOpenHour(h12);
+                        setTicketOpenMinute(dt.getMinutes().toString().padStart(2, '0'));
+                        setTicketOpenAmpm(ampm);
+                    }
+                }
+
+                if (d.ticket_close_date) {
+                    const dt = new Date(d.ticket_close_date as string);
+                    if (!isNaN(dt.getTime())) {
+                        setTicketCloseDate(dt.toISOString().split('T')[0]);
+                        const h24 = dt.getHours();
+                        const ampm = h24 >= 12 ? 'PM' : 'AM';
+                        const h12 = (h24 % 12 || 12).toString();
+                        setTicketCloseHour(h12);
+                        setTicketCloseMinute(dt.getMinutes().toString().padStart(2, '0'));
+                        setTicketCloseAmpm(ampm);
+                    }
+                }
+
+                if (d.event_end_date) {
+                    const dt = new Date(d.event_end_date as string);
+                    if (!isNaN(dt.getTime())) {
+                        setEventEndDate(dt.toISOString().split('T')[0]);
+                        setOriginalEventEndDate(dt);
+                        const h24 = dt.getHours();
+                        const ampm = h24 >= 12 ? 'PM' : 'AM';
+                        const h12 = (h24 % 12 || 12).toString();
+                        setEventEndHour(h12);
+                        setEventEndMinute(dt.getMinutes().toString().padStart(2, '0'));
+                        setEventEndAmpm(ampm);
+                    }
+                }
+
+                setTimezone((d.timezone as string) ?? 'Asia/Kolkata');
+                setTotalTicketsAvailable(String((d.total_tickets_available as number) ?? 0));
+                setIsSalesPaused((d.is_sales_paused as boolean) ?? false);
+                setIsCanceled((d.is_canceled as boolean) ?? false);
+
                 const g = (d.guide as Record<string, unknown>) ?? {};
                 setGuide({
                     languages: (g.languages as string[]) ?? [''],
@@ -483,6 +642,50 @@ export default function EditEventPage() {
         if (!eventName.trim()) { setSubmitMsg('Event name is required.'); return; }
         if (selections.category === 'Select Category') { setSubmitMsg('Please select a category.'); return; }
         if (!portraitUrl || !landscapeUrl) { setSubmitMsg('Please upload both portrait and landscape images.'); return; }
+
+        const parseDateString = (date: string, hour: string, minute: string, ampm: string) => {
+            if (!date) return null;
+            let h24 = parseInt(hour) % 12;
+            if (ampm === 'PM') h24 += 12;
+            const hourStr = h24.toString().padStart(2, '0');
+            const minuteStr = minute.padStart(2, '0');
+            try {
+                const localISO = `${date}T${hourStr}:${minuteStr}:00`;
+                const d = new Date(localISO);
+                return d.toISOString();
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const tOpen = parseDateString(ticketOpenDate, ticketOpenHour, ticketOpenMinute, ticketOpenAmpm);
+        const tClose = parseDateString(ticketCloseDate, ticketCloseHour, ticketCloseMinute, ticketCloseAmpm);
+        const eEnd = parseDateString(eventEndDate, eventEndHour, eventEndMinute, eventEndAmpm);
+
+        // Get standard event 24-hour string for correct startDateTime ISO construction
+        const get24HourTimeStr = () => {
+            if (!eventTime) return '00:00';
+            const [h, m] = eventTime.split(':');
+            return `${h.padStart(2, '0')}:${(m || '00').padStart(2, '0')}`;
+        };
+        const startDateTime = eventDate ? new Date(`${eventDate}T${get24HourTimeStr()}:00`) : null;
+        const openTimeObj = tOpen ? new Date(tOpen) : null;
+        const closeTimeObj = tClose ? new Date(tClose) : null;
+        const endTimeObj = eEnd ? new Date(eEnd) : null;
+
+        if (openTimeObj && closeTimeObj && openTimeObj >= closeTimeObj) {
+            setSubmitMsg('Ticket Open Date & Time must be strictly before Ticket Close Date & Time.');
+            return;
+        }
+        if (closeTimeObj && endTimeObj && closeTimeObj > endTimeObj) {
+            setSubmitMsg('Ticket Close Date & Time cannot be after Event End Date & Time.');
+            return;
+        }
+        if (startDateTime && endTimeObj && startDateTime >= endTimeObj) {
+            setSubmitMsg('Event Start Date & Time must be strictly before Event End Date & Time.');
+            return;
+        }
+
         setSubmitLoading(true); setSubmitMsg('');
         try {
             await eventsApi.update(id, {
@@ -502,6 +705,13 @@ export default function EditEventPage() {
                 landscape_image_url: landscapeUrl,
                 card_video_url: videoUrl,
                 gallery_urls: galleryUrls,
+                ticket_open_date: tOpen,
+                ticket_close_date: tClose,
+                event_end_date: eEnd,
+                timezone: timezone,
+                total_tickets_available: parseInt(totalTicketsAvailable) || 0,
+                is_sales_paused: isSalesPaused,
+                is_canceled: isCanceled,
                 guide: {
                     languages: guide.languages.filter(Boolean),
                     min_age: guide.minAge,
@@ -773,6 +983,51 @@ export default function EditEventPage() {
                                             <p className="text-[24px] font-semibold text-black">{duration || 'N/A'}</p>
                                         </div>
                                     </div>
+
+                                    {/* Ticket Scheduling & Capacity View */}
+                                    <div className="border-t border-[#EAEAEA] pt-6 mt-6 space-y-6">
+                                        <h4 className="text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Ticket Scheduling & Capacity</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Event Timezone</label>
+                                                <p className="text-[24px] font-semibold text-black">{timezone}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Total Tickets Capacity</label>
+                                                <p className="text-[24px] font-semibold text-black">{totalTicketsAvailable === '0' ? 'Unlimited' : totalTicketsAvailable}</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Ticket Open Date & Time</label>
+                                                <p className="text-[24px] font-semibold text-black font-anek-latin">
+                                                    {ticketOpenDate ? `${ticketOpenDate} at ${ticketOpenHour}:${ticketOpenMinute} ${ticketOpenAmpm}` : 'Not scheduled'}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Ticket Close Date & Time</label>
+                                                <p className="text-[24px] font-semibold text-black font-anek-latin">
+                                                    {ticketCloseDate ? `${ticketCloseDate} at ${ticketCloseHour}:${ticketCloseMinute} ${ticketCloseAmpm}` : 'Not scheduled'}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Event End Date & Time</label>
+                                                <p className="text-[24px] font-semibold text-black font-anek-latin">
+                                                    {eventEndDate ? `${eventEndDate} at ${eventEndHour}:${eventEndMinute} ${eventEndAmpm}` : 'Not scheduled'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Sales Status</label>
+                                                <p className="text-[24px] font-semibold text-black">{isSalesPaused ? 'Paused' : 'Active'}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[20px] font-medium text-[#686868]">Event Status</label>
+                                                <p className="text-[24px] font-semibold text-black">{isCanceled ? 'Canceled' : 'Active'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-8">
@@ -857,30 +1112,215 @@ export default function EditEventPage() {
                                         </div>
                                     </div>
                                     {/* Date / Time / Duration */}
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[20px] font-medium text-[#686868]">Event Date</label>
-                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mt-[10px]">
-                                                <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className="w-full bg-transparent outline-none text-[20px] text-black" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[20px] font-medium text-[#686868]">Start Time</label>
-                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mt-[10px]">
-                                                <input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)} className="w-full bg-transparent outline-none text-[20px] text-black" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[20px] font-medium text-[#686868]">Duration</label>
-                                            <div className="relative border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mt-[10px]">
-                                                <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full appearance-none bg-transparent outline-none text-[20px] text-black">
-                                                    <option value="">Select duration</option>
-                                                    {["30 mins", "1 hour", "1.5 hours", "2 hours", "2.5 hours", "3 hours", "3.5 hours", "4 hours", "5 hours", "6 hours", "All day"].map(d => <option key={d} value={d}>{d}</option>)}
-                                                </select>
-                                                <ChevronDown size={20} className="absolute right-6 pointer-events-none" />
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {(() => {
+                                        const isStartPassed = originalEventDate && originalEventDate.getTime() < Date.now();
+                                        const isEndPassed = originalEventEndDate && originalEventEndDate.getTime() < Date.now();
+                                        return (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-6">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[20px] font-medium text-[#686868]">Event Date</label>
+                                                        <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mt-[10px]">
+                                                            <input
+                                                                type="date"
+                                                                value={eventDate}
+                                                                onChange={e => setEventDate(e.target.value)}
+                                                                className="w-full bg-transparent outline-none text-[20px] text-black"
+                                                            />
+                                                        </div>
+                                                        {isStartPassed && <span className="text-[14px] text-amber-600 font-medium font-anek-latin">Event has already started. You can reschedule it by selecting a future date.</span>}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[20px] font-medium text-[#686868]">Start Time</label>
+                                                        <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mt-[10px] gap-3">
+                                                            <select value={eventStartHour} onChange={e => setEventStartHour(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                                {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                            </select>
+                                                            <span className="text-[20px] text-black">:</span>
+                                                            <select value={eventStartMinute} onChange={e => setEventStartMinute(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                                {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                            </select>
+                                                            <select value={eventStartAmpm} onChange={e => setEventStartAmpm(e.target.value)} className="bg-transparent outline-none text-[20px] text-black w-[60px]">
+                                                                <option value="AM">AM</option>
+                                                                <option value="PM">PM</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[20px] font-medium text-[#686868]">Duration</label>
+                                                        <div className="relative border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6 mt-[10px]">
+                                                            <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full appearance-none bg-transparent outline-none text-[20px] text-black">
+                                                                <option value="">Select duration</option>
+                                                                {["30 mins", "1 hour", "1.5 hours", "2 hours", "2.5 hours", "3 hours", "3.5 hours", "4 hours", "5 hours", "6 hours", "All day"].map(d => <option key={d} value={d}>{d}</option>)}
+                                                            </select>
+                                                            <ChevronDown size={20} className="absolute right-6 pointer-events-none" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Ticket Scheduling & Capacity Edit */}
+                                                <div className="border-t border-[#EAEAEA] pt-6 mt-6 space-y-6">
+                                                    <h4 className="text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Ticket Scheduling & Capacity</h4>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        {/* Timezone & Total Capacity */}
+                                                        <div className="space-y-2">
+                                                            <label className="text-[20px] font-medium text-[#686868]">Event Timezone</label>
+                                                            <div className="relative border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6">
+                                                                <select
+                                                                    value={timezone}
+                                                                    onChange={e => setTimezone(e.target.value)}
+                                                                    className="w-full appearance-none bg-transparent outline-none text-[20px] text-black"
+                                                                >
+                                                                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                                                                    <option value="UTC">UTC</option>
+                                                                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                                                                    <option value="America/New_York">America/New_York (EST/EDT)</option>
+                                                                    <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                                                                </select>
+                                                                <ChevronDown size={20} className="absolute right-6 pointer-events-none" />
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="space-y-2">
+                                                            <label className="text-[20px] font-medium text-[#686868]">Total Tickets Capacity</label>
+                                                            <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-6">
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="0 (Unlimited)"
+                                                                    value={totalTicketsAvailable}
+                                                                    onChange={e => setTotalTicketsAvailable(e.target.value)}
+                                                                    className="w-full bg-transparent outline-none text-[20px] text-black placeholder-[#AEAEAE]"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                        {/* Ticket Open Date & Time */}
+                                                        <div className="space-y-2">
+                                                            <label className="text-[20px] font-medium text-[#686868]">Ticket Open Date & Time</label>
+                                                            <div className="flex gap-3">
+                                                                <div className="flex-1 border border-[#686868] rounded-[10px] h-[64px] flex items-center px-4">
+                                                                    <input
+                                                                        type="date"
+                                                                        value={ticketOpenDate}
+                                                                        onChange={e => setTicketOpenDate(e.target.value)}
+                                                                        className="w-full bg-transparent outline-none text-[18px] text-black"
+                                                                    />
+                                                                </div>
+                                                                <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-4 gap-2">
+                                                                    <select value={ticketOpenHour} onChange={e => setTicketOpenHour(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[45px]">
+                                                                        {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                                    </select>
+                                                                    <span className="text-[18px] text-black">:</span>
+                                                                    <select value={ticketOpenMinute} onChange={e => setTicketOpenMinute(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[45px]">
+                                                                        {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                                    </select>
+                                                                    <select value={ticketOpenAmpm} onChange={e => setTicketOpenAmpm(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[50px]">
+                                                                        <option value="AM">AM</option>
+                                                                        <option value="PM">PM</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Ticket Close Date & Time */}
+                                                        <div className="space-y-2">
+                                                            <label className="text-[20px] font-medium text-[#686868]">Ticket Close Date & Time</label>
+                                                            <div className="flex gap-3">
+                                                                <div className="flex-1 border border-[#686868] rounded-[10px] h-[64px] flex items-center px-4">
+                                                                    <input
+                                                                        type="date"
+                                                                        value={ticketCloseDate}
+                                                                        onChange={e => setTicketCloseDate(e.target.value)}
+                                                                        className="w-full bg-transparent outline-none text-[18px] text-black"
+                                                                    />
+                                                                </div>
+                                                                <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-4 gap-2">
+                                                                    <select value={ticketCloseHour} onChange={e => setTicketCloseHour(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[45px]">
+                                                                        {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                                    </select>
+                                                                    <span className="text-[18px] text-black">:</span>
+                                                                    <select value={ticketCloseMinute} onChange={e => setTicketCloseMinute(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[45px]">
+                                                                        {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                                    </select>
+                                                                    <select value={ticketCloseAmpm} onChange={e => setTicketCloseAmpm(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[50px]">
+                                                                        <option value="AM">AM</option>
+                                                                        <option value="PM">PM</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Event End Date & Time */}
+                                                        <div className="space-y-2">
+                                                            <label className="text-[20px] font-medium text-[#686868]">Event End Date & Time</label>
+                                                            <div className="space-y-2">
+                                                                {isEndPassed && (
+                                                                    <p className="text-[16px] text-amber-600 font-semibold font-anek-latin">Event has ended. You can extend it by selecting a future date.</p>
+                                                                )}
+                                                                <div className="flex gap-3">
+                                                                    <div className="flex-1 border border-[#686868] rounded-[10px] h-[64px] flex items-center px-4">
+                                                                        <input
+                                                                            type="date"
+                                                                            value={eventEndDate}
+                                                                            onChange={e => setEventEndDate(e.target.value)}
+                                                                            className="w-full bg-transparent outline-none text-[18px] text-black"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="border border-[#686868] rounded-[10px] h-[64px] flex items-center px-4 gap-2">
+                                                                        <select value={eventEndHour} onChange={e => setEventEndHour(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[45px]">
+                                                                            {['12','1','2','3','4','5','6','7','8','9','10','11'].map(h => <option key={h} value={h}>{h}</option>)}
+                                                                        </select>
+                                                                        <span className="text-[18px] text-black">:</span>
+                                                                        <select value={eventEndMinute} onChange={e => setEventEndMinute(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[45px]">
+                                                                            {['00','05','10','15','20','25','30','35','40','45','50','55'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                                        </select>
+                                                                        <select value={eventEndAmpm} onChange={e => setEventEndAmpm(e.target.value)} className="bg-transparent outline-none text-[18px] text-black w-[50px]">
+                                                                            <option value="AM">AM</option>
+                                                                            <option value="PM">PM</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Sales Paused and Event Canceled Manual Controls */}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-[#EAEAEA] pt-6 mt-6">
+                                                        <div className="flex items-center justify-between border border-[#686868] rounded-[10px] p-6">
+                                                            <div>
+                                                                <h5 className="text-[20px] font-semibold text-black">Pause Ticket Sales</h5>
+                                                                <p className="text-[16px] text-zinc-500">Temporarily stop ticket bookings for this event.</p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setIsSalesPaused(!isSalesPaused)}
+                                                                className={`px-6 h-[48px] rounded-[8px] text-[16px] font-medium transition-all ${isSalesPaused ? 'bg-red-500 text-white' : 'bg-zinc-200 text-black hover:bg-zinc-300'}`}
+                                                            >
+                                                                {isSalesPaused ? 'Resume Sales' : 'Pause Sales'}
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between border border-[#686868] rounded-[10px] p-6">
+                                                            <div>
+                                                                <h5 className="text-[20px] font-semibold text-black">Cancel Event</h5>
+                                                                <p className="text-[16px] text-zinc-500">Formally cancel the event and block all ticket sales.</p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setIsCanceled(!isCanceled)}
+                                                                className={`px-6 h-[48px] rounded-[8px] text-[16px] font-medium transition-all ${isCanceled ? 'bg-red-600 text-white' : 'bg-zinc-200 text-black hover:bg-zinc-300'}`}
+                                                            >
+                                                                {isCanceled ? 'Re-activate Event' : 'Cancel Event'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             )}
                         </section>

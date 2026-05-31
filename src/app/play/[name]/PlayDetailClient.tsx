@@ -96,26 +96,14 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
     const handleBook = () => {
         if (!venue) return;
 
-        // 1. If Organizer is logged in, they CANNOT book
-        if (organizerSession) {
-            setIsOrgLogoutModalOpen(true);
-            return;
-        }
-
-        // 2. If no User session, show generic login
+        // 1. If no User session, show generic login
         if (!session) {
             setIsLoginModalOpen(true);
             return;
         }
 
-        // 3. Proceed to booking
+        // 2. Proceed to booking
         router.push(`/play/${encodeURIComponent(venue.name)}/book`);
-    };
-
-    const handleOrganizerLogout = () => {
-        clearOrganizerSession();
-        setIsOrgLogoutModalOpen(false);
-        setIsLoginModalOpen(true);
     };
 
     const toggleAccordion = (section: string) => {
@@ -386,12 +374,6 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
                 onSuccess={() => router.push(`/play/${encodeURIComponent(venue.name)}/book`)}
-            />
-            <OrganizerLogoutModal
-                isOpen={isOrgLogoutModalOpen}
-                onClose={() => setIsOrgLogoutModalOpen(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
             />
 
             {/* Facilities Modal */}

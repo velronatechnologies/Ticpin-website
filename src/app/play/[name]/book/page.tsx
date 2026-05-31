@@ -187,7 +187,6 @@ export default function PlayBookPage() {
     const [venue, setVenue] = useState<RealPlay | null>(null);
     const [loading, setLoading] = useState(true);
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isAuthChecking, setIsAuthChecking] = useState(true);
 
     useEffect(() => {
@@ -664,12 +663,6 @@ export default function PlayBookPage() {
     const handleBooking = () => {
         if (!venue) return;
         if (bookingInProgressRef.current) return;
-
-        // Check if organizer is logged in
-        if (organizerSession) {
-            setShowLogoutModal(true);
-            return;
-        }
 
         if (!session) { setShowAuthModal(true); return; }
         if (selectedCourtIds.length === 0) { toast.warning('Please select at least one court.'); return; }
@@ -1206,13 +1199,6 @@ export default function PlayBookPage() {
                 isOpen={isLocationOpen}
                 onClose={() => setIsLocationOpen(false)}
                 onSelect={setLocation}
-            />
-
-            <OrganizerLogoutModal
-                isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={handleOrganizerLogout}
-                organizerName={organizerSession?.email}
             />
 
             <style>{`

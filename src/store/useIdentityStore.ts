@@ -16,6 +16,7 @@ export interface BillingDetails {
 interface IdentityState {
     userSession: UserSession | null;
     organizerSession: OrganizerSession | null;
+    activeRole: string | null;
     isLoading: boolean;
     rememberedEmail: string;
     rememberedBilling: BillingDetails | null;
@@ -28,6 +29,13 @@ interface IdentityState {
     loginOrganizer: (session: OrganizerSession) => void;
     logoutUser: () => void;
     logoutOrganizer: () => void;
+    switchRole: (role: 'user' | 'organizer') => Promise<void>;
+}
+
+function getCookie(name: string): string {
+    if (typeof document === 'undefined') return '';
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[2]) : '';
 }
 
 export const useIdentityStore = create<IdentityState>()(
@@ -39,24 +47,34 @@ export const useIdentityStore = create<IdentityState>()(
             setRememberedBilling: (billing) => set({ rememberedBilling: billing }),
     userSession: null,
     organizerSession: null,
+    activeRole: null,
     isLoading: true,
 
     sync: () => {
+        const user = getUserSession();
+        const organizer = getOrganizerSession();
+        let role = getCookie('active_role');
+        if (!role) {
+            if (user) role = 'user';
+            else if (organizer) role = 'organizer';
+            else role = 'guest';
+        }
         set({
-            userSession: getUserSession(),
-            organizerSession: getOrganizerSession(),
+            userSession: user,
+            organizerSession: organizer,
+            activeRole: role,
             isLoading: false
         });
     },
 
     loginUser: (session) => {
         saveUserSession(session);
-        set({ userSession: session, organizerSession: null }); // Typical: login as user clears organizer
+        set({ userSession: session, activeRole: 'user' });
     },
 
     loginOrganizer: (session) => {
         saveOrganizerSession(session);
-        set({ organizerSession: session, userSession: null }); // Typical: login as org clears user
+        set({ organizerSession: session, activeRole: 'organizer' });
     },
 
     logoutUser: () => {
@@ -65,8 +83,26 @@ export const useIdentityStore = create<IdentityState>()(
     },
 
     logoutOrganizer: () => {
-        clearOrganizerSession(); // this calls backend logout + clears cookies + sessionStorage keys
-        set({ organizerSession: null, userSession: null });
+        clearOrganizerSession();
+        set({ organizerSession: null });
+    },
+
+    switchRole: async (role) => {
+        try {
+            const res = await fetch(`/backend/api/auth/switch/${role}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (res.ok) {
+                if (typeof document !== 'undefined') {
+                    document.cookie = `active_role=${role}; path=/; SameSite=Lax`;
+                }
+                set({ activeRole: role });
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error('[Auth] Failed to switch role:', err);
+        }
     }
         }),
         {
