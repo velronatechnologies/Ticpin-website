@@ -5,16 +5,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getMinPrice(event: {
-  price_starts_from?: number;
-  ticket_categories?: Array<{ price?: number; name?: string }>;
-  layout_json?: string;
-}) {
+export function getMinPrice(
+  event: {
+    price_starts_from?: number;
+    ticket_categories?: Array<{ price?: number; name?: string; capacity?: number }>;
+    layout_json?: string;
+  },
+  bookedMap?: Record<string, number>
+) {
   let prices: number[] = [];
 
   if (event.ticket_categories && event.ticket_categories.length > 0) {
     event.ticket_categories.forEach(cat => {
       if (cat.price !== undefined && cat.price > 0) {
+        if (bookedMap && cat.name && cat.capacity !== undefined && cat.capacity > 0) {
+          const booked = bookedMap[cat.name] ?? 0;
+          if (booked >= cat.capacity) {
+            return; // Skip full/sold out category
+          }
+        }
         prices.push(cat.price);
       }
     });
@@ -28,6 +37,12 @@ export function getMinPrice(event: {
           if (el.type === 'section' && el.price !== undefined) {
             const p = Number(el.price);
             if (!isNaN(p) && p > 0) {
+              if (bookedMap && el.name && el.capacity !== undefined && el.capacity > 0) {
+                const booked = bookedMap[el.name] ?? 0;
+                if (booked >= el.capacity) {
+                  return; // Skip full/sold out layout section
+                }
+              }
               prices.push(p);
             }
           }

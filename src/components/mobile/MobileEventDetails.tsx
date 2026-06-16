@@ -8,6 +8,7 @@ import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
 import dynamic from 'next/dynamic';
 import { toast } from '@/components/ui/Toast';
+import { bookingApi } from '@/lib/api/booking';
 
 const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 
@@ -252,7 +253,25 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         }
     }, [event.date]);
 
-    const minPrice = useMemo(() => getMinPrice(event), [event]);
+    const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            try {
+                const avail = await bookingApi.getEventAvailability(event.id);
+                if (avail && avail.booked) {
+                    setBookedMap(avail.booked);
+                }
+            } catch (err) {
+                console.error('Failed to fetch availability:', err);
+            }
+        };
+        if (event?.id) {
+            fetchAvailability();
+        }
+    }, [event?.id]);
+
+    const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
     const displayTime = event.time || 'Time TBA';
     const displayPrice = minPrice > 0 ? `₹${minPrice}` : 'TBA';
 

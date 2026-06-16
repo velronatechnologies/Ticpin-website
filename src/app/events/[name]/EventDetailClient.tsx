@@ -83,8 +83,25 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const session = useUserSession();
     const organizerSession = getOrganizerSession();
+    const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
 
-    const minPrice = useMemo(() => getMinPrice(event), [event]);
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            try {
+                const avail = await bookingApi.getEventAvailability(event.id);
+                if (avail && avail.booked) {
+                    setBookedMap(avail.booked);
+                }
+            } catch (err) {
+                console.error('Failed to fetch availability:', err);
+            }
+        };
+        if (event?.id) {
+            fetchAvailability();
+        }
+    }, [event?.id]);
+
+    const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
     const closedBooking = useMemo(() => {
         if (!event) return false;
