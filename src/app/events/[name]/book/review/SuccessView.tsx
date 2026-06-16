@@ -34,7 +34,10 @@ export default function SuccessView({
         <div className="h-screen w-screen overflow-hidden flex flex-col items-center bg-[#FDFDFD]">
             {/* Top Space (8vh) */}
             <div className="h-[8vh] w-full flex items-center justify-between px-6 md:px-10 bg-[#FDFDFD] shrink-0">
-                <div className="flex-shrink-0 cursor-pointer" onClick={() => router.push('/')}>
+                <div className="flex-shrink-0 cursor-pointer" onClick={() => {
+                    sessionStorage.removeItem('ticpin_booking_step');
+                    router.push('/');
+                }}>
                     <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-[20px] md:h-[22px] w-auto object-contain" />
                 </div>
                 <button
@@ -166,7 +169,10 @@ export default function SuccessView({
                     </p>
 
                     <button
-                        onClick={() => router.push('/')}
+                        onClick={() => {
+                            sessionStorage.removeItem('ticpin_booking_step');
+                            router.push('/');
+                        }}
                         className="w-full h-[44px] bg-black text-white rounded-[7px] font-medium text-[24px] hover:bg-zinc-900 active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
                         style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
                     >

@@ -219,6 +219,9 @@ export default function TicketSelectionPage() {
       setShowAuthModal(true);
     }
     setIsAuthChecking(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("ticpin_booking_step");
+    }
   }, []);
 
   // BUG FIX #4: Check if organizer is trying to access booking flow (enforce user-only)

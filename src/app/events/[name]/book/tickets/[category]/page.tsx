@@ -143,6 +143,9 @@ export default function TicketSelectionPage() {
 
   // Handle edit mode when user returns from review page
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("ticpin_booking_step");
+    }
     if (!event) return;
     const isEditingFlag = sessionStorage.getItem("ticpin_edit_selection") === "1";
     const hasCart = !!sessionStorage.getItem("ticpin_cart");
