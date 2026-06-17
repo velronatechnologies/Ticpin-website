@@ -43,7 +43,7 @@ async function getVenueData(name: string): Promise<RealDining | null> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/dining/${encodeURIComponent(name)}`, {
-            next: { revalidate: 60 },
+            cache: 'no-store'
         });
         if (!res.ok) return null;
         return res.json();
@@ -57,7 +57,7 @@ async function getVenueOffers(name: string): Promise<OfferRecord[]> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/dining/${encodeURIComponent(name)}/offers`, {
-            next: { revalidate: 60 },
+            cache: 'no-store'
         });
         if (!res.ok) return [];
         const data = await res.json();

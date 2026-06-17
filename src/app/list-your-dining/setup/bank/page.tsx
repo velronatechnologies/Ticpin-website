@@ -72,6 +72,7 @@ function BankDetailsContent() {
                 })
                 .catch(err => {
                     console.error('IFSC fetch error:', err);
+                    toast.error('Invalid IFSC code. Please check and try again.');
                 });
         }
     }, [bankIfsc]);

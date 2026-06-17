@@ -152,7 +152,7 @@ function BookingsContent() {
                 </div>
 
                 {/* Content Section */}
-                <div className="mt-[30px] w-full max-w-[460px] space-y-6">
+                <div className="mt-[30px] w-full max-w-[520px] space-y-6">
                     {loading ? (
                         <div className="flex flex-col items-center py-20">
                             <RefreshCw className="animate-spin text-zinc-400 mb-4" size={40} />
@@ -165,7 +165,7 @@ function BookingsContent() {
                         </div>
                     ) : filteredBookings.length > 0 ? (
                         filteredBookings.map((booking, idx) => (
-                            <div key={booking.id || idx} style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }} className="bg-white border-[0.5px] border-[#686868] rounded-[20px] p-5 w-full max-w-[400px] flex flex-col gap-4 relative mx-auto">
+                            <div key={booking.id || idx} style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }} className="bg-white border-[0.5px] border-[#aeaeae] rounded-[12px] p-5 w-full flex flex-col gap-4 relative mx-auto">
                                 {/* Top Row: Details & Image */}
                                 <div className="flex justify-between items-start gap-3">
                                     <div className="flex-1 min-w-0 space-y-1">
@@ -186,7 +186,7 @@ function BookingsContent() {
                                     </div>
 
                                     {/* Keep the 16:9 landscape image exactly as is in your code */}
-                                    <div className="w-[96px] h-[54px] bg-zinc-100 rounded-[12px] overflow-hidden flex items-center justify-center border border-zinc-200 shrink-0">
+                                    <div className="w-[100px] h-[60px] bg-zinc-100 rounded-[8px] overflow-hidden flex items-center justify-center shrink-0">
                                         {(booking.play_image || booking.image_url || booking.event_image_url || booking.venue_image_url) ? (
                                             <img src={booking.play_image || booking.image_url || booking.event_image_url || booking.venue_image_url} alt="" className="w-full h-full object-cover" />
                                         ) : (
@@ -217,7 +217,7 @@ function BookingsContent() {
                                 </div>
 
                                 {/* Bottom Row: Divider, Badge & Action */}
-                                <div className="pt-3 border-t border-[#D1D1D1] flex justify-between items-center w-full">
+                                <div className="pt-3 border-t border-[#686868] flex justify-between items-center w-full">
                                     {/* Status Badge */}
                                     <div className={`px-3 py-1 rounded-[6px] flex items-center justify-center min-w-[80px] ${(booking.status === 'booked' || booking.status === 'confirmed' || booking.status === 'pending') ? 'bg-[#65B54E]/30 ' : 'bg-red-50'}`}>
                                         <span className={`text-[14px] font-semibold ${(booking.status === 'booked' || booking.status === 'confirmed' || booking.status === 'pending') ? 'text-[#009133]' : 'text-red-600'}`}>
@@ -234,7 +234,7 @@ function BookingsContent() {
                             </div>
                         ))
                     ) : (
-                        <div className="text-center py-20 bg-zinc-50 rounded-[25px] border border-dashed border-zinc-300 w-full">
+                        <div className="text-center py-20 bg-zinc-50 rounded-[12px] border border-dashed border-zinc-300 w-full">
                             <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 {activeTab === 'events' ? <Ticket size={32} className="text-zinc-400" /> :
                                     activeTab === 'play' ? <PlayCircle size={32} className="text-zinc-400" /> :
@@ -250,14 +250,14 @@ function BookingsContent() {
                 </div>
 
                 {/* Chat with Support Box */}
-                <div className="mt-8 w-full max-w-[460px]">
-                    <Link href="/chat-support" className="bg-white border-[0.5px] border-[#686868] rounded-[20px] p-4 md:p-6 flex items-center gap-4 md:gap-6 cursor-pointer hover:bg-zinc-50 transition-colors">
+                {/* <div className="mt-8 w-full max-w-[520px]">
+                    <Link href="/chat-support" className="bg-white border-[0.5px] border-[#686868] rounded-[12px] p-4 md:p-6 flex items-center gap-4 md:gap-6 cursor-pointer hover:bg-zinc-50 transition-colors">
                         <div className="w-[36px] h-[36px] md:w-[48px] md:h-[48px] flex items-center justify-center bg-black rounded-full text-white shrink-0">
                             <MessageSquare size={18} className="md:w-6 md:h-6" />
                         </div>
                         <h3 className="text-[16px] md:text-[22px] font-semibold text-black">Chat with support</h3>
                     </Link>
-                </div>
+                </div> */}
             </main>
         </div>
     );

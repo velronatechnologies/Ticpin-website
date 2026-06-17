@@ -72,6 +72,7 @@ function BankDetailsContent() {
                 })
                 .catch(err => {
                     console.error('IFSC fetch error:', err);
+                    toast.error('Invalid IFSC code. Please check and try again.');
                 });
         }
     }, [bankIfsc]);
@@ -198,12 +199,7 @@ function BankDetailsContent() {
                                 <p className="text-[13px] text-[#686868] font-medium leading-normal">I hereby certify that the above details are accurate, the bank account mentioned above is maintained by me or my organisation, and I take full responsibility if any information is found false under applicable laws.</p>
                             </div>
                             
-                            {certChecked && (
-                                <div className="bg-green-50 border border-green-200 rounded-[14px] px-5 py-3 flex items-center gap-3 max-w-2xl">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    <p className="text-[14px] text-green-700 font-medium">✓ Declaration accepted</p>
-                                </div>
-                            )}
+                         
 
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button onClick={handleContinue}

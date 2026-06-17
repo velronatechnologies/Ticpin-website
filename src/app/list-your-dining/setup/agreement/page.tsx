@@ -7,14 +7,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { diningApi } from '@/lib/api/dining';
 import { getOrganizerSession, updateSessionCategoryStatus } from '@/lib/auth/organizer';
 import { toast } from '@/components/ui/Toast';
+import { AgreementModal } from '@/components/ui/AgreementModal';
 
 function AgreementContent() {
     const searchParams = useSearchParams();
     const category = searchParams.get('category');
     const [loading, setLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const router = useRouter();
 
-    const handleSign = async () => {
+    const handleSign = async (signature: string, signatoryEmail: string, signedAt: string, signedIP: string) => {
         setLoading(true);
         try {
             const session = getOrganizerSession();
@@ -34,6 +36,10 @@ function AgreementContent() {
                 backupEmail: data.backupEmail,
                 backupPhone: data.backupPhone,
                 gstList: data.gstList ?? [],
+                signature,
+                signatoryEmail,
+                signedAt,
+                signedIP,
             });
             updateSessionCategoryStatus('dining', 'pending');
             sessionStorage.removeItem('setup_dining');
@@ -54,11 +60,11 @@ function AgreementContent() {
 
     useEffect(() => {
         const handleEnter = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' && !loading) handleSign();
+            if (e.key === 'Enter' && !loading && !isModalOpen) setIsModalOpen(true);
         };
         window.addEventListener('keydown', handleEnter);
         return () => window.removeEventListener('keydown', handleEnter);
-    }, [loading, handleSign]);
+    }, [loading, isModalOpen]);
 
     return (
         <div className="overflow-hidden flex flex-col font-[family-name:var(--font-anek-latin)] h-[calc(100vh-80px)]" style={{ background: 'rgba(211, 203, 245, 0.1)' }}>
@@ -68,7 +74,7 @@ function AgreementContent() {
 
                     {/* Sidebar Column */}
                     <aside className="w-fit pt-32 hidden lg:block">
-                        <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} category={category} />
+                        <SetupSidebar currentStep="05" completedSteps={['01', '02', '03', '04']} category={category} />
                     </aside>
 
                     {/* Content Column */}
@@ -83,7 +89,7 @@ function AgreementContent() {
 
                         {/* Mobile Sidebar */}
                         <div className="lg:hidden mb-12">
-                            <SetupSidebar currentStep="04" completedSteps={['01', '02', '03']} category={category} />
+                            <SetupSidebar currentStep="05" completedSteps={['01', '02', '03', '04']} category={category} />
                         </div>
 
                         {/* Form Area */}
@@ -98,17 +104,25 @@ function AgreementContent() {
 
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button
-                                    onClick={handleSign}
+                                    onClick={() => setIsModalOpen(true)}
                                     disabled={loading}
                                     className="bg-black text-white w-full max-w-[160px] h-[48px] rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all group active:scale-95 disabled:opacity-60"
                                 >
-                                    {loading ? 'Submitting...' : 'Sign agreement'}<ChevronRight size={18} className="transition-transform" />
+                                    Sign agreement<ChevronRight size={18} className="transition-transform" />
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
+
+            <AgreementModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSubmit={handleSign}
+                submitLoading={loading}
+                category="dining"
+            />
         </div>
     );
 }

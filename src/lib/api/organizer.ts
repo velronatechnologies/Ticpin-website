@@ -41,6 +41,7 @@ export interface ExistingSetup {
   gstNumber?: string;
   backupEmail?: string;
   backupPhone?: string;
+  phone?: string;
   panVerified?: boolean;
   verifiedName?: string;
 }

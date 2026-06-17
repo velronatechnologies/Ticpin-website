@@ -53,7 +53,7 @@ async function getEventData(name: string): Promise<EventData | null> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/events/${encodeURIComponent(name)}`, {
-            next: { revalidate: 60 }, // ISR: revalidate every 60s
+            cache: 'no-store'
         });
         if (!res.ok) return null;
         return await res.json();

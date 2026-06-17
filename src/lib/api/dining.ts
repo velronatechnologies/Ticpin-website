@@ -39,6 +39,10 @@ export interface SetupPayload {
   backupEmail?: string;
   backupPhone?: string;
   gstList?: string[];
+  signature?: string;
+  signatoryEmail?: string;
+  signedAt?: string;
+  signedIP?: string;
 }
 
 export const diningApi = {

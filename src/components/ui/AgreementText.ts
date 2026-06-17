@@ -1,0 +1,411 @@
+export interface AgreementSubclause {
+  code: string;
+  text: string;
+}
+
+export interface AgreementSection {
+  title: string;
+  subclauses: AgreementSubclause[];
+}
+
+export interface ChecklistItem {
+  sNo: string;
+  category: string;
+  req: string;
+  standard: string;
+}
+
+export const agreementIntro = `PLEASE READ THIS TICKETING SERVICES AGREEMENT CAREFULLY. THIS AGREEMENT CONTAINS IMPORTANT INFORMATION REGARDING YOUR RIGHTS, OBLIGATIONS, REPRESENTATIONS, WARRANTIES, INDEMNITIES, LIMITATIONS OF LIABILITY, DISPUTE RESOLUTION MECHANISMS, AND OTHER LEGAL TERMS GOVERNING YOUR USE OF THE TICPIN PLATFORM. BY CLICKING THE "ACCEPT" BUTTON, CREATING AN ORGANISER ACCOUNT, LISTING AN EVENT, OR OTHERWISE USING THE SERVICES PROVIDED BY TICPIN, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREED TO BE LEGALLY BOUND BY THIS AGREEMENT. IF YOU DO NOT AGREE TO THE TERMS OF THIS AGREEMENT, YOU MUST NOT USE THE TICPIN PLATFORM OR ANY SERVICES PROVIDED THROUGH IT.`;
+
+export const agreementParties = `This Ticketing Services Agreement ("Agreement") is entered into between:
+
+VELRONA TECHNOLOGIES PRIVATE LIMITED, a company incorporated under the Companies Act, 2013 and having its registered office at 1st Floor, 22B Kambar Street, Kamatchipuram, Ondipudur, Coimbatore - 641016, operating under the brand name "Ticpin" (hereinafter referred to as "Ticpin", which expression shall include its successors and permitted assigns);
+
+AND
+
+The individual, proprietorship concern, partnership firm, limited liability partnership, company, trust, society, association, or other legal entity registering, publishing, hosting, promoting, or selling tickets for Events through the Ticpin Platform (hereinafter referred to as the "Organiser", which expression shall include its successors, legal representatives, and permitted assigns). Ticpin and the Organiser shall hereinafter be collectively referred to as the "Parties" and individually as a "Party".`;
+
+export const agreementSections: AgreementSection[] = [
+  {
+    title: "1. DEFINITIONS AND INTERPRETATION",
+    subclauses: [
+      { code: "1.1", text: `"Affiliate" shall mean any entity that directly or indirectly controls, is controlled by, or is under common control with a Party.` },
+      { code: "1.2", text: `"Agreement" shall mean this Ticketing Services Agreement together with all schedules, annexures, policies, guidelines, amendments, and documents incorporated herein by reference.` },
+      { code: "1.3", text: `"Applicable Laws" shall mean all laws, statutes, regulations, notifications, circulars, judicial decisions, governmental orders, directives, and regulatory requirements applicable in India.` },
+      { code: "1.4", text: `"Business Day" shall mean any day other than a Saturday, Sunday, or public holiday on which banks are open for business in India.` },
+      { code: "1.5", text: `"Customer" shall mean any individual who purchases, reserves, registers for, receives, or otherwise acquires a Ticket through the Ticpin Platform.` },
+      { code: "1.6", text: `"Customer Data" shall mean all information relating to Customers collected through the Ticpin Platform, including names, email addresses, phone numbers, transaction details, attendance information, and any personally identifiable information.` },
+      { code: "1.7", text: `"Event" shall mean any concert, exhibition, festival, conference, seminar, workshop, sports event, educational program, entertainment activity, virtual event, dining experience, community gathering, or any other activity listed on the Ticpin Platform.` },
+      { code: "1.8", text: `"Net Revenue" shall mean the gross ticket revenue collected through the Platform after deduction of Platform Fees, refunds, chargebacks, reversals, taxes, and other lawful deductions.` },
+      { code: "1.9", text: `"Platform Fee" shall mean six percent (6%) inclusive of applicable taxes charged by Ticpin on the gross value of Tickets sold through the Platform.` },
+      { code: "1.10", text: `"Services" shall mean ticketing, registration, payment facilitation, attendee management, QR validation, reporting, settlement support, marketing support, and related services provided by Ticpin.` },
+      { code: "1.11", text: `"Ticket" shall mean a digital ticket, QR code, pass, reservation, or other credential issued through the Platform granting access to an Event.` },
+      { code: "1.12", text: `"Ticpin Platform" shall mean the website, mobile applications, organiser dashboards, APIs, QR validation systems, software, infrastructure, and associated technologies operated by Ticpin.` }
+    ]
+  },
+  {
+    title: "2. SERVICES PROVIDED BY TICPIN",
+    subclauses: [
+      { code: "2.1", text: "Ticpin shall provide the Organiser with access to the Platform for listing and managing Events." },
+      { code: "2.2", text: "Ticpin shall facilitate the sale and distribution of Tickets through the Platform." },
+      { code: "2.3", text: "Ticpin shall provide ticket inventory management tools and attendee reporting facilities." },
+      { code: "2.4", text: "Ticpin shall generate QR code-based Tickets and provide ticket validation services." },
+      { code: "2.5", text: "Ticpin shall provide an Organiser Dashboard through which the Organiser may monitor sales, attendance, settlements, and customer information." },
+      { code: "2.6", text: "Ticpin may provide promotional and marketing support for Events." },
+      { code: "2.7", text: "Ticpin may, at its sole discretion, provide discounts, rewards, offers, cashback promotions, or other customer acquisition initiatives at its own cost where Ticpin determines that such promotions are commercially viable." },
+      { code: "2.8", text: "Organisers may issue complimentary Tickets through the Platform subject to operational limitations and platform policies." },
+      { code: "2.9", text: "Ticpin shall use commercially reasonable efforts to maintain Platform availability on a twenty-four (24) hour, seven (7) day basis, except during maintenance periods, emergencies, or Force Majeure Events." },
+      { code: "2.10", text: "Ticpin acts solely as a technology and ticketing intermediary and shall not be responsible for Event execution, venue management, artist performance, crowd management, security arrangements, transportation, accommodation, food and beverage services, or any other operational aspect of the Event." }
+    ]
+  },
+  {
+    title: "3. ORGANISER OBLIGATIONS",
+    subclauses: [
+      { code: "3.1", text: "Appointment of Ticpin: The Organiser hereby appoints Ticpin as a non-exclusive ticketing platform for the listing, promotion, registration, sale, distribution, and management of Tickets relating to the Event." },
+      { code: "3.2", text: "Event Information: The Organiser shall provide complete, accurate, current, and non-misleading information relating to the Event, including but not limited to Event description, venue details, schedule, ticket pricing, seating information, age restrictions, entry requirements, artist details, refund terms, and any other information reasonably required by Ticpin." },
+      { code: "3.3", text: "Accuracy of Content: The Organiser shall ensure that all content submitted to Ticpin, including text, images, videos, promotional materials, advertisements, and Event-related communications, is accurate and does not contain any false, misleading, deceptive, defamatory, unlawful, or infringing material." },
+      { code: "3.4", text: "Event Permissions: The Organiser shall obtain and maintain all licenses, permits, permissions, approvals, registrations, clearances, authorisations, and no-objection certificates required from governmental authorities, venue owners, licensors, rights holders, and other third parties for conducting the Event." },
+      { code: "3.5", text: "Compliance with Applicable Laws: The Organiser shall comply with all Applicable Laws relating to the planning, promotion, organisation, management, and execution of the Event." },
+      { code: "3.6", text: "Venue Compliance: The Organiser shall ensure that the Event venue complies with all fire safety regulations, occupancy restrictions, building requirements, health regulations, public safety standards, and governmental requirements applicable to the Event." },
+      { code: "3.7", text: "Ticket Inventory: The Organiser shall provide Ticpin with accurate and updated ticket inventory information including ticket categories, quantities, pricing, availability, seating plans, and any restrictions applicable to Tickets." },
+      { code: "3.8", text: "Event Execution: The Organiser shall be solely responsible for organising, managing, supervising, and executing the Event and shall ensure that the Event is conducted in accordance with the information published on the Ticpin Platform." },
+      { code: "3.9", text: "Customer Admission: The Organiser shall honour all valid Tickets issued through the Ticpin Platform and shall permit entry to Customers holding valid Tickets, subject only to lawful restrictions and published Event policies." },
+      { code: "3.10", text: "Customer Experience: The Organiser shall use commercially reasonable efforts to ensure a satisfactory Event experience for Customers and shall address customer concerns promptly and professionally." },
+      { code: "3.11", text: "Event Personnel: The Organiser shall be solely responsible for all performers, artists, speakers, vendors, exhibitors, contractors, suppliers, volunteers, employees, and agents engaged for the Event." },
+      { code: "3.12", text: "Professional Conduct: The Organiser shall ensure that all Event personnel conduct themselves professionally and comply with Applicable Laws and Event policies." },
+      { code: "3.13", text: "Insurance: The Organiser shall maintain adequate insurance coverage appropriate to the nature, scale, and risk profile of the Event, including public liability insurance where applicable." },
+      { code: "3.14", text: "Health and Safety: The Organiser shall implement and maintain appropriate health, safety, and emergency procedures for the protection of Customers, staff, vendors, performers, and other attendees." },
+      { code: "3.15", text: "Security Arrangements: The Organiser shall arrange and maintain adequate security personnel and security procedures appropriate to the nature and expected attendance of the Event." },
+      { code: "3.16", text: "Medical Arrangements: Where reasonably required, the Organiser shall ensure the availability of first-aid facilities, medical personnel, ambulances, emergency response equipment, and emergency evacuation procedures." },
+      { code: "3.17", text: "Event Changes: The Organiser shall promptly notify Ticpin of any cancellation, postponement, rescheduling, venue change, performer change, ticket pricing modification, or any material change affecting the Event." },
+      { code: "3.18", text: "Intellectual Property Rights: The Organiser shall ensure that all intellectual property used in connection with the Event is lawfully owned, licensed, authorised, or otherwise permitted for use." },
+      { code: "3.19", text: "Copyright Compliance: The Organiser shall obtain all necessary music licenses, performance licenses, content licenses, broadcasting permissions, and intellectual property clearances required for the Event." },
+      { code: "3.20", text: "Taxes: The Organiser shall be solely responsible for all taxes, duties, levies, charges, fees, and statutory obligations applicable to the Event and its operations." },
+      { code: "3.21", text: "Banking Information: The Organiser shall provide accurate and complete banking information for settlement purposes and shall promptly notify Ticpin of any changes." },
+      { code: "3.22", text: "Customer Communications: The Organiser shall cooperate with Ticpin in responding to customer inquiries, complaints, refund requests, and service issues." },
+      { code: "3.23", text: "Event Policies: The Organiser shall clearly communicate all Event policies, restrictions, prohibited items, age requirements, dress codes, entry conditions, and safety requirements to Customers." },
+      { code: "3.24", text: "Prohibited Activities: The Organiser shall not organise, promote, list, or facilitate Events involving unlawful activities, fraudulent schemes, prohibited goods or services, hate speech, violence, exploitation, or activities prohibited under Applicable Laws." },
+      { code: "3.25", text: "No Misrepresentation: The Organiser shall not make any representation regarding Ticpin that is false, misleading, unauthorised, or likely to damage Ticpin’s reputation." },
+      { code: "3.26", text: "Platform Usage: The Organiser shall use the Ticpin Platform solely for legitimate Event management purposes and shall not interfere with, disrupt, reverse engineer, or misuse the Platform." },
+      { code: "3.27", text: "Data Protection: The Organiser shall handle Customer Data strictly in accordance with this Agreement, Applicable Laws, and Ticpin policies." },
+      { code: "3.28", text: "Fraud Prevention: The Organiser shall take reasonable measures to prevent fraud, counterfeit tickets, unauthorised resales, duplicate entries, and other abusive practices relating to the Event." },
+      { code: "3.29", text: "Record Maintenance: The Organiser shall maintain complete and accurate records relating to the Event and shall provide such records to Ticpin upon reasonable request." },
+      { code: "3.30", text: "Cooperation: The Organiser shall provide all information, documents, support, access, and assistance reasonably required by Ticpin for the provision of Services." },
+      { code: "3.31", text: "Complaints and Investigations: The Organiser shall cooperate fully with Ticpin in relation to customer complaints, governmental inquiries, legal proceedings, investigations, audits, or regulatory actions relating to the Event." },
+      { code: "3.32", text: "Event Quality: The Organiser acknowledges that the reputation of Ticpin may be affected by the quality of Events listed on the Platform and shall use commercially reasonable efforts to maintain high standards of Event quality and customer satisfaction." },
+      { code: "3.33", text: "No Guarantee by Ticpin: The Organiser acknowledges and agrees that Ticpin does not guarantee ticket sales, attendance levels, profitability, sponsorship revenue, audience engagement, or the commercial success of any Event." },
+      { code: "3.34", text: "Responsibility for Event Risks: The Organiser shall be solely responsible for all risks associated with the Event, including risks relating to customer injuries, property damage, crowd management, operational failures, weather conditions, performer cancellations, venue issues, and third-party claims." },
+      { code: "3.35", text: "Compliance with Ticpin Policies: The Organiser shall comply with all policies, guidelines, standards, operational requirements, platform rules, settlement procedures, refund procedures, and other instructions issued by Ticpin from time to time." },
+      { code: "3.36", text: "Right of Suspension: The Organiser acknowledges and agrees that Ticpin may immediately suspend, restrict, remove, deactivate, or terminate any Event listing, Ticket inventory, Organiser account, or access to the Platform without prior notice where Ticpin reasonably believes that such action is necessary to prevent fraud, protect Customers, comply with Applicable Laws, mitigate operational risks, address safety concerns, protect Ticpin’s reputation, or enforce this Agreement." },
+      { code: "3.37", text: "Survival of Obligations: The obligations of the Organiser relating to compliance, customer protection, indemnification, refunds, confidentiality, intellectual property, taxes, data protection, and dispute resolution shall survive the termination or expiration of this Agreement to the extent necessary to give effect to their intended purpose." }
+    ]
+  },
+  {
+    title: "4. CANCELLATION, REFUNDS AND RESCHEDULING",
+    subclauses: [
+      { code: "4.1", text: "Event Cancellation by Organiser: The Organiser may cancel an Event by providing written notice to Ticpin through the Organiser Dashboard, registered email address, or such other communication channels as may be prescribed by Ticpin from time to time." },
+      { code: "4.2", text: "Immediate Notification Obligation: The Organiser shall immediately notify Ticpin upon becoming aware of any circumstance that may reasonably result in the cancellation, postponement, suspension, interruption, or material modification of the Event." },
+      { code: "4.3", text: "Refund Policy Incorporation: The Organiser acknowledges and agrees that the refund policy published by Ticpin on its Platform, as amended from time to time, shall form an integral and binding part of this Agreement and shall govern all refund-related matters unless otherwise expressly approved in writing by Ticpin." },
+      { code: "4.4", text: "Event-Specific Refund Policies: The Organiser may establish Event-specific refund policies only with the prior approval of Ticpin and provided such policies do not conflict with the Ticpin Refund Policy or Applicable Laws." },
+      { code: "4.5", text: "Responsibility for Refunds: The Organiser shall be solely responsible for all refund obligations arising from cancellation, postponement, rescheduling, non-performance, partial performance, venue changes, artist cancellations, regulatory restrictions, or any other Event-related circumstances." },
+      { code: "4.6", text: "Refund Processing by Ticpin: Ticpin may, at its sole discretion, facilitate the processing of refunds on behalf of the Organiser. Such facilitation shall not transfer refund liability from the Organiser to Ticpin." },
+      { code: "4.7", text: "Funding of Refunds: The Organiser authorises Ticpin to utilise Event revenues, settlement balances, reserves, future settlements, security deposits, or any other monies payable to the Organiser for the purpose of processing refunds." },
+      { code: "4.8", text: "Insufficient Funds: Where available settlement balances are insufficient to satisfy refund obligations, the Organiser shall remit the required funds to Ticpin within three (3) Business Days of receiving a written demand from Ticpin." },
+      { code: "4.9", text: "Customer Communications: Ticpin may communicate directly with Customers regarding Event cancellations, refunds, rescheduling, venue changes, or related matters, and the Organiser authorises Ticpin to issue such communications as deemed necessary." },
+      { code: "4.10", text: "Event Rescheduling: The Organiser may reschedule an Event subject to prior notification to Ticpin and compliance with the refund framework applicable to the Event." },
+      { code: "4.11", text: "Publication of Revised Information: Upon rescheduling, the Organiser shall provide revised Event details including the updated date, time, venue, lineup, schedule, and other material information necessary for Customers to make informed decisions." },
+      { code: "4.12", text: "Customer Rights in Rescheduled Events: Customers affected by a rescheduled Event shall be entitled to such remedies, options, credits, transfers, refunds, or accommodations as may be specified under the Ticpin Refund Policy or Applicable Laws." },
+      { code: "4.13", text: "Venue Changes: The Organiser shall promptly notify Ticpin of any venue changes and shall ensure that any replacement venue is suitable, safe, legally compliant, and reasonably capable of accommodating affected Customers." },
+      { code: "4.14", text: "Material Event Modifications: Where the Organiser materially modifies an Event, including changes to headlining artists, performers, speakers, content, timing, venue, duration, or format, Ticpin may determine that such modification constitutes a cancellation or rescheduling event for the purposes of refund eligibility." },
+      { code: "4.15", text: "Chargebacks: The Organiser shall remain solely liable for all chargebacks, payment reversals, banking disputes, card disputes, fraud claims, and transaction disputes arising from or relating to the Event." },
+      { code: "4.16", text: "Refund Deductions: Ticpin may deduct refund amounts, processing charges, chargebacks, banking costs, legal costs, dispute management expenses, and related losses from any amounts payable to the Organiser." },
+      { code: "4.17", text: "Regulatory Orders: If any governmental authority, court, regulatory body, law enforcement agency, or statutory authority requires cancellation, suspension, postponement, restriction, or modification of an Event, the Organiser shall comply with such requirements and remain responsible for all resulting refund obligations." },
+      { code: "4.18", text: "Force Majeure Events: Where cancellation, postponement, or disruption occurs due to a Force Majeure Event, refund eligibility shall be determined in accordance with the Ticpin Refund Policy, Applicable Laws, and the specific circumstances of the Event." },
+      { code: "4.19", text: "Fraudulent Activities: If Ticpin reasonably suspects fraudulent conduct, misrepresentation, unlawful activity, ticket manipulation, artificial ticket inflation, unauthorised resale, or any activity that may adversely affect Customers or Ticpin, Ticpin may suspend ticket sales, freeze settlements, process refunds, and take such actions as it deems necessary to protect Customers and the Platform." },
+      { code: "4.20", text: "No Liability of Ticpin: Ticpin shall not be liable for any loss, damage, expense, claim, liability, penalty, reputational harm, business interruption, or consequential loss suffered by the Organiser arising from Event cancellations, postponements, rescheduling, refunds, chargebacks, venue issues, performer withdrawals, regulatory restrictions, customer claims, or other Event-related circumstances." },
+      { code: "4.21", text: "Organiser Indemnity for Refund Claims: The Organiser shall defend, indemnify, and hold harmless Ticpin from and against all claims, proceedings, disputes, liabilities, damages, costs, expenses, penalties, and legal fees arising out of or relating to refunds, chargebacks, cancellation disputes, rescheduling disputes, or customer complaints associated with the Event." },
+      { code: "4.22", text: "Refund Records and Reconciliation: The Organiser acknowledges that Ticpin’s records, transaction logs, payment gateway reports, refund reports, settlement statements, and system records shall constitute prima facie evidence of all refund-related transactions unless proven otherwise through clear documentary evidence." },
+      { code: "4.23", text: "Survival: The rights and obligations contained in this Clause shall survive the cancellation of an Event, termination of the Organiser account, expiration of this Agreement, and completion of the Event until all refund obligations, chargebacks, disputes, and related claims have been fully resolved." }
+    ]
+  },
+  {
+    title: "5. COMMERCIAL TERMS",
+    subclauses: [
+      { code: "5.1", text: "Platform Fee: In consideration of the Services provided by Ticpin under this Agreement, the Organiser agrees that Ticpin shall be entitled to charge and retain a Platform Fee equal to six percent (6%) inclusive of applicable taxes on the gross value of all paid Tickets sold through the Ticpin Platform." },
+      { code: "5.2", text: "Acceptance of Commercial Terms: The Organiser acknowledges and agrees that the Platform Fee constitutes valid consideration for the Services provided by Ticpin and shall be payable irrespective of the commercial success or profitability of the Event." },
+      { code: "5.3", text: "Collection of Ticket Revenues: Ticpin shall facilitate the collection of ticket sale proceeds through authorised payment gateway providers, banking partners, UPI systems, card networks, and other payment channels integrated with the Platform." },
+      { code: "5.4", text: "Appointment as Collection Agent: The Organiser hereby authorises Ticpin to collect ticket sale proceeds on its behalf solely for the purposes contemplated under this Agreement and to distribute settlements in accordance with the terms herein." },
+      { code: "5.5", text: "Settlement Cycle: Subject to reconciliation, deductions, refunds, chargebacks, and compliance requirements, Ticpin shall process settlement of Net Revenue payable to the Organiser within two (2) Business Days following successful completion of the Event." },
+      { code: "5.6", text: "Settlement Date: The settlement timeline shall commence only after: (5.6.1) The Event has been successfully completed; (5.6.2) No material disputes have been reported relating to the Event; (5.6.3) The Organiser has provided complete and valid banking information; (5.6.4) All verification, compliance, fraud prevention, and reconciliation processes have been completed." },
+      { code: "5.7", text: "Net Revenue: For the purposes of this Agreement, Net Revenue shall mean the gross ticket sale proceeds collected through the Ticpin Platform after deduction of Platform Fees, refunds, chargebacks, payment reversals, fraud-related losses, applicable taxes, government-mandated deductions, banking charges, and other amounts recoverable under this Agreement." },
+      { code: "5.8", text: "Settlement Statement: Ticpin shall make available through the Organiser Dashboard a settlement statement containing details of ticket sales, refunds, deductions, taxes, chargebacks, and Net Revenue payable." },
+      { code: "5.9", text: "Organiser Review Period: The Organiser shall review settlement statements promptly and notify Ticpin of any discrepancy within seven (7) Business Days of receipt, failing which such statement shall be deemed accepted." },
+      { code: "5.10", text: "Taxes: Each Party shall be solely responsible for its respective tax obligations arising under Applicable Laws." },
+      { code: "5.11", text: "Organiser Taxes: The Organiser shall be solely responsible for payment of GST, income tax, entertainment tax, local taxes, venue taxes, and any other statutory obligations arising from the Event." },
+      { code: "5.12", text: "Tax Compliance: The Organiser shall provide all tax registrations, GST details, PAN information, declarations, certificates, and documents reasonably required by Ticpin for compliance purposes." },
+      { code: "5.13", text: "Tax Deductions: Ticpin may deduct taxes, withholding taxes, tax collected at source, tax deducted at source, or other statutory deductions as required by Applicable Laws." },
+      { code: "5.14", text: "Payment Method: Settlement shall be made through bank transfer, electronic funds transfer, UPI, or any other payment mechanism approved by Ticpin." },
+      { code: "5.15", text: "Banking Information: The Organiser shall ensure that all banking information provided to Ticpin remains accurate, complete, and up to date throughout the Term of this Agreement." },
+      { code: "5.16", text: "Incorrect Banking Information: Ticpin shall not be liable for delays, losses, reversals, failed transfers, or settlement errors resulting from inaccurate, incomplete, or outdated banking information supplied by the Organiser." },
+      { code: "5.17", text: "Complimentary Tickets: The Organiser may issue complimentary Tickets through the Ticpin Platform subject to operational limitations, technical feasibility, and policies prescribed by Ticpin from time to time." },
+      { code: "5.18", text: "Complimentary Ticket Controls: Ticpin reserves the right to impose reasonable restrictions on the quantity, categories, issuance procedures, and management of complimentary Tickets where necessary for operational, compliance, or reporting purposes." },
+      { code: "5.19", text: "Promotional Campaigns: Ticpin may, at its sole discretion, undertake promotional campaigns, discount programs, cashback initiatives, loyalty rewards, coupon campaigns, marketing offers, referral programs, or customer acquisition initiatives relating to an Event." },
+      { code: "5.20", text: "Ticpin-Funded Promotions: Where Ticpin independently chooses to provide discounts, promotional benefits, cashback, offers, coupons, loyalty rewards, or marketing incentives, such benefits shall generally be funded by Ticpin and shall not reduce amounts otherwise payable to the Organiser unless expressly agreed in writing." },
+      { code: "5.21", text: "Commercial Viability: The Organiser acknowledges that Ticpin may evaluate ticket sales performance, expected revenue, customer demand, Event category, and profitability before determining whether to undertake promotional activities at its own expense." },
+      { code: "5.22", text: "Right to Refuse Promotions: Nothing in this Agreement shall obligate Ticpin to provide promotional support, discounts, featured placements, advertising campaigns, or marketing assistance for any Event." },
+      { code: "5.23", text: "Chargebacks and Payment Disputes: The Organiser shall remain solely liable for all chargebacks, payment disputes, card reversals, banking reversals, fraud claims, unauthorised transaction claims, and customer disputes relating to the Event." },
+      { code: "5.24", text: "Recovery Rights: Ticpin may recover amounts owed by the Organiser through deduction from current settlements, future settlements, reserves, deposits, refunds, credits, or any other monies payable to the Organiser." },
+      { code: "5.25", text: "Right to Withhold Settlements: Ticpin may temporarily withhold settlements where reasonably necessary to investigate suspected fraud, address chargebacks or customer disputes, comply with legal/regulatory requirements, verify Event completion, protect Customers or the Platform, or recover outstanding liabilities." },
+      { code: "5.26", text: "Reserve Rights: Ticpin may establish reasonable reserves from settlement amounts where necessary to address anticipated refunds, chargebacks, legal liabilities, regulatory requirements, or financial risks associated with an Event." },
+      { code: "5.27", text: "No Interest: The Organiser shall not be entitled to interest on any settlement amounts held, withheld, reserved, delayed, or retained by Ticpin in accordance with this Agreement." },
+      { code: "5.28", text: "Currency: All amounts under this Agreement shall be denominated, calculated, settled, and payable in Indian Rupees (INR)." },
+      { code: "5.29", text: "Records: Ticpin’s transaction logs, payment gateway records, settlement reports, accounting records, system-generated reports, and financial statements shall constitute prima facie evidence of transactions processed through the Platform." },
+      { code: "5.30", text: "Survival: The provisions of this Clause relating to payments, settlements, deductions, chargebacks, taxes, audits, recoveries, and financial obligations shall survive the termination or expiration of this Agreement until all outstanding obligations have been fully discharged." }
+    ]
+  },
+  {
+    title: "6. CUSTOMER DATA",
+    subclauses: [
+      { code: "6.1", text: "Ownership of Customer Data: The Organiser acknowledges and agrees that all Customer Data collected, generated, processed, stored, transmitted, or otherwise obtained through the Ticpin Platform shall remain the sole and exclusive property of Ticpin." },
+      { code: "6.2", text: "Definition of Customer Data: Customer Data includes name, email, phone, address, transaction history, attendance logs, device details, and other personally identifiable information collected on the Platform." },
+      { code: "6.3", text: "Limited License to Organiser: Subject to the terms of this Agreement, Ticpin grants the Organiser a limited, non-exclusive, non-transferable, revocable right to access Customer Data solely for the purpose of managing and operating the Event." },
+      { code: "6.4", text: "Permitted Use: The Organiser shall use Customer Data exclusively for purposes directly related to the Event, including ticket validation, attendee management, event communication, customer support, operational planning, and compliance with Applicable Laws." },
+      { code: "6.5", text: "Prohibited Use: The Organiser shall not use Customer Data for any purpose other than those expressly permitted under this Agreement." },
+      { code: "6.6", text: "Sale of Customer Data: The Organiser shall not sell, rent, lease, license, distribute, transfer, disclose, commercialise, monetise, or otherwise exploit Customer Data for financial gain or commercial benefit." },
+      { code: "6.7", text: "Third-Party Disclosure: The Organiser shall not disclose Customer Data to any third party except where required by Applicable Laws or expressly authorised in writing by Ticpin." },
+      { code: "6.8", text: "Marketing Restrictions: The Organiser shall not use Customer Data for unsolicited marketing, promotional campaigns, advertising activities, remarketing initiatives, or unrelated business purposes without obtaining all legally required consents and Ticpin’s prior written approval." },
+      { code: "6.9", text: "Confidentiality of Customer Data: The Organiser shall maintain strict confidentiality of all Customer Data and shall implement appropriate safeguards to prevent unauthorised access, disclosure, modification, or loss." },
+      { code: "6.10", text: "Compliance with Privacy Laws: The Organiser shall comply with all Applicable Laws relating to privacy, data protection, cybersecurity, electronic communications, and processing of personal information." },
+      { code: "6.11", text: "Security Measures: The Organiser shall implement and maintain industry-standard security measures to protect Customer Data against unauthorised access, theft, cyberattacks, or accidental disclosure." },
+      { code: "6.12", text: "Data Breach Notification: The Organiser shall notify Ticpin immediately and in any event no later than twenty-four (24) hours after becoming aware of any actual, suspected, or potential unauthorised access, disclosure, loss, breach, compromise, or misuse of Customer Data." },
+      { code: "6.13", text: "Cooperation During Security Incidents: The Organiser shall cooperate fully with Ticpin in investigating, mitigating, responding to, and resolving any security incident or data breach." },
+      { code: "6.14", text: "Incident Reporting: Upon request by Ticpin, the Organiser shall provide a detailed written report describing the nature of the incident, affected data, root cause, and corrective measures." },
+      { code: "6.15", text: "Data Retention: The Organiser shall retain Customer Data only for the period reasonably necessary to fulfill the purposes permitted under this Agreement or as required by Applicable Laws." },
+      { code: "6.16", text: "Data Deletion: Upon completion of the Event, termination of this Agreement, or request by Ticpin, the Organiser shall promptly delete, destroy, or return Customer Data in its possession unless retention is required by Applicable Laws." },
+      { code: "6.17", text: "Audit Rights: Ticpin may request information, certifications, declarations, or evidence demonstrating the Organiser’s compliance with this Clause, and the Organiser shall promptly provide such information." },
+      { code: "6.18", text: "Organiser Responsibility: The Organiser shall be solely responsible for all acts, omissions, negligence, misconduct, breaches, and violations committed by its employees, contractors, agents, and representatives relating to Customer Data." },
+      { code: "6.19", text: "Indemnification: The Organiser shall defend, indemnify, and hold harmless Ticpin and its representatives from any claims, losses, or penalties arising from data breaches or violations of privacy laws attributable to the Organiser." },
+      { code: "6.20", text: "Platform Analytics and Insights: The Organiser acknowledges that all analytics, insights, ticketing trends, predictive models, and metrics generated on the Platform are the exclusive property of Ticpin." },
+      { code: "6.21", text: "No Ownership Rights: Nothing in this Agreement grants the Organiser any ownership interest or title in Customer Data." },
+      { code: "6.22", text: "Regulatory Compliance Assistance: The Organiser shall assist Ticpin in complying with regulatory/legal requests relating to Customer Data." },
+      { code: "6.23", text: "Suspension Rights: Ticpin may suspend access to Customer Data if it suspects privacy or compliance violations by the Organiser." },
+      { code: "6.24", text: "Survival: Privacy and data protection obligations shall survive termination or expiration of this Agreement for as long as the Organiser holds or has access to Customer Data." }
+    ]
+  },
+  {
+    title: "7. INTELLECTUAL PROPERTY RIGHTS",
+    subclauses: [
+      { code: "7.1", text: "Ownership: Each Party retains its own Intellectual Property Rights. No transfer of ownership occurs under this Agreement." },
+      { code: "7.2", text: "Ticpin IP: Ticpin owns all rights, title, and interest in the Platform, its code, APIs, databases, QR systems, trademarks, and branding." },
+      { code: "7.3", text: "Organiser IP: The Organiser retains ownership of its Event names, logos, creatives, artwork, and promotional materials." },
+      { code: "7.4", text: "License to Ticpin: The Organiser grants Ticpin a worldwide, royalty-free, sublicensable license to use Event IP for listing, promoting, marketing, and executing the Event on the Platform." },
+      { code: "7.5", text: "Marketing Rights: Ticpin may use Event names, descriptions, logos, and photos/videos across websites, social media, advertisements, and marketing campaigns." },
+      { code: "7.6", text: "Warranties: The Organiser represents that it has all necessary licenses and rights to use and authorize Ticpin to use the Event IP." },
+      { code: "7.7", text: "No Infringement: The Organiser warrants that the Event materials do not infringe third-party IP rights, privacy rights, or publicity rights." },
+      { code: "7.8", text: "Permissions & Licenses: The Organiser must secure and maintain music, performance, copyright, and trademark licenses required for the Event." },
+      { code: "7.9", text: "Restrictions: The Organiser shall not copy, modify, reverse engineer, or attempt to extract source code from the Ticpin Platform." },
+      { code: "7.10", text: "Platform Data: Ticketing, transaction, and attendance analytics generated on the Platform belong exclusively to Ticpin." },
+      { code: "7.11", text: "Feedback: Ticpin may freely use, implement, and exploit any suggestions or feature requests provided by the Organiser." },
+      { code: "7.12", text: "Publicity: Ticpin may identify the Organiser as a partner and display its logos and Event creatives for promotional purposes." },
+      { code: "7.13", text: "Notice of Infringement: The Organiser must immediately notify Ticpin of any suspected or actual IP infringement or counterfeit tickets." },
+      { code: "7.14", text: "Indemnification: The Organiser will indemnify Ticpin against all claims and damages resulting from IP infringement associated with the Event." },
+      { code: "7.15", text: "Reservation of Rights: All rights not expressly granted under this Agreement are reserved by their respective owners." },
+      { code: "7.16", text: "Survival: Intellectual Property clauses survive the termination or expiration of the Agreement." }
+    ]
+  },
+  {
+    title: "8. REPRESENTATIONS AND WARRANTIES",
+    subclauses: [
+      { code: "8.1", text: "Mutual Representations: Each Party warrants its legal existence, authority to enter this contract, and that this contract forms a binding obligation." },
+      { code: "8.2", text: "Organiser Warranties: The Organiser warrants its corporate authority, the legality of the Event, accuracy of all submitted details, and capability to successfully execute the Event." },
+      { code: "8.3", text: "Intellectual Property: The Organiser warrants that it owns or has valid licenses for all IP used in the Event, and that no third-party IP is infringed." },
+      { code: "8.4", text: "Customer Protection: The Organiser warrants it will honour all valid Tickets and provide access in accordance with booking terms." },
+      { code: "8.5", text: "Safety & Security: The Organiser warrants it will implement safety protocols, emergency response procedures, and crowd management." },
+      { code: "8.6", text: "Financial Capability: The Organiser warrants it has sufficient resources to cover refunds, chargebacks, and tax obligations." },
+      { code: "8.7", text: "No Litigation: The Organiser warrants that there is no pending litigation or bankruptcy that impairs its performance." },
+      { code: "8.8", text: "Continuous Nature: These warranties are deemed repeated continuously while the Event is listed." },
+      { code: "8.9", text: "Reliance: The Organiser acknowledges that Ticpin relies on these representations to provide the Services." },
+      { code: "8.10", text: "Breach: Any breach of warranty constitutes a material breach, allowing Ticpin to suspend listings or settlements." },
+      { code: "8.11", text: "Disclaimer: Except as expressly stated, the Platform and Services are provided 'as is' and 'as available'." },
+      { code: "8.12", text: "No Revenue Guarantee: Ticpin does not guarantee sales, attendance, or commercial success." },
+      { code: "8.13", text: "No Operational Guarantee: Ticpin does not warrant the quality or safety of listed Events." },
+      { code: "8.14", text: "Technology Disclaimer: Ticpin does not warrant that Platform operations will be continuous or error-free." },
+      { code: "8.15", text: "Survival: Representations and disclaimers survive the termination or expiration of the Agreement." }
+    ]
+  },
+  {
+    title: "9. INDEMNIFICATION",
+    subclauses: [
+      { code: "9.1", text: "Organiser Indemnity: The Organiser will indemnify Ticpin, its affiliates, directors, and employees against any losses, claims, damages, or costs (including legal fees) arising from breaches of this Agreement, Event cancellations, safety/security incidents, regulatory fines, IP infringement, or tax demands." },
+      { code: "9.2", text: "Scope: Reimbursement covers legal fees, arbitration/court costs, settlements, penalties, and administrative expenses." },
+      { code: "9.3", text: "Defence of Claims: Ticpin may require the Organiser to defend claims, or assume control of the defence to protect its reputation." },
+      { code: "9.4", text: "Immediate Reimbursement: The Organiser must reimburse Ticpin for indemnifiable losses within seven (7) Business Days of demand." },
+      { code: "9.5", text: "Recovery: Ticpin can recover indemnifiable amounts by deducting from settlements, reserves, deposits, or direct invoicing." },
+      { code: "9.6", text: "No Limitation: Indemnification applies regardless of whether claims are brought by Customers, authorities, or third parties." },
+      { code: "9.7", text: "Independent Obligation: Indemnity is separate from and in addition to other liabilities under this Agreement." },
+      { code: "9.8", text: "Mitigation: Ticpin is not required to mitigate losses before seeking indemnity, but will act reasonably." },
+      { code: "9.9", text: "Survival: Indemnification obligations survive the termination, expiration, or completion of the Event." },
+      { code: "9.10", text: "Continuing Obligation: Indemnity remains binding for as long as any related claim or dispute remains unresolved." },
+      { code: "9.11", text: "Responsibility for Risks: The Organiser acknowledges it bears all operational, legal, and safety risks of the Event." },
+      { code: "9.12", text: "Cumulative: Indemnification rights are cumulative and do not limit other remedies available to Ticpin." },
+      { code: "9.13", text: "Material Provision: The indemnity clause is a material provision of this contract." },
+      { code: "9.14", text: "Full Indemnity Basis: Indemnity applies on a full basis and is not limited by insurance or other restrictions." },
+      { code: "9.15", text: "Enforcement: This Clause survives indefinitely to permit enforcement of claims arising during the Term." }
+    ]
+  },
+  {
+    title: "10. LIMITATION OF LIABILITY",
+    subclauses: [
+      { code: "10.1", text: "Nature of Services: Ticpin operates solely as a ticketing intermediary. It is not the host, venue operator, or employer for any Event." },
+      { code: "10.2", text: "No Responsibility: Ticpin is not liable for Event execution, venue conditions, artist conduct, crowd management, or safety." },
+      { code: "10.3", text: "Exclusion of Indirect Damages: Ticpin is not liable for any indirect, incidental, punitive, or consequential damages." },
+      { code: "10.4", text: "Excluded Losses: Exclusions include loss of profits, revenue, business opportunities, goodwill, reputation, or data." },
+      { code: "10.5", text: "No Sales Guarantee: Ticpin is not responsible for ticket sales, attendance, or commercial success." },
+      { code: "10.6", text: "Technology Limits: The Organiser accepts that the Platform may experience downtime, bugs, or maintenance interruptions." },
+      { code: "10.7", text: "No Continuous Availability: Ticpin does not warrant error-free or uninterrupted Platform operations." },
+      { code: "10.8", text: "Third-Party Services: Ticpin is not liable for issues caused by payment gateways, cloud hosting, or SMS/email providers." },
+      { code: "10.9", text: "Customer Disputes: Disputes between the Organiser and Customers are the sole responsibility of the Organiser." },
+      { code: "10.10", text: "Regulatory Actions: Ticpin is not liable for losses due to venue closure orders or government restrictions on Events." },
+      { code: "10.11", text: "Force Majeure: Ticpin is not liable for performance failures caused by Force Majeure events." },
+      { code: "10.12", text: "Maximum Liability: Ticpin’s maximum aggregate liability shall not exceed the Platform Fees actually retained by Ticpin from the specific Event giving rise to the claim in the 12 months preceding the claim." },
+      { code: "10.13", text: "Single Cap: The cap applies irrespective of the number of claims or parties involved." },
+      { code: "10.14", text: "Remedy Limitation: These limitations constitute a fundamental basis of the bargain between the Parties." },
+      { code: "10.15", text: "Organiser Risk: The Organiser assumes all operational and financial risks associated with the Event." },
+      { code: "10.16", text: "No Personal Liability: No director, officer, or employee of Ticpin bears personal liability under this Agreement." },
+      { code: "10.17", text: "Independent Limits: Each limitation operates independently and survives the termination of the Agreement." },
+      { code: "10.18", text: "Material Basis: Ticpin enters this Agreement in reliance on these liability limitations." },
+      { code: "10.19", text: "Applicability: Limitations apply even if Ticpin has been advised of the possibility of such losses." },
+      { code: "10.20", text: "Survival: This Clause survives the termination or completion of the Event." }
+    ]
+  },
+  {
+    title: "11. FORCE MAJEURE",
+    subclauses: [
+      { code: "11.1", text: "Definition: Force Majeure includes acts of God, epidemics, war, riots, strikes, government mandates, infrastructure failures, or other circumstances beyond a Party's reasonable control." },
+      { code: "11.2", text: "Suspension: Performance of affected obligations is suspended for the duration of the Force Majeure event." },
+      { code: "11.3", text: "No Liability: Neither Party is liable for delays or failures resulting from Force Majeure." },
+      { code: "11.4", text: "Notice: The affected Party must notify the other Party promptly, detailing the event, affected obligations, and mitigation efforts." },
+      { code: "11.5", text: "Mitigation: The affected Party must use commercially reasonable efforts to minimize the impact of the event." },
+      { code: "11.6", text: "Event Cancellation: The Organiser remains responsible for managing the Event and communicating cancellations to Customers." },
+      { code: "11.7", text: "Refunds: Refunds during Force Majeure will be processed according to Ticpin Refund Policy and Applicable Laws." },
+      { code: "11.8", text: "No Guarantee: Ticpin is not responsible for business losses or reduced attendance caused by Force Majeure." },
+      { code: "11.9", text: "Ticpin Rights: Ticpin may suspend ticket sales, freeze settlements, or process refunds to protect Customers during Force Majeure." },
+      { code: "11.10", text: "Extended Force Majeure: If Force Majeure continues for over 60 days, Ticpin may terminate or suspend the Agreement." },
+      { code: "11.11", text: "Preservation of Rights: Force Majeure does not affect prior payment obligations, refunds, or indemnities." },
+      { code: "11.12", text: "Survival: This Clause survives termination to resolve outstanding disputes or liabilities." }
+    ]
+  },
+  {
+    title: "12. TERM AND TERMINATION",
+    subclauses: [
+      { code: "12.1", text: "Term: Effective upon electronic acceptance, account creation, or Event listing on the Platform, continuing until terminated." },
+      { code: "12.2", text: "Suspension: Ticpin may suspend listings, accounts, or settlements for suspected breach, fraud, or legal compliance." },
+      { code: "12.3", text: "Termination by Ticpin: Ticpin may terminate the contract immediately for material breach, insolvency, or regulatory risks." },
+      { code: "12.4", text: "Termination by Organiser: The Organiser may terminate the contract by written notice, provided all Event obligations are complete." },
+      { code: "12.5", text: "Effect: Access is revoked, listings are removed, and outstanding settlements are processed after deductions." },
+      { code: "12.6", text: "Survival: Financial, IP, confidentiality, indemnity, liability, and dispute clauses survive termination." },
+      { code: "12.7", text: "No Liability for Termination: Ticpin is not liable for business losses resulting from lawful suspension or termination." }
+    ]
+  },
+  {
+    title: "13. CONFIDENTIALITY",
+    subclauses: [
+      { code: "13.1", text: "Definition: Confidential Information includes non-public business, financial, technical, and customer data disclosed under this contract." },
+      { code: "13.2", text: "Obligations: Recipient must maintain confidentiality, use information only for performing this contract, and safeguard it." },
+      { code: "13.3", text: "Permitted Disclosure: Disclosures are allowed to advisors, employees with a need-to-know, or when legally compelled." },
+      { code: "13.4", text: "Exclusions: Excludes publicly known info, info already held, or independently developed without reference to confidential details." },
+      { code: "13.5", text: "Customer Data: All Customer Data accessed is treated as strict Confidential Information under privacy laws." },
+      { code: "13.6", text: "Return/Destruction: Upon request or termination, recipient must return or destroy all confidential files (except legal retention)." },
+      { code: "13.7", text: "Injunctive Relief: Breach of confidentiality causes irreparable harm, entitling the disclosing party to seek injunctive relief." },
+      { code: "13.8", text: "Survival: Confidentiality obligations survive for five (5) years post-termination." },
+      { code: "13.9", text: "Aggregated Data: Ticpin retains the right to use aggregated, anonymised statistical data for platform improvement." },
+      { code: "13.10", text: "Materiality: The confidentiality clause is a material provision of this contract." }
+    ]
+  },
+  {
+    title: "14. DISPUTE RESOLUTION",
+    subclauses: [
+      { code: "14.1", text: "Amicable: Dispute discussions in good faith should be attempted first." },
+      { code: "14.2", text: "Notice: Initiating party must send a written notice detailing the dispute and relief requested." },
+      { code: "14.3", text: "Negotiation: A 30-day negotiation period applies before initiating arbitration." },
+      { code: "14.4", text: "Arbitration: Unresolved disputes will be resolved by arbitration under the Arbitration and Conciliation Act, 1996." },
+      { code: "14.5", text: "Arbitrator: Mutually appointed sole arbitrator, or appointed under the Act if mutual agreement fails." },
+      { code: "14.6", text: "Seat & Venue: The seat and venue of arbitration shall be Coimbatore, Tamil Nadu, India." },
+      { code: "14.7", text: "Language: English shall be the language of arbitration." },
+      { code: "14.8", text: "Binding: The arbitration award is final and binding on both Parties." },
+      { code: "14.9", text: "Interim Relief: Ticpin may seek interim or protective relief from courts to safeguard IP, data, or confidentiality." },
+      { code: "14.10", text: "Costs: Parties bear their own legal costs unless the arbitrator awards costs otherwise." },
+      { code: "14.11", text: "Performance: Performance of unaffected obligations must continue during dispute resolution." },
+      { code: "14.12", text: "Survival: The arbitration clause survives termination or completion of this Agreement." }
+    ]
+  },
+  {
+    title: "15. GOVERNING LAW AND JURISDICTION",
+    subclauses: [
+      { code: "15.1", text: "Governing Law: Governed by and construed in accordance with the laws of India." },
+      { code: "15.2", text: "Jurisdiction: Courts in Coimbatore, Tamil Nadu, India have exclusive jurisdiction." },
+      { code: "15.3", text: "Compliance: The Organiser must comply with all Applicable Laws in executing the Event." },
+      { code: "15.4", text: "Submission: The Organiser irrevocably submits to the jurisdiction of the specified courts." },
+      { code: "15.5", text: "Injunctions: Ticpin may seek injunctive relief from any competent court to protect its proprietary interests." },
+      { code: "15.6", text: "Survival: Governing Law and Jurisdiction clauses survive termination." }
+    ]
+  },
+  {
+    title: "16. MISCELLANEOUS",
+    subclauses: [
+      { code: "16.1", text: "Entire Agreement: Supersedes all prior discussions, understandings, and draft agreements." },
+      { code: "16.2", text: "Amendments: Ticpin reserves the right to amend this contract, with continued use constituting acceptance of revised terms." },
+      { code: "16.3", text: "Relationship: No partnership, joint venture, agency, or employment is created." },
+      { code: "16.4", text: "Independent Contractors: Parties act as independent contractors and cannot bind each other." },
+      { code: "16.5", text: "Assignment by Ticpin: Ticpin may assign or transfer its rights and obligations without consent." },
+      { code: "16.6", text: "Assignment by Organiser: The Organiser cannot assign rights without Ticpin's prior written consent." },
+      { code: "16.7", text: "Waiver: Waivers must be written; delay or omission does not constitute a waiver." },
+      { code: "16.8", text: "Severability: Invalidity of any clause does not affect the validity of other provisions." },
+      { code: "16.9", text: "Cumulative: Rights and remedies under this contract are cumulative." },
+      { code: "16.10", text: "Electronic Acceptance: Clicking 'Accept', signing digitally, or listing an Event creates a legally binding contract." },
+      { code: "16.11", text: "Electronic Records: System logs and records of transactions constitute valid business records." },
+      { code: "16.12", text: "Notices: Sent to registered emails or dashboards. For Ticpin: support@ticpin.in." },
+      { code: "16.13", text: "Ticpin Address: Velrona Technologies Private Limited, Coimbatore - 641016." },
+      { code: "16.14", text: "Organiser Address: Notices sent to last known organizer email are deemed delivered." },
+      { code: "16.15", text: "Publicity: Ticpin has the right to identify the Organiser as a customer in promotional materials." },
+      { code: "16.16", text: "Policies: All published platform policies form an integral part of this Agreement." },
+      { code: "16.17", text: "Audits: Ticpin can request documents, permits, or records to verify contract compliance." },
+      { code: "16.18", text: "Cooperation: The Organiser will provide support and info necessary for compliance or audits." },
+      { code: "16.19", text: "Survival: Clause survival remains in force to protect rights post-termination." },
+      { code: "16.20", text: "Counterparts: Acceptance can be completed in counterparts, each being an original." },
+      { code: "16.21", text: "No Third-Party Rights: No person other than the Parties has rights under this contract." },
+      { code: "16.22", text: "Interpretation: Headings are for convenience and do not affect clause interpretation." },
+      { code: "16.23", text: "Language: English is the governing language of this contract." },
+      { code: "16.24", text: "Binding: Contract binds and benefits both Parties, their successors, and permitted assigns." },
+      { code: "16.25", text: "Materiality: Commercial, refund, and liability clauses are material terms of the Agreement." }
+    ]
+  }
+];
+
+export const checklistData: ChecklistItem[] = [
+  { sNo: "1", category: "Ticketing", req: "Event published with accurate ticket categories and pricing", standard: "Mandatory" },
+  { sNo: "2", category: "Event Information", req: "Event date, venue, timings and description finalized", standard: "Mandatory" },
+  { sNo: "3", category: "Venue Layout", req: "Venue map and entry/exit plan finalized", standard: "Mandatory" },
+  { sNo: "4", category: "Venue Capacity", req: "Venue capacity disclosed and legally compliant", standard: "Mandatory" },
+  { sNo: "5", category: "Parking", req: "Adequate parking arrangements available", standard: "Recommended" },
+  { sNo: "6", category: "Accessibility", req: "Accessibility arrangements for persons with disabilities", standard: "Recommended" },
+  { sNo: "7", category: "Entry Management", req: "Separate and clearly marked entry points where applicable", standard: "Mandatory" },
+  { sNo: "8", category: "Signages", req: "Clear directional and safety signages installed", standard: "Mandatory" },
+  { sNo: "9", category: "Security", req: "Adequate security personnel deployed", standard: "Mandatory" },
+  { sNo: "10", category: "First Aid", req: "First aid facilities available on site", standard: "Mandatory" },
+  { sNo: "11", category: "Emergency Exits", req: "Emergency exits clearly marked and operational", standard: "Mandatory" },
+  { sNo: "12", category: "Crowd Management", req: "Crowd management plan in place", standard: "Mandatory" },
+  { sNo: "13", category: "Washrooms", req: "Adequate washroom facilities available", standard: "Mandatory" },
+  { sNo: "14", category: "Drinking Water", req: "Drinking water facilities available", standard: "Mandatory" },
+  { sNo: "15", category: "Food & Beverage", req: "Food service arrangements disclosed where applicable", standard: "Optional" },
+  { sNo: "16", category: "Customer Helpdesk", req: "On-site customer support/helpdesk available", standard: "Recommended" },
+  { sNo: "17", category: "Artist/Speaker Approvals", req: "Required agreements and permissions obtained", standard: "Mandatory" },
+  { sNo: "18", category: "Music Licenses", req: "Applicable copyright and music licenses obtained", standard: "Mandatory" },
+  { sNo: "19", category: "Government Permissions", req: "All permits, licenses and approvals obtained", standard: "Mandatory" },
+  { sNo: "20", category: "Insurance", req: "Appropriate insurance coverage obtained where applicable", standard: "Recommended" },
+  { sNo: "21", category: "Medical Support", req: "Medical support and emergency response arrangements available where required", standard: "Recommended" },
+  { sNo: "22", category: "Refund Policy", req: "Refund terms communicated to Customers", standard: "Mandatory" },
+  { sNo: "23", category: "Customer Communication", req: "Event instructions communicated to attendees", standard: "Mandatory" },
+  { sNo: "24", category: "Venue Coordinates", req: "Accurate venue location provided on Platform", standard: "Mandatory" },
+  { sNo: "25", category: "Compliance Declaration", req: "Organizer confirms compliance with Applicable Laws", standard: "Mandatory" }
+];

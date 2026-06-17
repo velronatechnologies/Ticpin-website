@@ -86,7 +86,7 @@ function GstSelectionContent() {
             gstList: finalGsts,
             gstNumber: finalGsts[0] || ''
         }));
-        router.push('/list-your-dining/setup/backup');
+        router.push('/list-your-dining/setup/bank');
     };
 
     return (

@@ -14,8 +14,10 @@ export default function SetupSidebar({
 }) {
     const steps = [
         { number: '01', title: 'Organization details' },
-        { number: '02', title: 'Backup contact' },
-        { number: '03', title: 'Agreement' },
+        { number: '02', title: 'GST selection' },
+        { number: '03', title: 'Bank details' },
+        { number: '04', title: 'Backup contact' },
+        { number: '05', title: 'Agreement' },
     ];
 
 

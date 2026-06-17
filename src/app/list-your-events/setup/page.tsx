@@ -253,7 +253,11 @@ function AccountSetupContent() {
                             <div className="pt-2 flex justify-center md:justify-start">
                                 <button onClick={handleContinue} disabled={!canContinue || verifying}
                                     className="bg-black text-white h-[48px] px-8 rounded-[15px] flex items-center justify-center gap-2 text-[15px] font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {verifying ? 'Verifying...' : 'Continue'}<ChevronRight size={18} />
+                                    {verifying ? (
+                                        <div className="h-5 w-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <>Continue<ChevronRight size={18} /></>
+                                    )}
                                 </button>
                             </div>
                         </div>
