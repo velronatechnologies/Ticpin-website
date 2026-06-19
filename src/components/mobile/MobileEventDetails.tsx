@@ -22,6 +22,18 @@ interface OfferRecord {
     discount_value: number;
 }
 
+function formatTime(raw?: string): string {
+    if (!raw || !raw.includes(':')) return '';
+    const [hStr, mStr] = raw.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h) || isNaN(m)) return '';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mm = m.toString().padStart(2, '0');
+    return `${h12}:${mm} ${ampm}`;
+}
+
 interface MobileEventDetailsProps {
     event: {
         id: string;
@@ -233,9 +245,8 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         try {
             const d = new Date(event.date);
             if (isNaN(d.getTime())) return event.date;
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${days[d.getDay()]} , ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
         } catch {
             return event.date;
         }
@@ -260,7 +271,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     }, [event?.id]);
 
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
-    const displayTime = event.time || 'Time TBA';
+    const displayTime = formatTime(event.time) || 'Time TBA';
     const displayPrice = minPrice > 0 ? `₹${minPrice}` : 'TBA';
 
     // Get languages from guide
@@ -351,7 +362,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                         {event.name}
                     </h1>
                     <p className="text-[15px] font-medium text-[#5331EA]" style={{ lineHeight: '16px' }}>
-                        {formattedDate} · {displayTime}
+                        {formattedDate} | {displayTime}
                     </p>
                 </div>
 
@@ -418,138 +429,131 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     )}
                 </div>
 
-                {/* Offers Section — only show if offers exist */}
-                {offers.length > 0 && (
-                    <div className="mb-10">
-                        <h2 className="text-[20px] font-semibold text-black mb-4">Offers for you</h2>
-                        <div className="w-full h-[120px] bg-[#AC9BF7] rounded-[8px] p-4 flex flex-col justify-center">
-                            <div>
-                                <p className="text-white font-bold">{offers[0].title}</p>
-                                <p className="text-white/80 text-sm">{offers[0].description}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* About the event — render HTML properly */}
-                {processedDesc.plain && (
-                    <div className="mb-12">
-                        <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
-                        <div
-                            className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-4 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
-                            dangerouslySetInnerHTML={{ __html: processedDesc.html }}
-                        />
-                        {processedDesc.isLong && (
-                            <button
-                                onClick={() => setShowFullDesc(!showFullDesc)}
-                                className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
-                            >
-                                {showFullDesc ? 'Show less' : 'Read more'}
-                                <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {/* Things to Know — from backend guide data */}
-                {(languages || minAge || ticketRequiredAboveAge) && (
-                    <div className="mb-12 mt-[-15px]">
-                        <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
-                        <div className="space-y-4 mb-4">
-                            {languages && (
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                        <img src="/mobile_icons/event clicking/language.svg" className="w-[23px] h-[23px]" alt="Language" />
-                                    </div>
-                                    <p className="text-[15px] font-medium text-black">{languages}</p>
-                                </div>
-                            )}
-                            {minAge && (
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                        <img src="/mobile_icons/event clicking/users-alt.svg" className="w-[23px] h-[23px]" alt="Age" />
-                                    </div>
-                                    <p className="text-[15px] font-medium text-black">
-                                        Min Age: {typeof minAge === 'number' ? `${minAge}+ years` : minAge}
-                                    </p>
-                                </div>
-                            )}
-                            {ticketRequiredAboveAge && (
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                        <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Ticket Age" />
-                                    </div>
-                                    <p className="text-[15px] font-medium text-black">
-                                        Ticket required for ages {ticketRequiredAboveAge} and above
-                                    </p>
-                                </div>
-                            )}
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                    <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Entry" />
-                                </div>
-                                <p className="text-[15px] font-medium text-black">Ticket Required for Entry</p>
-                            </div>
-                            {event.guide?.venue_type && (
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                        <MapPin size={20} className="text-black opacity-70" />
-                                    </div>
-                                    <p className="text-[15px] font-medium text-black">{event.guide.venue_type} · {event.guide?.audience_type || 'General'}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* More Section — FAQs & Terms with expand/collapse */}
-                <div className="space-y-4 mb-12 mt-[-15px]">
-                    <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
-                    <div className="space-y-4">
-                        {/* FAQs */}
-                        {event.faqs && event.faqs.length > 0 && (
-                            <div>
-                                <button
-                                    onClick={() => toggleAccordion('faqs')}
-                                    className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
-                                >
-                                    <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
-                                    {openAccordion === 'faqs' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
-                                </button>
-                                {openAccordion === 'faqs' && (
-                                    <div className="mt-2 px-2 space-y-3">
-                                        {event.faqs.map((faq, idx) => (
-                                            <div key={idx} className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                                <p className="text-[14px] font-semibold text-black mb-1">{faq.question}</p>
-                                                <p className="text-[13px] text-zinc-600">{faq.answer}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Terms */}
-                        {event.terms && (
-                            <div>
-                                <button
-                                    onClick={() => toggleAccordion('terms')}
-                                    className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
-                                >
-                                    <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
-                                    {openAccordion === 'terms' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
-                                </button>
-                                {openAccordion === 'terms' && (
-                                    <div className="mt-2 px-2">
-                                        <div className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                            <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
+                 {/* About the event — render HTML properly */}
+                 {processedDesc.plain && (
+                     <div className="mb-12">
+                         <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
+                         <div
+                             className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-4 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
+                             dangerouslySetInnerHTML={{ __html: processedDesc.html }}
+                         />
+                         {processedDesc.isLong && (
+                             <button
+                                 onClick={() => setShowFullDesc(!showFullDesc)}
+                                 className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
+                             >
+                                 {showFullDesc ? 'Show less' : 'Read more'}
+                                 <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
+                             </button>
+                         )}
+                     </div>
+                 )}
+ 
+                 {/* Things to Know — from backend guide data */}
+                 {(languages || (minAge !== null && minAge !== undefined) || (ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined)) && (
+                     <div className="mb-12 mt-[-15px]">
+                         <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
+                         <div className="space-y-4 mb-4">
+                             {languages && (
+                                 <div className="flex items-center gap-4">
+                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                         <img src="/mobile_icons/event clicking/language.svg" className="w-[23px] h-[23px]" alt="Language" />
+                                     </div>
+                                     <p className="text-[15px] font-medium text-black">{languages}</p>
+                                 </div>
+                             )}
+                             {(minAge !== null && minAge !== undefined) && (
+                                 <div className="flex items-center gap-4">
+                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                         <img src="/mobile_icons/event clicking/users-alt.svg" className="w-[23px] h-[23px]" alt="Age" />
+                                     </div>
+                                     <p className="text-[15px] font-medium text-black">
+                                         Min Age: {minAge === 0 ? 'All ages allowed' : (typeof minAge === 'number' ? `${minAge}+ years` : minAge)}
+                                     </p>
+                                 </div>
+                             )}
+                             {(ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined) && (
+                                 <div className="flex items-center gap-4">
+                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                         <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Ticket Age" />
+                                     </div>
+                                     <p className="text-[15px] font-medium text-black">
+                                         {ticketRequiredAboveAge === 0 ? 'Ticket required for all ages' : `Ticket required for ages ${ticketRequiredAboveAge} and above`}
+                                     </p>
+                                 </div>
+                             )}
+                             <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                     <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Entry" />
+                                 </div>
+                                 <p className="text-[15px] font-medium text-black">Ticket Required for Entry</p>
+                             </div>
+                             {event.guide?.venue_type && (
+                                 <div className="flex items-center gap-4">
+                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                         <MapPin size={20} className="text-black opacity-70" />
+                                     </div>
+                                     <p className="text-[15px] font-medium text-black">{event.guide.venue_type} · {event.guide?.audience_type || 'General'}</p>
+                                 </div>
+                             )}
+                         </div>
+                     </div>
+                 )}
+ 
+                 {/* More Section — FAQs & Terms with expand/collapse */}
+                 <div className="space-y-4 mb-12 mt-[-15px]">
+                     <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
+                     <div className="space-y-4">
+                         {/* FAQs */}
+                         <div>
+                             <button
+                                 onClick={() => toggleAccordion('faqs')}
+                                 className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
+                             >
+                                 <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
+                                 {openAccordion === 'faqs' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                             </button>
+                             {openAccordion === 'faqs' && (
+                                 <div className="mt-2 px-2 space-y-3">
+                                     {event.faqs && event.faqs.length > 0 ? (
+                                         event.faqs.map((faq, idx) => (
+                                             <div key={idx} className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                                 <p className="text-[14px] font-semibold text-black mb-1">{faq.question}</p>
+                                                 <p className="text-[13px] text-zinc-600">{faq.answer}</p>
+                                             </div>
+                                         ))
+                                     ) : (
+                                         <div className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                             <p className="text-[13px] text-zinc-600">No FAQ</p>
+                                         </div>
+                                     )}
+                                 </div>
+                             )}
+                         </div>
+ 
+                         {/* Terms */}
+                         <div>
+                             <button
+                                 onClick={() => toggleAccordion('terms')}
+                                 className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
+                             >
+                                 <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
+                                 {openAccordion === 'terms' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                             </button>
+                             {openAccordion === 'terms' && (
+                                 <div className="mt-2 px-2">
+                                     <div className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                         {event.terms ? (
+                                             <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms}</p>
+                                         ) : (
+                                             <p className="text-[13px] text-zinc-600">Events terms and conditions apply</p>
+                                         )}
+                                     </div>
+                                 </div>
+                             )}
+                         </div>
+                     </div>
+                 </div>
 
                 {/* Ask Anything AI */}
                 <div className="flex justify-center mb-10">

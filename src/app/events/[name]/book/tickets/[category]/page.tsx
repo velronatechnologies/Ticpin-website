@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { bookingApi } from "@/lib/api/booking";
 import { passApi, TicpinPass } from "@/lib/api/pass";
-import { useUserSession, clearUserSession } from "@/lib/auth/user";
+import { useUserSession, clearUserSession, getUserSession } from "@/lib/auth/user";
 import {
   useOrganizerSession,
   clearOrganizerSession,
@@ -90,6 +90,15 @@ export default function TicketSelectionPage() {
   const organizerSession = useOrganizerSession();
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Enforce logged-in session: redirect to event details if not authenticated
+  useEffect(() => {
+    const activeSession = getUserSession();
+    if (!activeSession?.id) {
+      toast.error("Please login to book tickets");
+      router.replace(`/events/${name}`);
+    }
+  }, [name, router]);
   const initialCountsRef = useRef<Record<number, number>>({});
   const hasChanges = useMemo(() => {
     const keys = new Set([...Object.keys(counts), ...Object.keys(initialCountsRef.current)]);
@@ -273,9 +282,9 @@ export default function TicketSelectionPage() {
         // Restore counts if user is editing (returning from review)
         let restoreCounts = sessionStorage.getItem("ticpin_restore_counts");
         const hasActiveRes = reservationStore.hasActiveReservation() && reservationStore.eventId === eventData.id;
-        const isEditingFlag = sessionStorage.getItem("ticpin_edit_selection") === "1";
+        const isEditingFlag = (sessionStorage.getItem("ticpin_edit_selection") === "1") && hasActiveRes;
 
-        if (isEditingFlag || hasActiveRes) {
+        if (hasActiveRes || isEditingFlag) {
           if (!restoreCounts) {
             const cartData = sessionStorage.getItem("ticpin_cart");
             if (cartData) {
@@ -293,6 +302,8 @@ export default function TicketSelectionPage() {
           sessionStorage.removeItem("ticpin_cart");
           sessionStorage.removeItem("ticpin_restore_counts");
           sessionStorage.removeItem("ticpin_edit_selection");
+          sessionStorage.removeItem("ticpin_temp_counts");
+          reservationStore.clearReservation();
         }
 
         let isTemp = false;
@@ -723,15 +734,8 @@ export default function TicketSelectionPage() {
       >
         {/* Header Section - Figma Exact Design Match */}
         <div className="w-full h-[68px] bg-white border-b border-[#AEAEAE] flex items-center justify-between px-[16px] relative shrink-0">
-          {/* Back + TICPIN logo */}
-          <div className="flex items-center gap-1">
-            <img
-              src="/ticpin-logo-black.png"
-              alt="TICPIN"
-              className="h-[20px] w-auto cursor-pointer"
-              onClick={() => router.push('/')}
-            />
-          </div>
+          {/* Back button removed */}
+          <div className="w-[31px] h-[31px]" />
 
           {/* Center Event Name & Date */}
           <div className="flex flex-col items-center justify-center max-w-[60%]">
@@ -822,103 +826,79 @@ export default function TicketSelectionPage() {
                 return (
                   <div
                     key={i}
-                    className="w-full bg-white border-[0.5px] border-[#AEAEAE] rounded-[15px] p-3.5 flex flex-col md:flex-row justify-between items-start relative gap-3.5 h-auto min-h-[125px]"
+                    className="w-full border border-[#E1E1E1] rounded-[15px] overflow-hidden flex flex-col bg-white"
                   >
-                    <div className="flex flex-col gap-1 flex-grow w-full">
-                      {/* Top Section: Phase Name | Category Name */}
-                      <div className="flex flex-wrap items-center gap-x-2">
-                        <span
-                          className="text-[15px] font-semibold text-black uppercase"
-                          style={{ fontFamily: "var(--font-anek-latin)" }}
-                        >
-                          Phase 1
-                        </span>
-                        <div className="h-[14px] w-[1.5px] bg-black hidden md:block" />
-                        <span
-                          className="text-[15px] font-semibold text-black uppercase"
-                          style={{ fontFamily: "var(--font-anek-latin)" }}
-                        >
-                          {cat.name}
-                        </span>
-                      </div>
-
-                      {/* Price */}
-                      <div
-                        className="text-[18px] font-medium text-[#686868]"
-                        style={{ fontFamily: "var(--font-anek-latin)" }}
-                      >
-                        ₹{formatPrice(cat.price ?? 0)}
-                      </div>
-
-                      {/* Separator */}
-                      <div className="w-full h-[1px] bg-[#686868]/30" />
-
-                      {/* Bullet Points */}
-                      <div className="space-y-0.5 mt-0.5">
-                        <p
-                          className="text-[9px] font-medium text-[#686868] max-w-md"
-                          style={{ fontFamily: "var(--font-anek-latin)" }}
-                        >
-                          • This ticket grants entry to one individual only.
-                        </p>
-                        <p
-                          className="text-[9px] font-medium text-[#686868] max-w-md"
-                          style={{ fontFamily: "var(--font-anek-latin)" }}
-                        >
-                          • This is a standing section.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Action Button Section */}
-                    <div className="flex flex-col items-center justify-center min-w-[100px] shrink-0 md:mt-[1px]">
-                      {isSoldOut ? (
-                        <div className="w-[86px] h-[38px] bg-red-100 rounded-[7px] flex items-center justify-center">
-                          <span className="text-[14px] text-red-600 font-semibold uppercase">
-                            SOLD OUT
-                          </span>
+                    <div className="p-[15px] pb-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center">
+                          <span className="text-[15px] font-medium text-black">Phase 1</span>
+                          <div className="w-[1px] h-[15px] bg-black mx-2" />
+                          <span className="text-[15px] font-medium text-black">{cat.name}</span>
                         </div>
-                      ) : current === 0 ? (
-                        <button
-                          onClick={() => add(i)}
-                          className="w-[86px] h-[38px] bg-[#D9D9D9] rounded-[7px] flex items-center justify-center hover:bg-[#c8c8c8] active:scale-[0.98] transition-all"
-                        >
-                          <span
-                            className="text-[25px] text-black leading-none"
-                            style={{
-                              fontFamily: "var(--font-anek-tamil-condensed)",
-                              fontWeight: 500,
-                            }}
-                          >
-                            ADD
-                          </span>
-                        </button>
-                      ) : (
-                        <div className="w-[86px] h-[38px] bg-black rounded-[7px] flex items-center justify-between px-2.5 text-white">
-                          <button
-                            onClick={() => remove(i)}
-                            className="text-[22px] leading-none hover:text-[#D9D9D9] cursor-pointer active:scale-90 transition-transform flex items-center justify-center w-6 h-6"
-                          >
-                            -
-                          </button>
-                          <span
-                            className="text-[18px] font-medium flex items-center justify-center"
-                            style={{
-                              fontFamily: "var(--font-anek-tamil-condensed)",
-                            }}
-                          >
-                            {current}
-                          </span>
+                        {isSoldOut ? (
+                          <div className="w-[61px] h-[23px] bg-red-100 border border-red-500 rounded-[5px] text-[10px] font-medium text-red-600 flex items-center justify-center">
+                            SOLD OUT
+                          </div>
+                        ) : current === 0 ? (
                           <button
                             onClick={() => add(i)}
-                            disabled={current >= available}
-                            className="text-[18px] leading-none hover:text-[#D9D9D9] cursor-pointer active:scale-90 transition-transform flex items-center justify-center w-6 h-6 disabled:opacity-40"
+                            className="w-[61px] h-[23px] bg-[#EFEFEF] border border-[#686868] rounded-[5px] text-[12px] font-medium text-black flex items-center justify-center active:scale-95 transition-transform"
                           >
-                            +
+                            Add
                           </button>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="flex items-center border border-[#686868] rounded-[5px] bg-[#EFEFEF] h-[23px] overflow-hidden">
+                            <button
+                              onClick={() => remove(i)}
+                              className="px-2 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors"
+                            >
+                              -
+                            </button>
+                            <span className="px-2 text-[12px] font-medium text-black min-w-[20px] text-center">
+                              {current}
+                            </span>
+                            <button
+                              onClick={() => add(i)}
+                              disabled={current >= available}
+                              className="px-2 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors disabled:opacity-40"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <span className="text-[12px] font-normal text-black block mb-4">
+                        ₹{formatPrice(cat.price ?? 0)}
+                      </span>
+
+                      <div className="w-full h-[0.5px] bg-[#E1E1E1] mb-4" />
+
+                      <ul className="space-y-2 mb-4">
+                        <li className="flex gap-2">
+                          <span className="text-[#686868] text-[10px] leading-tight">
+                            • Each ticket grants entry to one person in the {cat.name} area.
+                          </span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="text-[#686868] text-[10px] leading-tight">
+                            • Access to food stalls, bars and washrooms in the {cat.name} area.
+                          </span>
+                        </li>
+                      </ul>
                     </div>
+
+                    {coupons.length > 0 && (
+                      <div className="w-full h-[26px] bg-[#5331EA] flex items-center justify-between px-[10px]">
+                        <div className="flex items-center gap-1.5">
+                          <Percent size={10} className="text-white" strokeWidth={3} />
+                          <span className="text-[10px] font-normal text-white uppercase tracking-tight">
+                            Flat 10% discount on purchase of 3+ tickets
+                          </span>
+                        </div>
+                        <Info size={11} className="text-white" />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -928,42 +908,28 @@ export default function TicketSelectionPage() {
 
         {/* Sticky Footer */}
         <footer
-          className="fixed bottom-0 left-0 right-0 w-full shrink-0 flex items-center justify-between px-6 z-50 bg-[#2A2A2A]"
-          style={{ height: "70px" }}
+          className="fixed bottom-0 left-0 right-0 w-full shrink-0 flex items-center justify-between px-[25px] z-50 bg-[#EFEFEF] border-t border-zinc-200"
+          style={{ height: "88px", paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <div className="flex flex-col justify-center">
-            <span
-              className="text-[20px] font-medium text-white"
-              style={{ fontFamily: "var(--font-anek-latin)" }}
-            >
-              ₹{formatPrice(totalPrice)}
+          <div className="flex flex-col">
+            <span className="text-[12px] font-normal text-black">
+              {totalTickets} {totalTickets === 1 ? "ticket" : "tickets"}
             </span>
-            <span
-              className="text-[12px] font-medium text-white opacity-80 uppercase"
-              style={{ fontFamily: "var(--font-anek-latin)" }}
-            >
-              {totalTickets} {totalTickets === 1 ? "TICKET" : "TICKETS"}
+            <span className="text-[20px] font-medium text-black leading-tight">
+              ₹{formatPrice(totalPrice)}
             </span>
           </div>
 
           <button
             disabled={totalTickets === 0 || isCreatingReservation}
             onClick={handleCheckout}
-            className={`bg-white text-black rounded-[10px] flex items-center justify-center transition-all ${totalTickets === 0 || isCreatingReservation ? "opacity-50 cursor-not-allowed" : "active:scale-[0.98]"}`}
-            style={{
-              width: "160px",
-              height: "53px",
-            }}
+            className={`w-[148px] h-[44px] text-white rounded-[14px] font-semibold text-[15px] flex items-center justify-center transition-all ${
+              totalTickets > 0 && !isCreatingReservation
+                ? "bg-black active:scale-95 cursor-pointer"
+                : "bg-zinc-400 cursor-not-allowed opacity-60"
+            }`}
           >
-            <span
-              style={{
-                fontFamily: "'Anek Tamil Medium', sans-serif",
-                fontWeight: 500,
-              }}
-              className="text-[24px] text-black uppercase leading-none"
-            >
-              {isEditing && hasChanges ? "UPDATE CART" : "ADD TO CART"}
-            </span>
+            {isEditing && hasChanges ? "UPDATE CART" : "ADD TO CART"}
           </button>
         </footer>
       </div>

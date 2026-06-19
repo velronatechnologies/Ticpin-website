@@ -20,6 +20,7 @@ const CreateDiningPage = () => {
     const [isUnderline, setIsUnderline] = useState(false);
     const [hasContent, setHasContent] = useState(false);
     const [authChecked, setAuthChecked] = useState(false);
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
     // Form fields
     const [diningName, setDiningName] = useState('');
@@ -85,6 +86,7 @@ const CreateDiningPage = () => {
 
     useEffect(() => {
         const checkAuth = async () => {
+            setHasCheckedSession(true);
             let session = getOrganizerSession();
             if (!session) { router.replace('/list-your-dining/Login'); return; }
 

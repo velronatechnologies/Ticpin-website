@@ -40,6 +40,18 @@ interface MobileEventsProps {
     events: RealEvent[];
 }
 
+function formatTime(raw?: string): string {
+    if (!raw || !raw.includes(':')) return '';
+    const [hStr, mStr] = raw.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h) || isNaN(m)) return '';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mm = m.toString().padStart(2, '0');
+    return `${h12}:${mm} ${ampm}`;
+}
+
 export default function MobileEvents({ events }: MobileEventsProps) {
     const router = useRouter();
     const city = useLocation();
@@ -537,10 +549,13 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                             try {
                                                 const d = new Date(event.date);
                                                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                                return `${months[d.getMonth()]} ${d.getDate()}`;
+                                                return `${d.getDate()} ${months[d.getMonth()]}`;
                                             } catch { return event.date; }
                                         })() : 'Date TBA'}
-                                        {event.time ? `, ${event.time}` : ''}
+                                        {event.time ? (() => {
+                                            const formatted = formatTime(event.time);
+                                            return formatted ? ` | ${formatted}` : '';
+                                        })() : ''}
                                     </p>
                                 </div>
                                 <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">

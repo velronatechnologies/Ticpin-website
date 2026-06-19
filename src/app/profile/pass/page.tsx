@@ -26,11 +26,10 @@ export default function PassUsagePage() {
         return () => clearTimeout(timer);
     }, []);
 
-    // Redirect if not authenticated
     useEffect(() => {
         if (!hasCheckedSession) return;
         if (!session) {
-            router.replace('/');
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
         }
     }, [hasCheckedSession, session, router]);

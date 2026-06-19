@@ -28,6 +28,12 @@ export default function TiclistsPage() {
     }, [sync]);
 
     useEffect(() => {
+        if (!isLoading && !userSession) {
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        }
+    }, [isLoading, userSession, router]);
+
+    useEffect(() => {
         const fetchLikes = async () => {
             setIsLoading(true);
             try {

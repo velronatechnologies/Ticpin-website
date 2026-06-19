@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const isAdmin = session?.isAdmin || session?.email === '23cs139@kpriet.ac.in' || session?.email === 'ramjib929@gmail.com';
         
         if (!isAdmin) {
-            router.replace('/admin/login');
+            router.replace(`/admin/login?redirect=${encodeURIComponent(pathname || '/admin')}`);
         } else {
             setAuthorized(true);
         }

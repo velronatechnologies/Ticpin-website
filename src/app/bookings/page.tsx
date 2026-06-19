@@ -79,6 +79,12 @@ function BookingsContent() {
     }, [session]);
 
     useEffect(() => {
+        if (!loading && !session) {
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        }
+    }, [loading, session, router]);
+
+    useEffect(() => {
         if (session?.id) {
             fetchBookings();
         } else if (!loading) {
@@ -100,7 +106,7 @@ function BookingsContent() {
                 <div className="text-center max-w-md">
                     <h2 className="text-[34px] font-semibold text-black mb-4">Please log in</h2>
                     <p className="text-[#686868] text-[20px] mb-8">You need to be logged in to review your bookings.</p>
-                    <Link href="/login" className="px-8 py-4 bg-black text-white rounded-full text-[20px] font-semibold inline-block">
+                    <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="px-8 py-4 bg-black text-white rounded-full text-[20px] font-semibold inline-block">
                         Login / Sign Up
                     </Link>
                 </div>

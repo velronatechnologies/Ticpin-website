@@ -7,6 +7,7 @@ const PROTECTED_ROUTES = [
     '/bookings',
     '/my-pass',
     '/logout',
+    '/ticlists',
 ];
 
 const ADMIN_ROUTES = [
@@ -35,15 +36,15 @@ export function proxy(request: NextRequest) {
     
     // Auth logic for normal users
     if (isProtected && !userSession) {
-        // Redirect to homepage if not logged in
-        return NextResponse.redirect(new URL('/', request.url));
+        // Redirect to login page if not logged in
+        return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url));
     }
 
     // Auth logic for organizer dashboard pages
     if (isOrganizerProtected) {
         if (!orgSession) {
             // Redirect to dining partner login as default
-            return NextResponse.redirect(new URL('/list-your-dining/Login', request.url));
+            return NextResponse.redirect(new URL(`/list-your-dining/Login?redirect=${encodeURIComponent(pathname)}`, request.url));
         }
     }
 
@@ -54,6 +55,8 @@ export function proxy(request: NextRequest) {
             return NextResponse.next();
         }
 
+        const loginUrl = new URL(`/admin/login?redirect=${encodeURIComponent(pathname)}`, request.url);
+
         // Check organizer session for admin role
         if (orgSession) {
             try {
@@ -62,7 +65,9 @@ export function proxy(request: NextRequest) {
                 // Validate base64 format
                 if (!/^[A-Za-z0-9+/=]+$/.test(raw)) {
                     console.error('[Auth] Invalid base64 in orgSession cookie');
-                    return NextResponse.redirect(new URL('/list-your-dining/Login', request.url));
+                    const response = NextResponse.redirect(loginUrl);
+                    response.cookies.delete('ticpin_session');
+                    return response;
                 }
                 
                 const json = atob(raw);
@@ -71,7 +76,7 @@ export function proxy(request: NextRequest) {
                 // Validate required fields
                 if (!session.id || session.isAdmin === undefined) {
                     console.error('[Auth] Invalid session structure:', Object.keys(session));
-                    const response = NextResponse.redirect(new URL('/list-your-dining/Login', request.url));
+                    const response = NextResponse.redirect(loginUrl);
                     response.cookies.delete('ticpin_session');
                     return response;
                 }
@@ -82,14 +87,18 @@ export function proxy(request: NextRequest) {
             } catch (error) {
                 console.error('[Auth] Cookie parsing error:', error);
                 // Clear invalid cookie and redirect
-                const response = NextResponse.redirect(new URL('/list-your-dining/Login', request.url));
+                const response = NextResponse.redirect(loginUrl);
                 response.cookies.delete('ticpin_session');
                 return response;
             }
         }
 
-        // If isAdmin check failed, redirect to root
-        return NextResponse.redirect(new URL('/', request.url));
+        // If isAdmin check failed or orgSession not found, redirect to admin login
+        const response = NextResponse.redirect(loginUrl);
+        if (orgSession) {
+            response.cookies.delete('ticpin_session');
+        }
+        return response;
     }
 
     return NextResponse.next();
@@ -104,6 +113,7 @@ export const config = {
         '/logout/:path*',
         '/bookings/:path*',
         '/my-pass/:path*',
-        '/organizer/:path*'
+        '/organizer/:path*',
+        '/ticlists/:path*'
     ],
 };

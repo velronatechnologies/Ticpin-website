@@ -26,7 +26,7 @@ export default function PlayBookingDetailPage() {
   useEffect(() => {
     if (!hasCheckedSession) return;
     if (!session) {
-      router.replace('/bookings');
+      router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
     }
   }, [hasCheckedSession, session, router]);
 

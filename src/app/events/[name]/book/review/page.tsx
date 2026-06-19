@@ -155,7 +155,7 @@ export default function ReviewBookingPage() {
 
   // User details
   const [email, setEmail] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
 
   // Billing details
   const [billing, setBilling] = useState({
@@ -232,16 +232,20 @@ export default function ReviewBookingPage() {
 
   // Split name when billing name loaded
   useEffect(() => {
-    if (billing.name && !firstName && !lastName) {
+    if (billing.name) {
       const parts = billing.name.trim().split(/\s+/);
       if (parts.length > 0) {
-        setFirstName(parts[0]);
-        if (parts.length > 1) {
-          setLastName(parts.slice(1).join(" "));
+        const first = parts[0];
+        const last = parts.slice(1).join(" ");
+        if (first !== firstName) {
+          setFirstName(first);
+        }
+        if (last !== lastName) {
+          setLastName(last);
         }
       }
     }
-  }, [billing.name]);
+  }, [billing.name, firstName, lastName]);
 
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [previousBookings, setPreviousBookings] = useState<any[]>([]);
@@ -275,10 +279,12 @@ export default function ReviewBookingPage() {
       }
 
       // Check if there's a pending reservation promise from the tickets page
-      if (typeof window !== "undefined" && (window as any).__pendingReservationPromise) {
+      const pendingPromise = (window as any).__pendingReservationPromise;
+      if (typeof window !== "undefined" && pendingPromise) {
+        delete (window as any).__pendingReservationPromise;
         setIsValidating(true);
         try {
-          await (window as any).__pendingReservationPromise;
+          await pendingPromise;
         } catch (e) {
           console.error("Awaiting pending reservation failed:", e);
           toast.error("Failed to reserve tickets. Please try again.");
@@ -286,17 +292,15 @@ export default function ReviewBookingPage() {
           sessionStorage.removeItem("ticpin_cart");
           router.replace(`/events/${name}/book`);
           setIsValidating(false);
-          delete (window as any).__pendingReservationPromise;
           return;
         }
-        delete (window as any).__pendingReservationPromise;
       }
 
       let savedCart = sessionStorage.getItem("ticpin_cart");
       
       // If cart exists in sessionStorage AND Zustand has a reservation, skip backend check
       // (User is navigating back from tickets page - reservation is still valid)
-      if (savedCart && reservationStore.reservationId) {
+      if (savedCart && reservationStore.reservationId && reservationStore.hasActiveReservation()) {
         const parsedCart = JSON.parse(savedCart);
         setCart(parsedCart);
         if (parsedCart.type === "event" && parsedCart.eventId) {
@@ -638,6 +642,21 @@ export default function ReviewBookingPage() {
                 latestBooking?.nationality ||
                 "Indian resident",
               state: prev.state || latestBooking?.state || profile?.state || "",
+              address:
+                prev.address ||
+                latestBooking?.address ||
+                profile?.address ||
+                "",
+              city:
+                prev.city ||
+                latestBooking?.city ||
+                profile?.city ||
+                "",
+              pincode:
+                prev.pincode ||
+                latestBooking?.pincode ||
+                profile?.pincode ||
+                "",
             };
             sessionStorage.setItem(
               "ticpin_billing_data",
@@ -681,7 +700,7 @@ export default function ReviewBookingPage() {
     const checkId = cart?.eventId;
     const userId = session?.id;
     const reservationId = reservationStore.reservationId;
-    if (!checkId || !userId || !reservationId || step === "success") return;
+    if (!checkId || !userId || !reservationId || step === "success" || (typeof window !== "undefined" && (window as any).__pendingReservationPromise)) return;
 
     const interval = setInterval(async () => {
       // Stop polling if booking is done or payment is in progress
@@ -1190,23 +1209,6 @@ export default function ReviewBookingPage() {
     ) {
       setBookingError("Please enter a valid 10-digit mobile number");
       return;
-    }
-    if (isMobile) {
-      if (!(billing.address || "").trim()) {
-        setBookingError("Please enter your address");
-        return;
-      }
-      if (!(billing.city || "").trim()) {
-        setBookingError("Please enter your city");
-        return;
-      }
-      if (
-        !(billing.pincode || "").trim() ||
-        billing.pincode.replace(/\D/g, "").length < 6
-      ) {
-        setBookingError("Please enter a valid 6-digit pincode");
-        return;
-      }
     }
     if (!(billing.nationality || "").trim()) {
       setBookingError("Please select your nationality");

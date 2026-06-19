@@ -429,6 +429,8 @@ export default function TicketSelectionPage() {
         sessionStorage.removeItem("ticpin_cart");
         sessionStorage.removeItem("ticpin_restore_counts");
         sessionStorage.removeItem("ticpin_edit_selection");
+        sessionStorage.removeItem("ticpin_temp_counts");
+        reservationStore.clearReservation();
         const availability = await bookingApi.getEventAvailability(
           eventData.id,
         );

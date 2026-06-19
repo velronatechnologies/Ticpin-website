@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { getOrganizerSession, saveOrganizerSession } from '@/lib/auth/organizer';
 import { getUserSession } from '@/lib/auth/user';
@@ -69,19 +69,21 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
     const [verificationStep, setVerificationStep] = useState<'none' | 'email_required' | 'phone_required'>('none');
     const [verificationCredential, setVerificationCredential] = useState('');
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const redirect = searchParams.get('redirect');
 
     useEffect(() => {
         const session = getOrganizerSession();
         if (session) {
             if (session.isAdmin) {
-                router.replace('/admin');
+                router.replace(redirect || '/admin');
             } else {
-                router.replace(session.vertical === vertical && session.categoryStatus?.[vertical]
+                router.replace(redirect || (session.vertical === vertical && session.categoryStatus?.[vertical]
                     ? `/organizer/dashboard?category=${vertical}`
-                    : setupPath);
+                    : setupPath));
             }
         }
-    }, [router, vertical, setupPath]);
+    }, [router, vertical, setupPath, redirect]);
 
     const handleSendOTP = async () => {
         if (!identifier) { 
@@ -214,11 +216,11 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
             clearOTPSentAt(identifier, vertical);
 
             if (isAdmin) {
-                router.replace('/admin');
+                router.replace(redirect || '/admin');
             } else if (catStatus[vertical]) {
-                router.replace(`/organizer/dashboard?category=${vertical}`);
+                router.replace(redirect || `/organizer/dashboard?category=${vertical}`);
             } else {
-                router.replace(setupPath);
+                router.replace(redirect || setupPath);
             }
         } catch (e: any) {
             setError(e instanceof Error ? e.message : 'Invalid OTP');

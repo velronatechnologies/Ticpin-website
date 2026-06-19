@@ -18,6 +18,18 @@ interface EventCardProps {
     opacity: number;
 }
 
+function formatTime(raw?: string): string {
+    if (!raw || !raw.includes(':')) return '';
+    const [hStr, mStr] = raw.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h) || isNaN(m)) return '';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mm = m.toString().padStart(2, '0');
+    return `${h12}:${mm} ${ampm}`;
+}
+
 export default function MobileEventCard({
     id, name, date, time, location, venue_name, city,
     portrait_image_url, price_starts_from, scale, opacity
@@ -49,18 +61,8 @@ export default function MobileEventCard({
         e.stopPropagation();
 
         if (!session?.id) {
-            try {
-                let liked: any[] = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                const isAlreadyLiked = liked.some((le: any) => le.id === id);
-                if (isAlreadyLiked) {
-                    liked = liked.filter((le: any) => le.id !== id);
-                    setIsLiked(false);
-                } else {
-                    liked.push({ id, name, date, time, price_starts_from, portrait_image_url, venue_name, city });
-                    setIsLiked(true);
-                }
-                localStorage.setItem('liked_events', JSON.stringify(liked));
-            } catch { /* ignore */ }
+            localStorage.setItem('pending_like_event_id', id);
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
         }
 
@@ -96,7 +98,8 @@ export default function MobileEventCard({
             const d = new Date(date);
             if (isNaN(d.getTime())) return date;
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}${time ? ` · ${time}` : ''}`;
+            const tStr = formatTime(time);
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}${tStr ? ` | ${tStr}` : ''}`;
         } catch { return date; }
     })();
 
@@ -136,7 +139,7 @@ export default function MobileEventCard({
                 )}
 
                 {/* Like button — fire icon, red when liked */}
-                <button
+                {/* <button
                     className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white flex items-center justify-center border border-white active:scale-90 transition-transform z-10"
                     onClick={toggleLike}
                 >
@@ -150,7 +153,7 @@ export default function MobileEventCard({
                                 : 'none'
                         }}
                     />
-                </button>
+                </button> */}
             </div>
 
             {/* Bottom Details */}

@@ -50,7 +50,7 @@ function UserProfileContent() {
         if (!hasCheckedSession) return;
         
         if (!userSession) {
-            router.replace('/');
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
         }
 
