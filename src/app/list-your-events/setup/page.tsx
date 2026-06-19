@@ -66,11 +66,7 @@ function AccountSetupContent() {
                         setPanFileName('(pre-filled from existing verification)');
                         setPrefilled(true);
                         setPanVerified(setup.panVerified ?? false);
-                        if (setup.panVerified && setup.panCardUrl) {
-                            router.push('/list-your-events/setup/gst');
-                            return;
-                        }
-                        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        const setupData = {
                             prefilled: true,
                             orgType: 'individual',
                             pan: setup.pan, panName: setup.panName ?? '',
@@ -79,7 +75,12 @@ function AccountSetupContent() {
                             bankName: setup.bankName ?? '', accountHolder: setup.accountHolder ?? '',
                             gstNumber: setup.gstNumber ?? '',
                             backupEmail: setup.backupEmail ?? '', backupPhone: setup.backupPhone ?? '',
-                        }));
+                        };
+                        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(setupData));
+                        if (setup.panVerified && setup.panCardUrl) {
+                            router.push('/list-your-events/setup/gst');
+                            return;
+                        }
                     }
                 })
                 .catch(err => { console.error('Setup loading error:', err); })

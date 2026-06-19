@@ -342,7 +342,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
                     <div className="flex items-center gap-4">
-                     
+
                         <button
                             className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
                             onClick={() => setIsLocationOpen(true)}
@@ -823,21 +823,18 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 )}
 
                 {/* Footer Banner — Ticpin Pass */}
-                <div className="px-6">
-                    <button
-                        onClick={() => router.push('/pass')}
-                        className="w-full rounded-[15px] overflow-hidden relative h-[80px] mt-[-25px] block active:scale-[0.98] transition-transform"
-                    >
+                <div className="px-6 mb-6">
+                    <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer">
                         <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                            <span className="text-white text-[18px] font-bold tracking-widest uppercase border-2 border-white/60 px-4 py-1 rounded-[8px] bg-black/20 font-[family-name:var(--font-anek-latin)]">COMING SOON</span>
-                        </div>
-                    </button>
+                    </Link>
                 </div>
             </main>
 
             {/* Footer Section */}
-            <footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center">
+            <footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center w-full">
+                <div className="mb-6">
+                    <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-[32px] w-auto invert brightness-0" />
+                </div>
 
                 <div className="flex flex-col gap-4 mb-8 font-medium">
                     <Link href="/terms" className="text-white text-[15px] hover:opacity-70 transition-opacity">Terms & Conditions</Link>
@@ -853,20 +850,20 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 </p>
 
                 <div className="flex gap-4 items-center">
-                    <a href="#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-6 h-6 invert" />
+                    <a href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+                        <img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-6 h-6 invert brightness-0" />
                     </a>
-                    <a href="#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/facebook.svg" alt="Facebook" className="w-6 h-6 invert" />
+                    <a href="https://www.facebook.com/profile.php?id=61579518933930#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+                        <img src="/social icons/facebook.svg" alt="Facebook" className="w-6 h-6 invert brightness-0" />
                     </a>
-                    <a href="#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/instagram.svg" alt="Instagram" className="w-6 h-6 invert" />
+                    <a href="https://www.instagram.com/ticpinindia/" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+                        <img src="/social icons/instagram.svg" alt="Instagram" className="w-6 h-6 invert brightness-0" />
                     </a>
-                    <a href="#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/x.svg" alt="X" className="w-6 h-6 invert" />
+                    <a href="https://x.com/ticpin" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+                        <img src="/social icons/x.svg" alt="X" className="w-6 h-6 invert brightness-0" />
                     </a>
-                    <a href="#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/youtube.svg" alt="YouTube" className="w-6 h-6 invert" />
+                    <a href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+                        <img src="/social icons/youtube.svg" alt="YouTube" className="w-6 h-6 invert brightness-0" />
                     </a>
                 </div>
             </footer>

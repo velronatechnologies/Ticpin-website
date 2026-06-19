@@ -211,8 +211,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             return;
         }
 
-        setLoading(true);
         setError('');
+        setView('otp');
+        setTimeLeft(120);
 
         try {
             // Call backend to generate and store real OTP (printed to console in dev)
@@ -223,17 +224,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             });
             if (!res.ok) {
                 const d = await res.json();
+                setView('number');
+                setTimeLeft(0);
                 setError(d.error || 'Failed to send OTP');
                 return;
             }
             localStorage.setItem(`user_otp_sent_at_${number}`, Date.now().toString());
-            setTimeLeft(120);
-            setView('otp');
         } catch (err: any) {
             console.error('Send OTP Error:', err);
+            setView('number');
+            setTimeLeft(0);
             setError('Failed to send OTP. Please try again.');
-        } finally {
-            setLoading(false);
         }
     };
 

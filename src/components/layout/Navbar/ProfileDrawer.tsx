@@ -50,74 +50,77 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     const [isVisible, setIsVisible] = useState(false);
     const [pass, setPass] = useState<TicpinPass | null>(null);
     const [organizerProfile, setOrganizerProfile] = useState<any>(null);
+    const [isFetching, setIsFetching] = useState(false);
 
+    // FIX: Consolidated data fetching to prevent multiple concurrent requests
     useEffect(() => {
-        if (isOpen && userSession?.id) {
-            passApi.getLatestPass(userSession.id).then(setPass);
-        }
-    }, [isOpen, userSession?.id]);
+        if (!isOpen) return;
 
-    useEffect(() => {
-        const loadOrganizerProfile = async () => {
+        const fetchData = async () => {
+            if (isFetching) return;
+            setIsFetching(true);
+
             try {
-                if (activeRole === 'organizer' && session?.id) {
-                    const profile = await organizerApi.getProfile(session.id);
-                    if (profile) {
-                        setOrganizerProfile(profile);
-                    }
+                // Fetch user pass if user session exists
+                if (userSession?.id) {
+                    passApi.getLatestPass(userSession.id)
+                        .then(setPass)
+                        .catch((err) => console.error('[ProfileDrawer] Failed to load pass:', err));
                 }
-            } catch (err) {
-                console.error('[ProfileDrawer] Failed to load organizer profile:', err);
+
+                // Fetch organizer profile if organizer session exists
+                if (activeRole === 'organizer' && session?.id) {
+                    organizerApi.getProfile(session.id)
+                        .then((profile) => {
+                            if (profile) {
+                                setOrganizerProfile(profile);
+                            }
+                        })
+                        .catch((err) => console.error('[ProfileDrawer] Failed to load organizer profile:', err));
+                }
+            } finally {
+                setIsFetching(false);
             }
         };
 
-        if (isOpen) {
-            loadOrganizerProfile();
-        }
-    }, [isOpen, activeRole, session?.id]);
+        fetchData();
+    }, [isOpen, userSession?.id, activeRole, session?.id]);
 
+    // FIX: Separate listener setup to avoid redundant fetches
     useEffect(() => {
         const handlePhotoUpdate = (e: Event) => {
             const customEvent = e as CustomEvent<string>;
             setOrganizerProfile((prev: any) => prev ? { ...prev, profilePhoto: customEvent.detail } : { profilePhoto: customEvent.detail });
-            // Also refetch from backend to ensure consistency
-            if (session?.id) {
-                organizerApi.getProfile(session.id).then(profile => {
-                    if (profile) {
-                        setOrganizerProfile(profile);
-                    }
-                }).catch(() => { });
-            }
         };
+
         window.addEventListener('profilePhotoUpdated', handlePhotoUpdate as EventListener);
         return () => {
             window.removeEventListener('profilePhotoUpdated', handlePhotoUpdate as EventListener);
         };
-    }, [session?.id]);
+    }, []);
 
     useEffect(() => {
-        let timeoutId: NodeJS.Timeout;
-        let rafId: number;
+        let timeoutId1: NodeJS.Timeout;
+        let timeoutId2: NodeJS.Timeout;
 
         if (isOpen) {
             setIsMounted(true);
-            rafId = requestAnimationFrame(() => {
-                rafId = requestAnimationFrame(() => {
-                    setIsVisible(true);
-                });
-            });
+            // Use a short timeout to ensure the DOM is mounted before visible triggers the transition
+            timeoutId1 = setTimeout(() => {
+                setIsVisible(true);
+            }, 50);
             document.body.style.overflow = 'hidden';
         } else {
             setIsVisible(false);
             document.body.style.overflow = 'unset';
-            timeoutId = setTimeout(() => {
+            timeoutId2 = setTimeout(() => {
                 setIsMounted(false);
             }, 300);
         }
 
         return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            if (rafId) cancelAnimationFrame(rafId);
+            if (timeoutId1) clearTimeout(timeoutId1);
+            if (timeoutId2) clearTimeout(timeoutId2);
         };
     }, [isOpen]);
 
@@ -355,7 +358,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
 
             {/* Mobile View */}
             <div
-                className={`md:hidden fixed inset-0 w-full h-full bg-[#F1F1F1] z-[100] overflow-y-auto px-[15px] py-6 transition-transform duration-300 ease-out ${
+                className={`md:hidden fixed inset-0 w-full h-full bg-[#F1F1F1] z-[100] overflow-y-auto scrollbar-hide px-[15px] py-6 transition-transform duration-300 ease-out ${
                     isVisible ? 'translate-x-0' : 'translate-x-full'
                 }`}
                 style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}

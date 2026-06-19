@@ -190,10 +190,14 @@ function OTPContent({ vertical, api, setupPath, loginPath }: Props) {
                         <button
                             onClick={handleVerify}
                             disabled={loading}
-                            className="bg-black text-white px-8 py-4 rounded-[15px] flex items-center gap-2 font-medium transition-all active:scale-95 disabled:opacity-60"
-                            style={{ fontSize: '20px', lineHeight: '22px' }}
+                            className="bg-black text-white px-8 py-4 rounded-[15px] flex items-center justify-center gap-2 font-medium transition-all active:scale-95 disabled:opacity-60"
+                            style={{ fontSize: '20px', lineHeight: '22px', minWidth: '140px' }}
                         >
-                            {loading ? 'Verifying...' : 'Continue'} <ChevronRight size={20} />
+                            {loading ? (
+                                <div className="h-5 w-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>Continue <ChevronRight size={20} /></>
+                            )}
                         </button>
                         {timeLeft > 0 ? (
                             <p className="text-[#AEAEAE] font-medium" style={{ fontSize: '15px' }}>

@@ -1,61 +1,80 @@
-import { Metadata } from 'next';
-import DiningClient from './DiningClient';
+'use client';
 
-export const metadata: Metadata = {
-    title: "Dining | Ticpin",
-    description: "Discover the best dining experiences, from premium restaurants to cozy cafes on Ticpin.",
-};
+import React from 'react';
+import Link from 'next/link';
 
-interface RealDining {
-    id: string;
-    name: string;
-    city?: string;
-    portrait_image_url?: string;
-    landscape_image_url?: string;
-    rating?: number;
-    description?: string;
-    category?: string;
-    amenities?: string[];
-    serves_alcohol?: boolean;
-    discount?: number;
-    status?: string;
-}
+export default function DiningComingSoon() {
+  return (
+    <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between items-center px-6 py-12 relative overflow-hidden font-sans">
+      {/* Soft blurred ambient glows to match the Prismania design */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div 
+          className="absolute w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-40 translate-x-[-15%] translate-y-[-10%]"
+          style={{
+            background: 'radial-gradient(circle, rgba(253,218,210,1) 0%, rgba(253,218,210,0) 70%)',
+            top: '0%',
+            left: '0%',
+          }}
+        />
+        <div 
+          className="absolute w-[70vw] h-[70vw] rounded-full blur-[140px] opacity-50 translate-y-[-20%]"
+          style={{
+            background: 'radial-gradient(circle, rgba(254,251,223,1) 0%, rgba(254,251,223,0) 70%)',
+            top: '10%',
+            left: '15%',
+          }}
+        />
+        <div 
+          className="absolute w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-40 translate-x-[15%] translate-y-[-10%]"
+          style={{
+            background: 'radial-gradient(circle, rgba(220,237,253,1) 0%, rgba(220,237,253,0) 70%)',
+            top: '0%',
+            right: '0%',
+          }}
+        />
+      </div>
 
-interface OfferRecord {
-    id: string;
-    title: string;
-    description: string;
-    image?: string;
-    discount_type: 'percent' | 'flat';
-    discount_value: number;
-    applies_to: string;
-    entity_ids?: string[];
-    valid_until: string;
-    is_active: boolean;
-    created_at: string;
-}
+      {/* Header Branding with Logo */}
+      <header className="w-full max-w-[800px] flex justify-center relative z-10 pt-4">
+        <img 
+          src="/ticpin-logo-black.png" 
+          alt="Ticpin" 
+          className="h-10 sm:h-12 w-auto object-contain select-none" 
+        />
+      </header>
 
-async function getDiningData() {
-    try {
-        const [venuesRes, offersRes] = await Promise.all([
-            fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dining`, { cache: 'no-store' }),
-            fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/offers/dining`, { cache: 'no-store' })
-        ]);
+      {/* Main Text Content */}
+      <main className="flex-1 flex flex-col items-center justify-center text-center max-w-[950px] w-full relative z-10 py-16">
+        <h1 className="text-[42px] sm:text-[62px] font-semibold text-black tracking-tight leading-tight mb-5">
+          Great things coming soon.
+        </h1>
+        
+        <p className="text-[#555555] text-[15px] sm:text-[16px] max-w-[460px] leading-relaxed mb-8 font-normal">
+          We are partnering with the finest cafes, lounges, and restaurants in town to bring you exclusive reservation privileges and curated table deals.
+        </p>
 
-        const venuesData = await venuesRes.json();
-        const offersData = await offersRes.json();
+        <div>
+          <Link 
+            href="/" 
+            className="inline-flex items-center justify-center px-6 py-2.5 border border-black/25 rounded-[4px] text-[11px] font-bold tracking-wider text-black bg-white/40 hover:bg-black hover:text-white transition-all uppercase select-none active:scale-[0.98]"
+          >
+            LEARN MORE &rarr;
+          </Link>
+        </div>
+      </main>
 
-        return {
-            venues: (Array.isArray(venuesData) ? venuesData : (venuesData?.data || [])).filter((v: RealDining) => v.status === 'approved'),
-            offers: Array.isArray(offersData) ? offersData : []
-        };
-    } catch (error) {
-        console.error("Failed to fetch dining data:", error);
-        return { venues: [], offers: [] };
-    }
-}
-
-export default async function DiningPage() {
-    const { venues, offers } = await getDiningData();
-    return <DiningClient initialVenues={venues} initialOffers={offers} />;
+      {/* Footer Ticpin-related Information */}
+      <footer className="w-full max-w-[800px] border-t border-black/5 pt-10 flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10 text-[13px] text-zinc-500 font-medium">
+        <div className="flex flex-nowrap items-center gap-x-4 sm:gap-x-8 justify-center sm:justify-start whitespace-nowrap text-[11px] sm:text-[13px]">
+          <Link href="/events" className="hover:text-black transition-colors">EVENTS</Link>
+          <Link href="/play" className="hover:text-black transition-colors">PLAY & SPORTS</Link>
+          <span className="text-zinc-300">|</span>
+          <span className="text-zinc-400 select-none">DINING STAGE</span>
+        </div>
+        <div className="text-zinc-400 select-none text-center sm:text-right">
+          &copy; {new Date().getFullYear()} Ticpin. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  );
 }

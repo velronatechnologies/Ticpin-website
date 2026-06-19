@@ -20,77 +20,103 @@ export default function GstSelectionPage() {
     const [noGst, setNoGst] = React.useState(false);
 
     React.useEffect(() => {
-        const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
-        if (!saved.pan && !saved.prefilled) {
-            router.replace('/list-your-play/setup');
-            return;
-        }
-
-        if (saved.gstList && Array.isArray(saved.gstList)) {
-            setSelectedGsts(saved.gstList);
-            if (saved.gstList.length === 0 && saved.noGst) {
-                setNoGst(true);
+        const loadInitial = async () => {
+            let saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
+            if (!saved.pan && !saved.prefilled) {
+                try {
+                    const setup = await organizerApi.getExistingSetup('play');
+                    if (setup && setup.pan) {
+                        saved = {
+                            prefilled: true,
+                            orgType: setup.orgType || 'individual',
+                            pan: setup.pan,
+                            panName: setup.panName ?? '',
+                            panCardUrl: setup.panCardUrl ?? '',
+                            panFileName: '(pre-filled)',
+                            bankAccountNo: setup.bankAccountNo ?? '',
+                            bankIfsc: setup.bankIfsc ?? '',
+                            bankName: setup.bankName ?? '',
+                            accountHolder: setup.accountHolder ?? '',
+                            gstNumber: setup.gstNumber ?? '',
+                            backupEmail: setup.backupEmail ?? '',
+                            backupPhone: setup.backupPhone ?? '',
+                        };
+                        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+                    } else {
+                        router.replace('/list-your-play/setup');
+                        return;
+                    }
+                } catch (e) {
+                    router.replace('/list-your-play/setup');
+                    return;
+                }
             }
-        }
-        else if (saved.gstNumber) setSelectedGsts([saved.gstNumber]);
-        
-        if (saved.noGst) setNoGst(true);
-        if (saved.prefilled) setPrefilled(true);
-        if (saved.orgType) {
-            const typeMap: Record<string, string> = {
-                'individual': 'Individual',
-                'creator': 'Creator',
-                'company': 'Company',
-                'non-profit': 'Non-profit Organization'
-            };
-            setAccountType(typeMap[saved.orgType] || saved.orgType);
-        }
 
-        // If we already have the fetched list in sessionStorage for the SAME PAN, load it directly
-        if (saved.fetchedGstList && Array.isArray(saved.fetchedGstList) && saved.fetchedGstPan === saved.pan) {
-            setGstList(saved.fetchedGstList);
-            return;
-        }
+            if (saved.gstList && Array.isArray(saved.gstList)) {
+                setSelectedGsts(saved.gstList);
+                if (saved.gstList.length === 0 && saved.noGst) {
+                    setNoGst(true);
+                }
+            }
+            else if (saved.gstNumber) setSelectedGsts([saved.gstNumber]);
+            
+            if (saved.noGst) setNoGst(true);
+            if (saved.prefilled) setPrefilled(true);
+            if (saved.orgType) {
+                const typeMap: Record<string, string> = {
+                    'individual': 'Individual',
+                    'creator': 'Creator',
+                    'company': 'Company',
+                    'non-profit': 'Non-profit Organization'
+                };
+                setAccountType(typeMap[saved.orgType] || saved.orgType);
+            }
 
-        if (saved.pan) {
-            setLoading(true);
-            organizerApi.fetchGST(saved.pan)
-                .then(res => {
-                    if (res.status === 'SUCCESS' && res.data.gstin_list) {
-                        const list = res.data.gstin_list;
-                        const validGsts = list.filter((item: any) => {
-                            const status = (item.status || item.gst_status || '').toUpperCase();
-                            return status === 'ACTIVE' || status === 'REGULAR';
-                        });
-                        setGstList(validGsts);
+            // If we already have the fetched list in sessionStorage for the SAME PAN, load it directly
+            if (saved.fetchedGstList && Array.isArray(saved.fetchedGstList) && saved.fetchedGstPan === saved.pan) {
+                setGstList(saved.fetchedGstList);
+                return;
+            }
 
-                        // Save the fetched list and the PAN in sessionStorage so we don't refetch on refresh
-                        const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
-                        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-                            ...existing,
-                            fetchedGstList: validGsts,
-                            fetchedGstPan: saved.pan
-                        }));
-                    }
-                })
-                .catch(err => {
-                    console.error('Fetch GST failed', err);
-                    // Show user-friendly error message based on error type
-                    let userMessage = 'Unable to fetch your GST details at this moment.';
-                    
-                    if (err.message && err.message.includes('ip_validation_failed')) {
-                        userMessage = 'Our system is experiencing temporary connectivity issues. Please try again in a few moments.';
-                    } else if (err.message && err.message.includes('authentication_error')) {
-                        userMessage = 'Unable to verify your GST information. Please try again later.';
-                    } else if (err.message && (err.message.includes('cashfree error') || err.message.includes('credits over') || err.message.includes('Internal Server Error'))) {
-                        userMessage = 'Our verification system is temporarily down. Please try again after some time.';
-                    }
-                    
-                    toast.error(userMessage);
-                })
-                .finally(() => setLoading(false));
-        }
-    }, []);
+            if (saved.pan) {
+                setLoading(true);
+                organizerApi.fetchGST(saved.pan)
+                    .then(res => {
+                        if (res.status === 'SUCCESS' && res.data.gstin_list) {
+                            const list = res.data.gstin_list;
+                            const validGsts = list.filter((item: any) => {
+                                const status = (item.status || item.gst_status || '').toUpperCase();
+                                return status === 'ACTIVE' || status === 'REGULAR';
+                            });
+                            setGstList(validGsts);
+
+                            // Save the fetched list and the PAN in sessionStorage so we don't refetch on refresh
+                            const existing = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}');
+                            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+                                ...existing,
+                                fetchedGstList: validGsts,
+                                fetchedGstPan: saved.pan
+                            }));
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Fetch GST failed', err);
+                        let userMessage = 'Unable to fetch your GST details at this moment.';
+                        if (err.message && err.message.includes('ip_validation_failed')) {
+                            userMessage = 'Our system is experiencing temporary connectivity issues. Please try again in a few moments.';
+                        } else if (err.message && err.message.includes('authentication_error')) {
+                            userMessage = 'Unable to verify your GST information. Please try again later.';
+                        } else if (err.message && (err.message.includes('cashfree error') || err.message.includes('credits over') || err.message.includes('Internal Server Error'))) {
+                            userMessage = 'Our verification system is temporarily down. Please try again after some time.';
+                        }
+                        toast.error(userMessage);
+                    })
+                    .finally(() => setLoading(false));
+            }
+        };
+
+        loadInitial();
+    }, [router]);
 
     const toggleGst = (gstin: string) => {
         if (noGst) return;

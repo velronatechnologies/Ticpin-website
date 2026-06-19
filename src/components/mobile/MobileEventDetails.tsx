@@ -59,6 +59,7 @@ interface MobileEventDetailsProps {
         };
         faqs?: { question: string; answer: string }[];
         terms?: string;
+        ticket_open_date?: string;
         ticket_close_date?: string;
         event_end_date?: string;
         is_sales_paused?: boolean;
@@ -73,80 +74,87 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const router = useRouter();
     const session = useUserSession();
 
-    const closedBooking = useMemo(() => {
-        if (!event) return false;
-        if (event.is_sales_paused || event.is_canceled) return true;
+    const bookingStatus = useMemo(() => {
+        if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
+        
+        if (event.is_sales_paused || event.is_canceled) {
+            return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
+        }
+
+        if (event.ticket_open_date) {
+            const openDate = new Date(event.ticket_open_date);
+            if (!isNaN(openDate.getTime()) && openDate.getTime() > Date.now()) {
+                const formatted = openDate.toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short'
+                }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
+            }
+        }
         
         if (event.ticket_close_date) {
             const closeDate = new Date(event.ticket_close_date);
             if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
-                return true;
+                return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
             }
         }
         
         if (event.event_end_date) {
             const endDate = new Date(event.event_end_date);
             if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-                return true;
+                return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
             }
         }
         
-        return false;
+        return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
     }, [event]);
+
+    const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [showFullDesc, setShowFullDesc] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
+    const [animateLike, setAnimateLike] = useState(false);
 
-    // Check if liked on mount
+    // Check if liked on mount, and handle pending like if exists
     useEffect(() => {
         if (session?.id) {
-            fetch(`/backend/api/user/likes/${event.id}`, { credentials: 'include' })
-                .then(res => res.ok ? res.json() : Promise.reject())
-                .then(data => setIsLiked(data.liked))
-                .catch(() => {
-                    try {
-                        const liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                        setIsLiked(liked.some((e: any) => e.id === event.id));
-                    } catch { /* ignore */ }
-                });
+            const pendingLikeId = localStorage.getItem('pending_like_event_id');
+            if (pendingLikeId === String(event.id)) {
+                localStorage.removeItem('pending_like_event_id');
+                fetch(`/backend/api/user/likes/${event.id}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                    .then(res => res.ok ? res.json() : Promise.reject())
+                    .then(data => {
+                        setIsLiked(data.liked);
+                        if (data.liked) {
+                            toast.success('Saved to liked events');
+                            setAnimateLike(true);
+                            setTimeout(() => setAnimateLike(false), 400);
+                        }
+                    })
+                    .catch(() => {});
+            } else {
+                fetch(`/backend/api/user/likes/${event.id}`, { credentials: 'include' })
+                    .then(res => res.ok ? res.json() : Promise.reject())
+                    .then(data => setIsLiked(data.liked))
+                    .catch(() => {});
+            }
         } else {
-            try {
-                const liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                setIsLiked(liked.some((e: any) => e.id === event.id));
-            } catch { /* ignore */ }
+            setIsLiked(false);
         }
     }, [event.id, session?.id]);
 
     const handleLikeToggle = async () => {
         if (!session?.id) {
-            try {
-                let liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                const isAlreadyLiked = liked.some((e: any) => e.id === event.id);
-                if (isAlreadyLiked) {
-                    liked = liked.filter((e: any) => e.id !== event.id);
-                    setIsLiked(false);
-                    toast.success('Removed from saved events');
-                } else {
-                    liked.push({
-                        id: event.id,
-                        name: event.name,
-                        date: event.date,
-                        time: event.time,
-                        price_starts_from: event.price_starts_from,
-                        portrait_image_url: event.portrait_image_url,
-                        landscape_image_url: event.landscape_image_url,
-                        venue_name: event.venue_name,
-                        city: event.city
-                    });
-                    setIsLiked(true);
-                    toast.success('Saved to liked events');
-                }
-                localStorage.setItem('liked_events', JSON.stringify(liked));
-            } catch (e) {
-                console.error('Error writing liked events to localStorage:', e);
-                toast.error('Failed to update saved events.');
-            }
+            localStorage.setItem('pending_like_event_id', String(event.id));
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
         }
 
@@ -160,31 +168,11 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 setIsLiked(data.liked);
                 if (data.liked) {
                     toast.success('Saved to liked events');
+                    setAnimateLike(true);
+                    setTimeout(() => setAnimateLike(false), 400);
                 } else {
                     toast.success('Removed from saved events');
                 }
-
-                try {
-                    let liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                    if (!data.liked) {
-                        liked = liked.filter((e: any) => e.id !== event.id);
-                    } else {
-                        if (!liked.some((e: any) => e.id === event.id)) {
-                            liked.push({
-                                id: event.id,
-                                name: event.name,
-                                date: event.date,
-                                time: event.time,
-                                price_starts_from: event.price_starts_from,
-                                portrait_image_url: event.portrait_image_url,
-                                landscape_image_url: event.landscape_image_url,
-                                venue_name: event.venue_name,
-                                city: event.city
-                            });
-                        }
-                    }
-                    localStorage.setItem('liked_events', JSON.stringify(liked));
-                } catch { /* ignore */ }
             } else {
                 toast.error('Failed to update saved events.');
             }
@@ -278,7 +266,9 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     // Get languages from guide
     const languages = event.guide?.languages?.join(', ') || event.language || null;
     // Get min age from guide
-    const minAge = event.guide?.min_age || event.guide?.ticket_required_above_age || event.age_limit || null;
+    const minAge = event.guide?.min_age || event.age_limit || null;
+    // Get ticket required age threshold
+    const ticketRequiredAboveAge = event.guide?.ticket_required_above_age || null;
 
     // Process description - render HTML properly
     const processedDesc = useMemo(() => {
@@ -328,11 +318,16 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 <div className="absolute top-6 right-4 flex gap-3">
-                    <button onClick={handleLikeToggle} className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                    <button
+                        onClick={handleLikeToggle}
+                        className={`w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
+                            animateLike ? 'scale-125 rotate-12 bg-red-50' : 'active:scale-90'
+                        }`}
+                    >
                         <img
                             src="/mobile_icons/event clicking/Vector 1.svg"
                             alt="Like"
-                            className="w-4 h-4 transition-all"
+                            className={`w-4 h-4 transition-all duration-300 ${animateLike ? 'scale-110' : ''}`}
                             style={{ filter: isLiked ? 'invert(27%) sepia(100%) saturate(7000%) hue-rotate(0deg) brightness(95%) contrast(110%)' : 'none' }}
                         />
                     </button>
@@ -399,6 +394,28 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                         </div>
                         <ChevronRight size={18} className="text-[#686868]" />
                     </div>
+
+                    {event.guide?.gates_open_before && (
+                        <>
+                            <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
+                            <div className="flex items-center justify-between group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                        <Clock size={20} className="text-black opacity-70" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[15px] font-medium text-black leading-tight">
+                                            Gates Open: {event.guide.gates_open_before_value || 30} {event.guide.gates_open_before_unit || 'mins'} before
+                                        </p>
+                                        <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">
+                                            Please arrive early for security check
+                                        </p>
+                                    </div>
+                                </div>
+                                <ChevronRight size={18} className="text-[#686868]" />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Offers Section — only show if offers exist */}
@@ -435,7 +452,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 )}
 
                 {/* Things to Know — from backend guide data */}
-                {(languages || minAge) && (
+                {(languages || minAge || ticketRequiredAboveAge) && (
                     <div className="mb-12 mt-[-15px]">
                         <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
                         <div className="space-y-4 mb-4">
@@ -452,7 +469,19 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
                                         <img src="/mobile_icons/event clicking/users-alt.svg" className="w-[23px] h-[23px]" alt="Age" />
                                     </div>
-                                    <p className="text-[15px] font-medium text-black">{typeof minAge === 'number' ? `${minAge}+ years` : minAge}</p>
+                                    <p className="text-[15px] font-medium text-black">
+                                        Min Age: {typeof minAge === 'number' ? `${minAge}+ years` : minAge}
+                                    </p>
+                                </div>
+                            )}
+                            {ticketRequiredAboveAge && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                                        <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Ticket Age" />
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">
+                                        Ticket required for ages {ticketRequiredAboveAge} and above
+                                    </p>
                                 </div>
                             )}
                             <div className="flex items-center gap-4">
@@ -542,13 +571,13 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 <button 
                     onClick={handleBook}
                     disabled={closedBooking}
-                    className={`w-[138px] h-[51px] rounded-[40px] font-medium text-[18px] active:scale-95 transition-all flex items-center justify-center ${
+                    className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${
                         closedBooking
-                        ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed'
-                        : 'bg-black text-white'
+                        ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
+                        : 'bg-black text-white text-[18px] w-[138px]'
                     }`}
                 >
-                    {closedBooking ? 'Tickets closed' : 'Book tickets'}
+                    {bookingStatus.text}
                 </button>
             </div>
 

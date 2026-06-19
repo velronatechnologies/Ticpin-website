@@ -11,23 +11,45 @@ interface MobileBookingProps {
         name: string;
         date: string;
         time: string;
+        location?: string;
     };
 }
 
 export default function MobileBooking({ event }: MobileBookingProps) {
     const router = useRouter();
     const [view, setView] = useState<'layout' | 'tickets' | 'review'>('layout');
+    const [quantity, setQuantity] = useState(0);
+    const [pricePerTicket, setPricePerTicket] = useState(5000);
+
+    const handleTicketsSelect = (selectedQty: number, selectedPrice: number) => {
+        setQuantity(selectedQty);
+        setPricePerTicket(selectedPrice);
+        setView('review');
+    };
 
     if (view === 'review') {
-        return <MobileReviewBooking event={event} onBack={() => setView('tickets')} />;
+        return (
+            <MobileReviewBooking 
+                event={event} 
+                quantity={quantity}
+                pricePerTicket={pricePerTicket}
+                onBack={() => setView('tickets')} 
+            />
+        );
     }
 
     if (view === 'tickets') {
-        return <MobileChooseTickets event={event} onBack={() => setView('layout')} onCheckout={() => setView('review')} />;
+        return (
+            <MobileChooseTickets 
+                event={event} 
+                onBack={() => setView('layout')} 
+                onCheckout={handleTicketsSelect} 
+            />
+        );
     }
 
     return (
-        <div className="md:hidden min-h-screen bg-white relative flex flex-col" style={{ fontFamily: "'Anek Latin', sans-serif" }}>
+        <div className="md:hidden min-h-screen bg-white relative flex flex-col" style={{ fontFamily: "'Anek Latin', sans-serif", paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
             {/* Header Section - Roughly 132px high in Figma */}
             <div className="w-full pt-4 px-4 relative h-[132px] shrink-0">
                 {/* Back Button - Ellipse 1 */}
@@ -41,10 +63,10 @@ export default function MobileBooking({ event }: MobileBookingProps) {
                 {/* Event Title and Info */}
                 <div className="w-full flex flex-col items-center mt-[2px]">
                     <h1 className="text-[20px] font-semibold text-black uppercase leading-tight text-center px-12">
-                        {event?.name || '{EVENT NAME}'}
+                        {event?.name || 'THE TICPIN PLAY FESTIVAL'}
                     </h1>
                     <p className="text-[10px] font-medium text-[#5331EA] mt-1 uppercase">
-                        {event?.date || '{DAY}, {DATE} {MONTH}'}, {event?.time || '{TIME}'}
+                        {event?.date || 'SAT, 23 MAY'}, {event?.time || '7:00 PM'}
                     </p>
                 </div>
 
@@ -74,7 +96,7 @@ export default function MobileBooking({ event }: MobileBookingProps) {
                          <Percent size={10} className="text-white" strokeWidth={3} />
                     </div>
                     <span className="text-[10px] font-normal text-white uppercase tracking-tight mt-[1px]">
-                        {`{MORE PROFITABLE OFFER FOR USER}`}
+                        Get 10% discount on 3+ tickets!
                     </span>
                 </div>
                 <Info size={11} className="text-white" />
@@ -85,44 +107,44 @@ export default function MobileBooking({ event }: MobileBookingProps) {
                 {/* Rectangle 273 (Top Box) */}
                 <div 
                     onClick={() => setView('tickets')}
-                    className="w-[292px] h-[80px] bg-[#D9D9D9] flex items-center justify-center shrink-0 cursor-pointer active:scale-[0.98] transition-transform"
+                    className="w-[292px] h-[80px] bg-[#D9D9D9] flex items-center justify-center shrink-0 cursor-pointer active:scale-[0.98] transition-transform rounded-lg"
                 >
-                    <span className="text-[10px] font-medium text-black uppercase tracking-tight text-center px-4">{`{SAMPLE LAYOUT IMAGE}`}</span>
+                    <span className="text-[10px] font-medium text-black uppercase tracking-tight text-center px-4">STAGE - FRONT AREA</span>
                 </div>
 
                 {/* Row with Rectangles 274, 272, 275 (Middle Boxes) */}
                 <div className="flex gap-[6px] shrink-0">
                     <div 
                         onClick={() => setView('tickets')}
-                        className="w-[93px] h-[80px] bg-[#D9D9D9] flex items-center justify-center px-2 cursor-pointer active:scale-[0.98] transition-transform"
+                        className="w-[93px] h-[80px] bg-[#D9D9D9] flex items-center justify-center px-2 cursor-pointer active:scale-[0.98] transition-transform rounded-lg"
                     >
-                        <span className="text-[6px] font-medium text-black text-center uppercase leading-tight">{`{SAMPLE LAYOUT IMAGE}`}</span>
+                        <span className="text-[8px] font-medium text-black text-center uppercase leading-tight">LEFT A</span>
                     </div>
                     <div 
                         onClick={() => setView('tickets')}
-                        className="w-[93px] h-[80px] bg-[#D9D9D9] flex items-center justify-center px-2 cursor-pointer active:scale-[0.98] transition-transform"
+                        className="w-[93px] h-[80px] bg-[#D9D9D9] flex items-center justify-center px-2 cursor-pointer active:scale-[0.98] transition-transform rounded-lg"
                     >
-                        <span className="text-[6px] font-medium text-black text-center uppercase leading-tight">{`{SAMPLE LAYOUT IMAGE}`}</span>
+                        <span className="text-[8px] font-medium text-black text-center uppercase leading-tight">CENTER A</span>
                     </div>
                     <div 
                         onClick={() => setView('tickets')}
-                        className="w-[93px] h-[80px] bg-[#D9D9D9] flex items-center justify-center px-2 cursor-pointer active:scale-[0.98] transition-transform"
+                        className="w-[93px] h-[80px] bg-[#D9D9D9] flex items-center justify-center px-2 cursor-pointer active:scale-[0.98] transition-transform rounded-lg"
                     >
-                        <span className="text-[6px] font-medium text-black text-center uppercase leading-tight">{`{SAMPLE LAYOUT IMAGE}`}</span>
+                        <span className="text-[8px] font-medium text-black text-center uppercase leading-tight">RIGHT A</span>
                     </div>
                 </div>
 
                 {/* Rectangle 278 (Bottom Box) */}
                 <div 
                     onClick={() => setView('tickets')}
-                    className="w-[292px] h-[108px] bg-[#D9D9D9] flex items-center justify-center shrink-0 cursor-pointer active:scale-[0.98] transition-transform"
+                    className="w-[292px] h-[108px] bg-[#D9D9D9] flex items-center justify-center shrink-0 cursor-pointer active:scale-[0.98] transition-transform rounded-lg"
                 >
-                    <span className="text-[10px] font-medium text-black uppercase tracking-tight text-center px-4">{`{SAMPLE LAYOUT IMAGE}`}</span>
+                    <span className="text-[10px] font-medium text-black uppercase tracking-tight text-center px-4">BALCONY / STANDING</span>
                 </div>
             </div>
 
             {/* Legend Footer - Rectangle 519 */}
-            <div className="w-full h-[88px] bg-[#EFEFEF] flex items-center justify-center gap-10 shrink-0 mt-auto">
+            <div className="w-full h-[88px] bg-[#EFEFEF] flex items-center justify-center gap-10 shrink-0 mt-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="flex items-center gap-2">
                     <div className="w-[15px] h-[15px] bg-[#D9D9D9] rounded-[5px]" />
                     <span className="text-[10px] font-normal text-black whitespace-nowrap">Sold out</span>

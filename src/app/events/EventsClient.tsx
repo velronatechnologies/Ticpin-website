@@ -105,13 +105,17 @@ export default function EventsClient({ initialEvents }: { initialEvents: RealEve
             ? events
             : events.filter(e => e.category === activeFilter);
 
-        // Filter by selected city (case-insensitive and partial match)
+        // Partition by selected city (selected city events first, then others)
         if (cityFilter) {
-            result = result.filter(e => {
+            const matching = result.filter(e => {
                 const eventCity = e.city?.toLowerCase() || '';
-                // Match if event city is in user's selected location OR vice-versa
                 return eventCity.includes(cityFilter) || cityFilter.includes(eventCity);
             });
+            const nonMatching = result.filter(e => {
+                const eventCity = e.city?.toLowerCase() || '';
+                return !(eventCity.includes(cityFilter) || cityFilter.includes(eventCity));
+            });
+            result = [...matching, ...nonMatching];
         }
 
         result = result.filter(e => {

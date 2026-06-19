@@ -3,12 +3,15 @@
 import React from 'react';
 import Image from 'next/image';
 import { LocationData } from '@/lib/hooks/useGeolocation';
+
 interface LocationSelectorProps {
     location: LocationData | null;
     onOpenModal: () => void;
     onClear: () => void;
 }
 
+// FIX: Wrap with React.memo to prevent unnecessary re-renders during parent updates
+// This is especially important since this component appears in the Navbar on every page
 const LocationSelector: React.FC<LocationSelectorProps> = ({ location, onOpenModal, onClear }) => {
     return (
         <div className="hidden lg:flex items-center gap-1 min-w-max">
@@ -25,4 +28,5 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ location, onOpenMod
     );
 };
 
+// FIX: Memoize component to prevent re-renders when parent props haven't changed
 export default React.memo(LocationSelector);

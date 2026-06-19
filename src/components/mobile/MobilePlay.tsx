@@ -233,9 +233,7 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
                     <div className="flex items-center gap-4">
-                        <Link href="/">
-                            <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-5 w-auto object-contain" />
-                        </Link>
+                      
                         <button
                             className="flex items-center gap-1.5 active:opacity-75 transition-opacity"
                             onClick={() => setIsLocationOpen(true)}
@@ -379,12 +377,12 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                                 <div
                                     className={`w-[89px] h-[120px] rounded-[25px] border flex flex-col items-center justify-start pt-3 relative overflow-visible cursor-pointer transition-all duration-150 ${
                                         isSelected
-                                            ? 'border-[#5331EA] shadow-[0_0_8px_rgba(83,49,234,0.3)] ring-2 ring-[#5331EA]'
+                                            ? 'border-black ring-1 ring-black'
                                             : 'border-[#E1E1E1]/60'
                                     }`}
                                     style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E7C200 159.52%)' }}
                                 >
-                                    <span className={`text-[10px] font-semibold tracking-tight z-10 ${isSelected ? 'text-[#5331EA]' : 'text-black'}`}>
+                                    <span className={`text-[10px] font-semibold tracking-tight z-10 text-black`}>
                                         {sport.name}
                                     </span>
 
@@ -524,7 +522,7 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
 
             {/* 8. Bottom Ticpin Pass Banner */}
             <div className="mt-10 px-[18px] pb-10">
-                <Link href="/my-pass" className="block w-full max-w-[327px] h-[80px] rounded-[15px] overflow-hidden mx-auto shadow-sm active:opacity-90 transition-opacity">
+                <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer shadow-sm active:opacity-90 transition-opacity">
                     <img src="/ticpin banner.jpg" className="w-full h-full object-cover" alt="Ticpin Pass" />
                 </Link>
             </div>

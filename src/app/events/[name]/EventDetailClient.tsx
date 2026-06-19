@@ -103,26 +103,46 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
 
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
-    const closedBooking = useMemo(() => {
-        if (!event) return false;
-        if (event.is_sales_paused || event.is_canceled) return true;
+    const bookingStatus = useMemo(() => {
+        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+        
+        if (event.is_sales_paused || event.is_canceled) {
+            return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
+        }
+
+        if (event.ticket_open_date) {
+            const openDate = new Date(event.ticket_open_date);
+            if (!isNaN(openDate.getTime()) && openDate.getTime() > Date.now()) {
+                const formatted = openDate.toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short'
+                }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
+            }
+        }
         
         if (event.ticket_close_date) {
             const closeDate = new Date(event.ticket_close_date);
             if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
-                return true;
+                return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
             }
         }
         
         if (event.event_end_date) {
             const endDate = new Date(event.event_end_date);
             if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-                return true;
+                return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
             }
         }
         
-        return false;
+        return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
     }, [event]);
+
+    const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
 
     // Scroll to top when page loads
     useEffect(() => {
@@ -202,7 +222,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
         };
     }, [event?.description]);
 
-    const bannerImg = useMemo(() => event?.portrait_image_url || event?.landscape_image_url || '', [event]);
+    const bannerImg = useMemo(() => event?.landscape_image_url || event?.portrait_image_url || '', [event]);
 
     // Mobile view check
     const [isMobile, setIsMobile] = useState(false);
@@ -446,21 +466,23 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                                         <button
                                             onClick={handleBook}
                                             disabled={closedBooking}
-                                            className={`w-[160px] h-[46px] rounded-[10px] flex items-center justify-center active:scale-[0.98] transition-all ${
+                                            className={`h-[46px] rounded-[10px] flex items-center justify-center active:scale-[0.98] transition-all px-4 ${
                                                 closedBooking 
-                                                ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed' 
-                                                : 'bg-black text-white hover:bg-zinc-800'
+                                                ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed min-w-[160px]' 
+                                                : 'bg-black text-white hover:bg-zinc-800 w-[160px]'
                                             }`}
                                         >
                                             <span
                                                 style={{
                                                     fontFamily: "var(--font-anek-tamil-condensed)",
                                                     fontWeight: 500,
-                                                    lineHeight: "2.5"
+                                                    lineHeight: bookingStatus.notOpenedYet ? "1.2" : "2.5"
                                                 }}
-                                                className="text-[25px] tracking-normal uppercase"
+                                                className={`tracking-normal uppercase text-center ${
+                                                    bookingStatus.notOpenedYet ? 'text-[12px] font-semibold' : 'text-[25px]'
+                                                }`}
                                             >
-                                                {closedBooking ? 'TICKETS CLOSED' : 'BOOK TICKETS'}
+                                                {bookingStatus.text}
                                             </span>
                                         </button>
                                     </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, ChevronRight, PlayCircle, Star, Bell } from 'lucide-react';
+import { Search, MapPin, ChevronRight, PlayCircle, Star, Bell, ChevronDown } from 'lucide-react';
 import { artists, events } from '@/data/mockData';
 import { useLocation } from '@/lib/useLocation';
 import { useLocationStore } from '@/store/useLocationStore';
@@ -140,13 +140,18 @@ export default function MobileHome() {
             {/* 1. Header Section */}
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
-                    <div 
-                        className="flex items-center gap-2 cursor-pointer animate-fade-in"
-                        onClick={() => setIsLocationOpen(true)}
-                    >
-                        <MapPin size={17} className="text-zinc-800" />
-                        <span className="text-[15px] font-medium text-black leading-none">{city || 'Select Location'}</span>
-                        <ChevronDown size={14} className="text-zinc-500" />
+                    <div className="flex items-center gap-4">
+                        <Link href="/">
+                            <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-5 w-auto object-contain" />
+                        </Link>
+                        <button
+                            className="flex items-center gap-1.5 active:opacity-75 transition-opacity"
+                            onClick={() => setIsLocationOpen(true)}
+                        >
+                            <MapPin size={15} className="text-zinc-800" />
+                            <span className="text-[14px] font-medium text-black leading-none truncate max-w-[100px]">{city || 'Location'}</span>
+                            <ChevronDown size={14} className="text-[#686868]" />
+                        </button>
                     </div>
                     <div
                         className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
@@ -511,18 +516,18 @@ export default function MobileHome() {
                 </section >
 
                 {/* 6. Footer Banner (Ticpin Pass) */}
-                < div className="px-6 " >
-                    <Link href="/ticpass" className="block rounded-[15px] overflow-hidden group relative h-[120px] mt-[-25px] cursor-pointer">
-                        <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full" />
+                <div className="px-6 mb-6">
+                    <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer">
+                        <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover" />
                     </Link>
-                </div >
+                </div>
 
             </main >
 
             {/* 7. Footer Section */}
-            < footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center" >
+            <footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center w-full" >
                 <div className="mb-6">
-                    <img src="/ticpin-logo-white1.svg" alt="TICPIN" className="h-[32px] w-auto" />
+                    <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-[32px] w-auto invert brightness-0" />
                 </div>
 
                 <div className="flex flex-col gap-4 mb-8 font-medium">
@@ -539,11 +544,11 @@ export default function MobileHome() {
                 </p>
 
                 <div className="flex gap-2 items-center">
-                    <Link href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412"><img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8" /></Link>
-                    <Link href="https://www.facebook.com/profile.php?id=61579518933930#"><img src="/social icons/facebook.svg" alt="Facebook" className="w-8 h-8" /></Link>
-                    <Link href="https://www.instagram.com/ticpinindia/"><img src="/social icons/instagram.svg" alt="Instagram" className="w-8 h-8" /></Link>
-                    <Link href="https://x.com/ticpin"><img src="/social icons/x.svg" alt="X" className="w-8 h-8" /></Link>
-                    <Link href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw"><img src="/social icons/youtube.svg" alt="YouTube" className="w-8 h-8" /></Link>
+                    <Link href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412"><img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8 invert brightness-0" /></Link>
+                    <Link href="https://www.facebook.com/profile.php?id=61579518933930#"><img src="/social icons/facebook.svg" alt="Facebook" className="w-8 h-8 invert brightness-0" /></Link>
+                    <Link href="https://www.instagram.com/ticpinindia/"><img src="/social icons/instagram.svg" alt="Instagram" className="w-8 h-8 invert brightness-0" /></Link>
+                    <Link href="https://x.com/ticpin"><img src="/social icons/x.svg" alt="X" className="w-8 h-8 invert brightness-0" /></Link>
+                    <Link href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw"><img src="/social icons/youtube.svg" alt="YouTube" className="w-8 h-8 invert brightness-0" /></Link>
                 </div>
             </footer >
             <LocationModal

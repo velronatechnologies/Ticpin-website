@@ -33,7 +33,7 @@ const CreateEventPage = () => {
     const [videoUrl, setVideoUrl] = useState('');
     const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
     const [eventDate, setEventDate] = useState('');
-    const [eventTime, setEventTime] = useState('');
+    const [eventTime, setEventTime] = useState('12:00');
     const [duration, setDuration] = useState('');
 
     const [ticketOpenDate, setTicketOpenDate] = useState('');

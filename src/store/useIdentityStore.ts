@@ -14,6 +14,8 @@ export interface BillingDetails {
 }
 
 interface IdentityState {
+    // FIX #4: Add hydration flag to prevent mismatches
+    _hydrated: boolean;
     userSession: UserSession | null;
     organizerSession: OrganizerSession | null;
     activeRole: string | null;
@@ -42,12 +44,14 @@ function getCookie(name: string): string {
 export const useIdentityStore = create<IdentityState>()(
     persist(
         (set) => ({
+            // FIX #4: Initialize hydration flag
+            _hydrated: false,
             rememberedEmail: '',
             rememberedBilling: null,
             setRememberedEmail: (email) => set({ rememberedEmail: email }),
             setRememberedBilling: (billing) => set({ rememberedBilling: billing }),
-    userSession: null,
-    organizerSession: null,
+            userSession: null,
+            organizerSession: null,
     activeRole: null,
     isLoading: true,
 
@@ -170,6 +174,15 @@ export const useIdentityStore = create<IdentityState>()(
         {
             name: 'identity-storage',
             partialize: (state) => ({ rememberedEmail: state.rememberedEmail, rememberedBilling: state.rememberedBilling }),
+            // FIX #4: Set hydration flag after storage is restored
+            onRehydrateStorage: () => (state, error) => {
+                if (error) {
+                    console.warn('[Auth] Hydration error:', error);
+                }
+                if (state) {
+                    state._hydrated = true;
+                }
+            },
         }
     )
 );

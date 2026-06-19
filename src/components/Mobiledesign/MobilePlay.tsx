@@ -72,13 +72,18 @@ export default function MobilePlay() {
             {/* 1. Header Section */}
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
-                    <div 
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => setIsLocationOpen(true)}
-                    >
-                        <MapPin size={17} className="text-zinc-800" />
-                        <span className="text-[15px] font-medium text-black leading-none">{city || 'Select Location'}</span>
-                        <ChevronDown size={14} className="text-zinc-500" />
+                    <div className="flex items-center gap-4">
+                        <Link href="/">
+                            <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-5 w-auto object-contain" />
+                        </Link>
+                        <button
+                            className="flex items-center gap-1.5 active:opacity-75 transition-opacity"
+                            onClick={() => setIsLocationOpen(true)}
+                        >
+                            <MapPin size={15} className="text-zinc-800" />
+                            <span className="text-[14px] font-medium text-black leading-none truncate max-w-[100px]">{city || 'Location'}</span>
+                            <ChevronDown size={14} className="text-[#686868]" />
+                        </button>
                     </div>
                     <div
                         className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
@@ -238,9 +243,9 @@ export default function MobilePlay() {
 
             {/* 8. Bottom Ticpin Pass Banner - image 16 2 */}
             <div className="mt-10 px-[18px] pb-10">
-                <div className="w-full max-w-[327px] aspect-[327/109] rounded-[15px] overflow-hidden mx-auto">
+                <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer">
                     <img src="/ticpin banner.jpg" className="w-full h-full object-cover" alt="Ticpin Pass" />
-                </div>
+                </Link>
             </div>
 
             <LocationModal

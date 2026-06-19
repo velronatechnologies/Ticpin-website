@@ -63,28 +63,35 @@ export default function MobileEvents({ events }: MobileEventsProps) {
     const [likedEventIds, setLikedEventIds] = useState<string[]>([]);
 
     useEffect(() => {
-        // Fetch liked event IDs from backend if logged in
         if (session?.id) {
             fetch('/backend/api/user/likes', { credentials: 'include' })
                 .then(res => res.ok ? res.json() : Promise.reject())
-                .then(data => {
-                    if (data.likedEventIds) {
-                        setLikedEventIds(data.likedEventIds);
+                .then(async (data) => {
+                    let likedIds = data.likedEventIds || data.events || [];
+                    
+                    // Check for pending like
+                    const pendingLikeId = localStorage.getItem('pending_like_event_id');
+                    if (pendingLikeId && !likedIds.includes(pendingLikeId)) {
+                        localStorage.removeItem('pending_like_event_id');
+                        try {
+                            const res = await fetch(`/backend/api/user/likes/${pendingLikeId}`, {
+                                method: 'POST',
+                                credentials: 'include'
+                            });
+                            if (res.ok) {
+                                const toggleData = await res.json();
+                                if (toggleData.liked) {
+                                    likedIds = [...likedIds, pendingLikeId];
+                                    toast.success('Saved to liked events');
+                                }
+                            }
+                        } catch (err) {}
                     }
+                    setLikedEventIds(likedIds);
                 })
-                .catch(() => {
-                    // Fallback to localStorage
-                    try {
-                        const localLiked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                        setLikedEventIds(localLiked.map((e: any) => e.id));
-                    } catch { /* ignore */ }
-                });
+                .catch(() => {});
         } else {
-            // Guest mode: get from localStorage
-            try {
-                const localLiked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                setLikedEventIds(localLiked.map((e: any) => e.id));
-            } catch { /* ignore */ }
+            setLikedEventIds([]);
         }
     }, [session?.id]);
 
@@ -92,37 +99,11 @@ export default function MobileEvents({ events }: MobileEventsProps) {
         e.stopPropagation(); // Don't navigate to event details
         
         if (!session?.id) {
-            // Guest mode logic
-            try {
-                let localLiked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                const isAlreadyLiked = localLiked.some((item: any) => item.id === event.id);
-                
-                if (isAlreadyLiked) {
-                    localLiked = localLiked.filter((item: any) => item.id !== event.id);
-                    setLikedEventIds(prev => prev.filter(id => id !== event.id));
-                    toast.success('Removed from saved events');
-                } else {
-                    localLiked.push({
-                        id: event.id,
-                        name: event.name,
-                        date: event.date,
-                        price_starts_from: event.price_starts_from,
-                        portrait_image_url: event.portrait_image_url,
-                        landscape_image_url: event.landscape_image_url,
-                        city: event.city
-                    });
-                    setLikedEventIds(prev => [...prev, event.id]);
-                    toast.success('Saved to liked events');
-                }
-                localStorage.setItem('liked_events', JSON.stringify(localLiked));
-            } catch (err) {
-                console.error('Error updating local likes:', err);
-                toast.error('Failed to update saved events');
-            }
+            localStorage.setItem('pending_like_event_id', String(event.id));
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
         }
 
-        // Logged in mode logic
         try {
             const res = await fetch(`/backend/api/user/likes/${event.id}`, {
                 method: 'POST',
@@ -137,27 +118,6 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                     setLikedEventIds(prev => prev.filter(id => id !== event.id));
                     toast.success('Removed from saved events');
                 }
-                
-                // Keep local storage in sync for consistency
-                try {
-                    let localLiked = JSON.parse(localStorage.getItem('liked_events') || '[]');
-                    if (data.liked) {
-                        if (!localLiked.some((item: any) => item.id === event.id)) {
-                            localLiked.push({
-                                id: event.id,
-                                name: event.name,
-                                date: event.date,
-                                price_starts_from: event.price_starts_from,
-                                portrait_image_url: event.portrait_image_url,
-                                landscape_image_url: event.landscape_image_url,
-                                city: event.city
-                            });
-                        }
-                    } else {
-                        localLiked = localLiked.filter((item: any) => item.id !== event.id);
-                    }
-                    localStorage.setItem('liked_events', JSON.stringify(localLiked));
-                } catch { /* ignore */ }
             } else {
                 toast.error('Failed to update saved events');
             }
@@ -272,13 +232,18 @@ export default function MobileEvents({ events }: MobileEventsProps) {
     const filteredAndSearchedEvents = useMemo(() => {
         let result = events.filter(e => e.status === 'approved');
 
-        // Location Filter based on active selected city
+        // Location Partitioning based on active selected city (matching city first, then others)
         if (city) {
             const cleanCity = city.split(',')[0].trim().toLowerCase();
-            result = result.filter(e => {
+            const matching = result.filter(e => {
                 const eventCity = (e.city || '').toLowerCase();
                 return eventCity.includes(cleanCity) || cleanCity.includes(eventCity);
             });
+            const nonMatching = result.filter(e => {
+                const eventCity = (e.city || '').toLowerCase();
+                return !(eventCity.includes(cleanCity) || cleanCity.includes(eventCity));
+            });
+            result = [...matching, ...nonMatching];
         }
 
         // Search Query Filter
@@ -328,9 +293,9 @@ export default function MobileEvents({ events }: MobileEventsProps) {
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
                     <div className="flex items-center gap-4">
-                        <Link href="/">
+                        {/* <Link href="/">
                             <Image src="/ticpin-logo-black.png" alt="TICPIN" width={90} height={20} className="h-5 w-auto object-contain" />
-                        </Link>
+                        </Link> */}
                         <button
                             className="flex items-center gap-1.5 active:opacity-75 transition-opacity"
                             onClick={() => setIsLocationOpen(true)}
@@ -472,13 +437,13 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                 <div
                                     className={`w-[89px] h-[120px] rounded-[25px] border flex flex-col items-center pt-[15px] relative transition-all duration-150 ${
                                         isSelected
-                                            ? 'border-[#5331EA] ring-2 ring-[#5331EA]'
+                                            ? 'border-black ring-1 ring-black'
                                             : ''
                                     }`}
                                     style={{ background: cat.bg }}
                                 >
                                     <div className="px-1 text-center">
-                                        <span className={`text-[10px] font-semibold uppercase block leading-tight ${isSelected ? 'text-[#5331EA]' : 'text-black'}`}>
+                                        <span className={`text-[10px] font-semibold uppercase block leading-tight text-black`}>
                                             {cat.name}
                                         </span>
                                     </div>
@@ -597,8 +562,8 @@ export default function MobileEvents({ events }: MobileEventsProps) {
             )}
 
             {/* Ticpin Pass Banner */}
-            <div className="mt-[40px] px-[18px]">
-                <Link href="/my-pass" className="block w-full h-[80px] rounded-[15px] overflow-hidden shadow-sm active:opacity-90 transition-opacity">
+            <div className="mt-[40px] px-[18px] pb-10">
+                <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer shadow-sm active:opacity-90 transition-opacity">
                     <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover" />
                 </Link>
             </div>

@@ -263,6 +263,9 @@ export const bookingApi = {
         const res = await fetch(`${BASE}/bookings/user/history?${params.toString()}`, {
             credentials: 'include',
         });
+        if (res.status === 401) {
+            throw new Error('UNAUTHORIZED');
+        }
         const data = await res.json();
         if (!res.ok) return [];
         return Array.isArray(data) ? data : [];

@@ -10,7 +10,7 @@ type Category = 'events' | 'dining' | 'play';
 
 export default function TiclistsPage() {
     const router = useRouter();
-    const { userSession, sync } = useIdentityStore();
+    const { userSession, sync, logoutUser } = useIdentityStore();
     const [activeTab, setActiveTab] = useState<Category>('events');
     const [isLoading, setIsLoading] = useState(true);
     const [likedData, setLikedData] = useState<{
@@ -33,11 +33,23 @@ export default function TiclistsPage() {
             try {
                 // 1. Get liked IDs from backend
                 const res = await fetch('/backend/api/user/likes', { credentials: 'include' });
-                if (!res.ok) throw new Error('Failed to fetch likes');
-                const likedIds = await res.json();
+                if (res.status === 401) {
+                    logoutUser();
+                    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+                    return;
+                }
+                let likedIds: any = { events: [], play: [], dining: [], likedEventIds: [] };
+                if (res.ok) {
+                    try {
+                        likedIds = await res.json();
+                    } catch (e) {
+                        console.warn('Failed to parse likes JSON, using defaults:', e);
+                    }
+                } else {
+                    console.warn('Likes endpoint returned status:', res.status, 'using default empty likes');
+                }
 
                 // 2. Fetch data for all categories to filter
-                // In a production app, we'd have a specialized "get multiple" endpoint
                 const [eventsRes, playsRes, diningsRes] = await Promise.all([
                     fetch('/backend/api/events').then(r => r.json()).catch(() => ({ data: [] })),
                     fetch('/backend/api/play').then(r => r.json()).catch(() => ({ data: [] })),
@@ -45,13 +57,13 @@ export default function TiclistsPage() {
                 ]);
 
                 const events = (eventsRes.data || []).filter((item: any) => 
-                    likedIds.events.includes(item.id)
+                    (likedIds.events || likedIds.likedEventIds || []).includes(item.id)
                 );
                 const play = (playsRes.data || []).filter((item: any) => 
-                    likedIds.play.includes(item.id)
+                    (likedIds.play || []).includes(item.id)
                 );
                 const dining = (diningsRes.data || []).filter((item: any) => 
-                    likedIds.dining.includes(item.id)
+                    (likedIds.dining || []).includes(item.id)
                 );
 
                 setLikedData({ events, dining, play });
@@ -65,14 +77,6 @@ export default function TiclistsPage() {
         if (userSession) {
             fetchLikes();
         } else {
-            // Check localStorage for guest likes if any
-            try {
-                const guestLikesStr = localStorage.getItem('liked_events');
-                if (guestLikesStr) {
-                    const guestLikes = JSON.parse(guestLikesStr);
-                    setLikedData(prev => ({ ...prev, events: guestLikes }));
-                }
-            } catch (e) {}
             setIsLoading(false);
         }
     }, [userSession]);
@@ -95,17 +99,28 @@ export default function TiclistsPage() {
         </div>
     );
 
+    if (!userSession && !isLoading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center p-4" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                <div className="text-center max-w-md">
+                    <h2 className="text-[34px] font-semibold text-black mb-4">Please log in</h2>
+                    <p className="text-[#686868] text-[20px] mb-8">You need to be logged in to review your Ticlists.</p>
+                    <button 
+                        onClick={() => router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)}
+                        className="px-8 py-4 bg-black text-white rounded-full text-[20px] font-semibold inline-block active:scale-95 transition-transform"
+                    >
+                        Login / Sign Up
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-white md:bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-white md:bg-gray-50 flex flex-col" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white border-b border-zinc-100 px-6 py-5 flex items-center gap-4">
-                <button 
-                    onClick={() => router.back()}
-                    className="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center active:bg-zinc-50"
-                >
-                    <ChevronLeft size={20} className="text-black" />
-                </button>
-                <h1 className="text-[20px] font-bold text-black font-[family-name:var(--font-inter)]">
+            <header className="sticky top-0 z-50 bg-white border-b border-[#E5E5E5] px-6 py-4 flex items-center gap-4">
+                <h1 className="text-[18px] font-semibold text-black leading-none">
                     Ticlists
                 </h1>
             </header>

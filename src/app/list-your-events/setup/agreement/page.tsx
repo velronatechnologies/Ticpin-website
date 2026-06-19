@@ -5,6 +5,7 @@ import SetupSidebar from '@/app/list-your-events/list-your-Setups/SetupSidebar';
 import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { eventsApi } from '@/lib/api/events';
+import { organizerApi } from '@/lib/api/organizer';
 import { getOrganizerSession, updateSessionCategoryStatus } from '@/lib/auth/organizer';
 import { toast } from '@/components/ui/Toast';
 import { AgreementModal } from '@/components/ui/AgreementModal';
@@ -15,10 +16,37 @@ export default function AgreementPage() {
     const router = useRouter();
 
     useEffect(() => {
-        const saved = JSON.parse(sessionStorage.getItem('setup_events') ?? '{}');
-        if (!saved.pan && !saved.prefilled) {
-            router.replace('/list-your-events/setup');
-        }
+        const checkSetup = async () => {
+            let saved = JSON.parse(sessionStorage.getItem('setup_events') ?? '{}');
+            if (!saved.pan && !saved.prefilled) {
+                try {
+                    const setup = await organizerApi.getExistingSetup('events');
+                    if (setup && setup.pan) {
+                        saved = {
+                            prefilled: true,
+                            orgType: setup.orgType || 'individual',
+                            pan: setup.pan,
+                            panName: setup.panName ?? '',
+                            panCardUrl: setup.panCardUrl ?? '',
+                            panFileName: '(pre-filled)',
+                            bankAccountNo: setup.bankAccountNo ?? '',
+                            bankIfsc: setup.bankIfsc ?? '',
+                            bankName: setup.bankName ?? '',
+                            accountHolder: setup.accountHolder ?? '',
+                            gstNumber: setup.gstNumber ?? '',
+                            backupEmail: setup.backupEmail ?? '',
+                            backupPhone: setup.backupPhone ?? '',
+                        };
+                        sessionStorage.setItem('setup_events', JSON.stringify(saved));
+                    } else {
+                        router.replace('/list-your-events/setup');
+                    }
+                } catch (e) {
+                    router.replace('/list-your-events/setup');
+                }
+            }
+        };
+        checkSetup();
     }, [router]);
 
     const handleSign = async (signature: string, signatoryEmail: string, signedAt: string, signedIP: string) => {

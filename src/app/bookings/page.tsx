@@ -5,7 +5,7 @@ import { ArrowLeft, ChevronRight, RefreshCw, Ticket, PlayCircle, Utensils, MapPi
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
-import { useUserSession } from '@/lib/auth/user';
+import { useUserSession, clearUserSession } from '@/lib/auth/user';
 import { bookingApi } from '@/lib/api/booking';
 
 let cachedBookings: any[] | null = null;
@@ -16,21 +16,12 @@ function BookingsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const session = useUserSession();
-    const initialTab = searchParams.get('type') as any;
+    const typeParam = searchParams.get('type') as any;
+    const activeTab = typeParam && ['dining', 'events', 'play'].includes(typeParam) ? typeParam : 'play';
 
-    const [activeTab, setActiveTab] = useState<'dining' | 'events' | 'play'>(
-        initialTab && ['dining', 'events', 'play'].includes(initialTab) ? initialTab : 'play'
-    );
     const [bookings, setBookings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const type = searchParams.get('type') as any;
-        if (type && ['dining', 'events', 'play'].includes(type) && type !== activeTab) {
-            setActiveTab(type);
-        }
-    }, [searchParams, activeTab]);
 
     const tabs = [
         { id: 'dining', label: 'Dining' },
@@ -66,8 +57,13 @@ function BookingsContent() {
             });
             cachedBookings = data || [];
             setBookings(cachedBookings);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to fetch bookings:', err);
+            if (err.message === 'UNAUTHORIZED') {
+                clearUserSession();
+                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+                return;
+            }
             setError('Failed to load bookings. Please try again.');
         } finally {
             setLoading(false);
@@ -115,19 +111,24 @@ function BookingsContent() {
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
             {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-16 md:h-20 bg-white border-b border-[#D9D9D9] z-50">
-                {/* Logo - Fixed left position */}
-                <div className="absolute left-4 md:left-[37px] top-0 bottom-0 flex items-center">
-                    <Link href="/">
-                        <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-6 md:h-7 w-auto" />
-                    </Link>
+            <header className="fixed top-0 left-0 right-0 h-16 md:h-20 bg-white border-b border-[#D9D9D9] z-50 flex items-center px-4 md:px-[37px]">
+                {/* Mobile Header: Title, NO logo */}
+                <div className="flex md:hidden items-center gap-[10px] w-full">
+                    <span className="text-[18px] font-semibold text-black">Review your bookings</span>
                 </div>
 
-                {/* Title - Centered */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <h1 className="text-[20px] md:text-[24px] font-semibold text-black leading-none whitespace-nowrap pointer-events-auto">
-                        Review your bookings
-                    </h1>
+                {/* Desktop Header */}
+                <div className="hidden md:flex items-center justify-between w-full h-full relative">
+                    <div className="flex items-center">
+                        <Link href="/">
+                            <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-7 w-auto" />
+                        </Link>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <h1 className="text-[24px] font-semibold text-black leading-none whitespace-nowrap pointer-events-auto">
+                            Review your bookings
+                        </h1>
+                    </div>
                 </div>
             </header>
 
@@ -138,7 +139,6 @@ function BookingsContent() {
                         <button
                             key={tab.id}
                             onClick={() => {
-                                setActiveTab(tab.id as any);
                                 router.replace(`/bookings?type=${tab.id}`, { scroll: false });
                             }}
                             className={`px-6 md:px-10 py-2 rounded-full text-[15px] md:text-[18px] font-medium transition-all duration-300 whitespace-nowrap ${activeTab === tab.id

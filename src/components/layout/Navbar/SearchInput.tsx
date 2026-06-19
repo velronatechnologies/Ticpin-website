@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { eventsApi } from '@/lib/api/events';
 import { playApi } from '@/lib/api/play';
 import { diningApi } from '@/lib/api/dining';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SearchInputProps {
     isVisible: boolean;
@@ -30,6 +31,9 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
     const allData = useRef<SearchResult[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    
+    // Debounce the query to prevent excessive filtering
+    const debouncedQuery = useDebounce(query, 300);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -51,6 +55,20 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isVisible]);
+
+    // Perform search filtering when debounced query changes
+    useEffect(() => {
+        if (debouncedQuery.trim().length > 0) {
+            const filtered = allData.current.filter(item =>
+                item.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+                item.category?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+                item.location?.toLowerCase().includes(debouncedQuery.toLowerCase())
+            ).slice(0, 8);
+            setResults(filtered);
+        } else {
+            setResults([]);
+        }
+    }, [debouncedQuery]);
 
     const fetchData = async () => {
         if (allData.current.length > 0) return;
@@ -98,18 +116,8 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
+        // Only update the query state. Filtering is handled by the debounced useEffect above.
         setQuery(val);
-
-        if (val.trim().length > 0) {
-            const filtered = allData.current.filter(item =>
-                item.name.toLowerCase().includes(val.toLowerCase()) ||
-                item.category?.toLowerCase().includes(val.toLowerCase()) ||
-                item.location?.toLowerCase().includes(val.toLowerCase())
-            ).slice(0, 8);
-            setResults(filtered);
-        } else {
-            setResults([]);
-        }
     };
 
     const handleResultClick = (result: SearchResult) => {

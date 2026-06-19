@@ -80,7 +80,7 @@ export default function MobileProfile() {
 
     if (!userSession && !organizerSession) {
         return (
-            <div className="md:hidden min-h-screen w-full bg-[#F5F5F5] font-sans px-5 py-6 overflow-x-hidden overflow-y-auto" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+            <div className="md:hidden min-h-screen w-full bg-[#F5F5F5] font-sans px-5 py-6 overflow-x-hidden" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                 <header className="flex items-center gap-[10px] mb-8">
                     <button
                         onClick={() => router.back()}
@@ -114,7 +114,7 @@ export default function MobileProfile() {
     }
 
     return (
-        <div className="md:hidden min-h-screen w-full bg-[#F5F5F5] font-sans px-5 pt-6 pb-20 overflow-x-hidden overflow-y-auto" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+        <div className="md:hidden min-h-screen w-full bg-[#F5F5F5] font-sans px-5 pt-6 pb-20 overflow-x-hidden" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* Header with simple back icon and title */}
             <header className="flex items-center gap-[10px] mb-6">
                 <button

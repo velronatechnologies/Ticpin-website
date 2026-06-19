@@ -12,6 +12,19 @@ interface EventCardProps {
   image: string;
 }
 
+/** Converts a 24-hour "HH:MM" string to "H:MM AM/PM". Returns '' for invalid input. */
+function formatTime(raw: string): string {
+  if (!raw || !raw.includes(':')) return '';
+  const [hStr, mStr] = raw.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return '';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  const mm = m.toString().padStart(2, '0');
+  return `${h12}:${mm} ${ampm}`;
+}
+
 export default function EventCard({
   id = '1',
   name,
@@ -32,6 +45,8 @@ export default function EventCard({
   const displayLocation = venuePart && location
     ? `${venuePart} | ${location}`
     : (venuePart || location);
+
+  const displayTime = formatTime(time);
 
   return (
     <Link href={`/events/${id}`} className="block">
@@ -56,7 +71,7 @@ export default function EventCard({
         </div>
         <div className="px-3 py-5.5 flex flex-col gap-0.5 mt-[-10px]">
           <div className="text-[15px] font-medium text-[#7B2FF7] font-[family-name:var(--font-anek-latin)]" >
-            {date} | {time}
+            {date}{displayTime ? ` | ${displayTime}` : ''}
           </div>
           <h3 className="text-[23px] font-medium text-black line-clamp-1 leading-tight font-[family-name:var(--font-anek-latin)]" style={{ color: 'black' }}>
             {name}

@@ -46,13 +46,18 @@ export default function MobileEvents() {
             {/* 1. Header Section */}
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
-                    <div 
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => setIsLocationOpen(true)}
-                    >
-                        <MapPin size={17} className="text-zinc-800" />
-                        <span className="text-[15px] font-medium text-black leading-none">{city || 'Select Location'}</span>
-                        <ChevronDown size={14} className="text-zinc-500" />
+                    <div className="flex items-center gap-4">
+                        {/* <Link href="/">
+                            <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-5 w-auto object-contain" />
+                        </Link> */}
+                        <button
+                            className="flex items-center gap-1.5 active:opacity-75 transition-opacity"
+                            onClick={() => setIsLocationOpen(true)}
+                        >
+                            <MapPin size={15} className="text-zinc-800" />
+                            <span className="text-[14px] font-medium text-black leading-none truncate max-w-[100px]">{city || 'Location'}</span>
+                            <ChevronDown size={14} className="text-[#686868]" />
+                        </button>
                     </div>
                     <div
                         className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
@@ -98,7 +103,7 @@ export default function MobileEvents() {
 
             {/* Explore Events Section */}
             <section className="mt-[32px]">
-                <h2 className="text-[20px] font-medium text-black mb-[20px] px-[18px]">Explore events</h2>
+                <h2 className="text-[20px] font-medium text-black mb-[20px] px-[18px]">Explore</h2>
                 <div className="grid grid-rows-2 grid-flow-col gap-[15px] overflow-x-auto scrollbar-hide px-[18px] pb-4">
                     {categories.map((cat, i) => (
                         <div key={i} className="flex flex-col items-center gap-[10px] flex-shrink-0 w-[89px]">
@@ -178,8 +183,8 @@ export default function MobileEvents() {
             </div>
 
             {/* Ticpin Pass Banner */}
-            <div className="mt-[40px] px-[18px]">
-                <Link href="/ticpass" className="block w-full h-[109px] rounded-[15px] overflow-hidden">
+            <div className="mt-[40px] px-[18px] pb-10">
+                <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer">
                     <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover" />
                 </Link>
             </div>
