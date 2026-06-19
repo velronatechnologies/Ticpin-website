@@ -42,6 +42,13 @@ export interface OrganizerDetail {
         backupPhone: string;
         updatedAt: string;
         rejectionReason?: string;
+        // Agreement signing
+        signature?: string;
+        signatoryEmail?: string;
+        signedAt?: string;
+        signedIP?: string;
+        agreementPdfUrl?: string;
+
     }>;
     profile: {
         name?: string;

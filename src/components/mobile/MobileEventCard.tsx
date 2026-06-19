@@ -158,7 +158,7 @@ export default function MobileEventCard({
                 <p className="text-[12px] font-medium text-[#5331EA] mb-1.5 uppercase tracking-wide">
                     {formattedDate}
                 </p>
-                <h3 className={`text-[20px] font-medium leading-[1.1] tracking-tight line-clamp-2 transition-colors text-black `}>
+                <h3 className={`text-[20px] font-medium leading-[1.1] tracking-tight line-clamp-2 transition-colors text-black pr-12`}>
                     {name || 'Event Name'}
                 </h3>
                 <p className="text-[12px] font-regular text-[#8E8E8E] mt-2  tracking-wider truncate">

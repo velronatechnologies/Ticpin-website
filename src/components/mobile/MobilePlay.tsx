@@ -255,8 +255,8 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                             }
                         }}
                     >
-                        {session?.profilePhoto ? (
-                            <img src={session.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                        {(session as any)?.profilePhoto ? (
+                            <img src={(session as any).profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
                             <img src="/profile icon.svg" alt="Profile" className="w-6 h-6" />
                         )}

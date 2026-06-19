@@ -53,12 +53,17 @@ export const useEventStore = create<EventState>((set) => ({
         set({ loading: true, error: null });
         try {
             const response = await fetch('/backend/api/events', { credentials: 'include' });
-            if (!response.ok) throw new Error('Failed to fetch events');
+            if (!response.ok) {
+                // Backend offline or error — silently show empty list, no error UI
+                set({ events: [], loading: false });
+                return;
+            }
             const data = await response.json();
             const list = (Array.isArray(data) ? data : []).filter((e: RealEvent) => e.status === 'approved');
             set({ events: list, loading: false });
-        } catch (err: any) {
-            set({ error: err.message, loading: false });
+        } catch {
+            // Network error (backend down) — silently show empty list
+            set({ events: [], loading: false });
         }
     },
 }));

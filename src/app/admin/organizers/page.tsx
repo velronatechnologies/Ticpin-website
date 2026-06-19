@@ -342,21 +342,32 @@ function OrganizerDetailView({ organizerId, onClose, onStatusChange }: {
                                             ))}
                                         </div>
 
-                                        {/* PAN Document Access */}
-                                        {setup.panCardUrl && (
-                                            <div className="mt-8 pt-8 border-t border-[#EEEDFC] flex gap-4">
-                                                <button
-                                                    onClick={() => router.push(`/admin/organizers/${organizerId}/pan-card`)}
-                                                    className="inline-flex items-center gap-3 text-[#5331EA] font-bold text-[16px] bg-[#EEEDFC] px-8 py-3.5 rounded-2xl hover:bg-[#AC9BF7] hover:text-white transition-all shadow-sm"
-                                                >
-                                                    <Shield size={20} /> Manage PAN Card
-                                                </button>
+                                        {/* PAN Document & Agreement Access */}
+                                        {(setup.panCardUrl || setup.signature) && (
+                                            <div className="mt-8 pt-8 border-t border-[#EEEDFC] flex flex-wrap gap-4">
+                                                {setup.panCardUrl && (
+                                                    <button
+                                                        onClick={() => router.push(`/admin/organizers/${organizerId}/pan-card`)}
+                                                        className="inline-flex items-center gap-3 text-[#5331EA] font-bold text-[16px] bg-[#EEEDFC] px-8 py-3.5 rounded-2xl hover:bg-[#AC9BF7] hover:text-white transition-all shadow-sm"
+                                                    >
+                                                        <Shield size={20} /> Manage PAN Card
+                                                    </button>
+                                                )}
+                                                {setup.signature && (
+                                                    <button
+                                                        onClick={() => router.push(`/admin/organizers/${organizerId}/agreement/${setup.category}`)}
+                                                        className="inline-flex items-center gap-3 text-emerald-700 font-bold text-[16px] bg-[#D1FAE5] px-8 py-3.5 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-200"
+                                                    >
+                                                        <CheckCircle size={20} /> View Agreement
+                                                    </button>
+                                                )}
                                                 <div className="flex items-center gap-2 text-[13px] text-zinc-500 bg-white px-4 py-2 rounded-lg">
                                                     <Shield size={16} />
                                                     Secure Admin Access
                                                 </div>
                                             </div>
                                         )}
+
 
                                         {/* Approval Actions */}
                                         <div className="mt-10 pt-8 border-t border-[#EEEDFC] flex gap-4 justify-end">

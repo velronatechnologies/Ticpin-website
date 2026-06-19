@@ -55,9 +55,8 @@ export function useUserPass() {
         } else {
           setUserPass(null);
         }
-      } catch (err) {
-        console.error('Error checking user pass:', err);
-        setError('Failed to check pass status');
+      } catch {
+        // Backend offline — silently treat as no active pass
         setUserPass(null);
       } finally {
         setLoading(false);

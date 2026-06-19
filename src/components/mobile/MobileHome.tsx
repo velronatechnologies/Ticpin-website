@@ -180,10 +180,11 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
 
         fetch('/backend/api/mobile/home')
             .then(res => {
-                if (!res.ok) throw new Error("Failed to fetch mobile data");
+                if (!res.ok) return null; // backend offline — silently skip, no error thrown
                 return res.json();
             })
             .then(data => {
+                if (!data) return;
                 if (data.events && data.events.length > 0 && localEvents.length === 0) {
                     setLocalEvents(data.events);
                 }
@@ -194,7 +195,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     setLocalPlays(data.plays);
                 }
             })
-            .catch(err => console.error("Mobile Home client-side self-healing failed:", err));
+            .catch(() => { /* backend offline — silently ignore */ });
     }, []); // Only run on mount, and only if data is missing
 
     useEffect(() => {
@@ -363,8 +364,8 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                             }
                         }}
                     >
-                        {organizerSession?.profilePhoto ? (
-                            <Image src={organizerSession.profilePhoto} alt="Profile" width={42} height={42} className="object-cover" />
+                        {(organizerSession as any)?.profilePhoto ? (
+                            <Image src={(organizerSession as any).profilePhoto} alt="Profile" width={42} height={42} className="object-cover" />
                         ) : userSession?.profilePhoto ? (
                             <Image src={userSession.profilePhoto} alt="Profile" width={42} height={42} className="object-cover" />
                         ) : (organizerSession || userSession) ? (
@@ -468,7 +469,18 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 <div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
 
                 {/* 4. Categories Section */}
-                <div className="grid grid-cols-2 gap-4 px-1 text-center">
+                <div className="grid grid-cols-3 gap-4 px-1 text-center">
+                    {/* Dining */}
+                    <div className="flex flex-col items-center" onClick={() => router.push('/dining')}>
+                        <div
+                            className="w-full aspect-[106/125] rounded-[25px] border border-[#D9D9D9] flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all duration-300"
+                            style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
+                        >
+                            <img src="/mobile_icons/Dining 1.svg" alt="Dining" className="w-[60%] h-[60%] object-contain" />
+                            <span className="text-[15px] font-medium text-black uppercase tracking-tight">DINING</span>
+                        </div>
+                    </div>
+
                     {/* Events */}
                     <div className="flex flex-col items-center" onClick={() => router.push('/events')}>
                         <div
@@ -500,46 +512,65 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                         {/* Hot Right Now Section */}
                         <section>
                             <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-35px]">HOT RIGHT NOW</h2>
-                            <div
-                                ref={carouselRef}
-                                onScroll={handleScroll}
-                                className="flex gap-6 overflow-x-auto px-32 scrollbar-hide snap-x snap-mandatory items-center py-8"
-                            >
-                                {scrollEvents.length > 0 ? scrollEvents.map((event, idx) => {
-                                    const cardWidth = 280;
-                                    const gap = 24;
-                                    const totalCardWidth = cardWidth + gap;
-                                    const containerWidth = windowWidth;
-                                    const scrollCenter = scrollX + containerWidth / 2;
-                                    const cardCenter = (idx * totalCardWidth) + (cardWidth / 2) + 24;
-                                    const distance = Math.abs(scrollCenter - cardCenter);
-                                    const threshold = totalCardWidth;
-                                    const t = Math.min(distance / threshold, 1);
-                                    const scale = 1.1 - t * 0.10;
-                                    const opacity = 1 - t * 0;
+                            {scrollEvents.length === 1 ? (
+                                <div className="flex justify-center items-center py-8 overflow-hidden w-full">
+                                    <MobileEventCard
+                                        key={scrollEvents[0].id}
+                                        id={scrollEvents[0].id}
+                                        name={scrollEvents[0].name}
+                                        date={scrollEvents[0].date}
+                                        time={scrollEvents[0].time}
+                                        location={scrollEvents[0].location}
+                                        venue_name={scrollEvents[0].venue_name}
+                                        city={scrollEvents[0].city}
+                                        portrait_image_url={scrollEvents[0].portrait_image_url}
+                                        price_starts_from={scrollEvents[0].price_starts_from}
+                                        scale={1.1}
+                                        opacity={1}
+                                    />
+                                </div>
+                            ) : (
+                                <div
+                                    ref={carouselRef}
+                                    onScroll={handleScroll}
+                                    className="flex gap-6 overflow-x-auto px-32 scrollbar-hide snap-x snap-mandatory items-center py-8"
+                                >
+                                    {scrollEvents.length > 0 ? scrollEvents.map((event, idx) => {
+                                        const cardWidth = 280;
+                                        const gap = 24;
+                                        const totalCardWidth = cardWidth + gap;
+                                        const containerWidth = windowWidth;
+                                        const scrollCenter = scrollX + containerWidth / 2;
+                                        const cardCenter = (idx * totalCardWidth) + (cardWidth / 2) + 24;
+                                        const distance = Math.abs(scrollCenter - cardCenter);
+                                        const threshold = totalCardWidth;
+                                        const t = Math.min(distance / threshold, 1);
+                                        const scale = 1.1 - t * 0.10;
+                                        const opacity = 1 - t * 0;
 
-                                    return (
-                                        <MobileEventCard
-                                            key={`${event.id}-${idx}`}
-                                            id={event.id}
-                                            name={event.name}
-                                            date={event.date}
-                                            time={event.time}
-                                            location={event.location}
-                                            venue_name={event.venue_name}
-                                            city={event.city}
-                                            portrait_image_url={event.portrait_image_url}
-                                            price_starts_from={event.price_starts_from}
-                                            scale={scale}
-                                            opacity={opacity}
-                                        />
-                                    );
-                                }) : (
-                                    <div className="w-full flex items-center justify-center py-10">
-                                        <p className="text-zinc-400 text-[14px]">No events available</p>
-                                    </div>
-                                )}
-                            </div>
+                                        return (
+                                            <MobileEventCard
+                                                key={`${event.id}-${idx}`}
+                                                id={event.id}
+                                                name={event.name}
+                                                date={event.date}
+                                                time={event.time}
+                                                location={event.location}
+                                                venue_name={event.venue_name}
+                                                city={event.city}
+                                                portrait_image_url={event.portrait_image_url}
+                                                price_starts_from={event.price_starts_from}
+                                                scale={scale}
+                                                opacity={opacity}
+                                            />
+                                        );
+                                    }) : (
+                                        <div className="w-full flex items-center justify-center py-10">
+                                            <p className="text-zinc-400 text-[14px]">No events available</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </section>
 
 
@@ -573,22 +604,47 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     </>
                 )}
 
-                {localPlays && localPlays.length > 0 && (
-                    <>
-                        {/* Play Near You Section */}
-                        <section>
-                            <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]">PLAY NEAR YOU</h2>
+                {/* In Limelight Section */}
+                {localDinings && localDinings.length > 0 && (
+                    <section>
+                        <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]">IN LIMELIGHT</h2>
+                        {scrollLimelight.length === 1 ? (
+                            <div className="flex justify-center items-center py-4 mt-[-30px] overflow-hidden w-full">
+                                <div
+                                    onClick={() => router.push(`/dining/venue/${encodeURIComponent(scrollLimelight[0].name)}`)}
+                                    className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] overflow-hidden cursor-pointer active:scale-95 transition-all duration-150"
+                                    style={{ transform: 'scale(1.05)', opacity: 1 }}
+                                >
+                                    <div className="w-full aspect-[326/182] bg-zinc-100 relative">
+                                        {scrollLimelight[0].landscape_image_url || scrollLimelight[0].portrait_image_url ? (
+                                            <img src={scrollLimelight[0].landscape_image_url || scrollLimelight[0].portrait_image_url} alt={scrollLimelight[0].name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center text-zinc-300 font-bold tracking-widest text-xs">DINING PREVIEW</div>
+                                        )}
+                                    </div>
+                                    <div className="p-5 flex justify-between items-end bg-white">
+                                        <div>
+                                            <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2">{scrollLimelight[0].name}</h3>
+                                            <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest">{scrollLimelight[0].city || 'LOCATION'}</p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-400">
+                                            <ChevronRight size={18} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
                             <div
-                                ref={playRef}
-                                onScroll={handlePlayScroll}
-                                className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-4"
+                                ref={limelightRef}
+                                onScroll={handleLimelightScroll}
+                                className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-4 mt-[-30px]"
                             >
-                                {scrollPlay.length > 0 ? scrollPlay.map((item, idx) => {
+                                {scrollLimelight.map((item, idx) => {
                                     const cardWidth = 326;
                                     const gap = 24;
                                     const totalCardWidth = cardWidth + gap;
                                     const containerWidth = windowWidth;
-                                    const scrollCenter = playScrollX + containerWidth / 2;
+                                    const scrollCenter = limelightScrollX + containerWidth / 2;
                                     const cardCenter = (idx * totalCardWidth) + (cardWidth / 2) + 24;
 
                                     const distance = Math.abs(scrollCenter - cardCenter);
@@ -600,59 +656,168 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
 
                                     return (
                                         <div
-                                            key={`play-${idx}`}
-                                            onClick={() => router.push(`/play/${encodeURIComponent(item.name)}`)}
-                                            className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden p-[1px] cursor-pointer active:scale-95"
+                                            key={`limelight-${idx}`}
+                                            onClick={() => router.push(`/dining/venue/${encodeURIComponent(item.name)}`)}
+                                            className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden cursor-pointer active:scale-95"
                                             style={{
                                                 transform: `scale(${scale})`,
                                                 opacity: opacity
                                             }}
                                         >
-                                            {/* Top Image Section */}
-                                            <div className="w-full aspect-[326/182] rounded-t-[19px] relative bg-zinc-100">
-                                                {item.landscape_image_url ? (
-                                                    <img src={item.landscape_image_url} alt={item.name} className="w-full h-full object-cover rounded-t-[19px]" />
+                                            <div className="w-full aspect-[326/182] bg-zinc-100 relative">
+                                                {item.landscape_image_url || item.portrait_image_url ? (
+                                                    <img src={item.landscape_image_url || item.portrait_image_url} alt={item.name} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="absolute inset-0 flex items-center justify-center text-zinc-400 font-bold uppercase tracking-widest text-xs">TURF IMAGE</div>
+                                                    <div className="absolute inset-0 flex items-center justify-center text-zinc-300 font-bold tracking-widest text-xs">DINING PREVIEW</div>
                                                 )}
                                             </div>
-
-                                            {/* Horizontal Divider */}
-                                            <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
-
-                                            {/* Bottom Details Section */}
-                                            <div className="p-5 flex justify-between items-center bg-white rounded-b-[19px]">
-                                                <div className="flex flex-col gap-1">
-                                                    <h3 className="text-[19px] font-medium text-black uppercase leading-none">
-                                                        {item.name}
-                                                    </h3>
-                                                    <div className="flex items-center gap-1.5 -ml-0.5">
-                                                        <span className="text-[14px] font-medium text-[#866BFF] tracking-tighter">{item.rating || '--'}</span>
-                                                        <Star size={12} className="text-[#866BFF] fill-[#866BFF]" />
-                                                    </div>
-                                                    <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-tight">
-                                                        {item.city || 'LOCATION'}
-                                                    </p>
+                                            <div className="p-5 flex justify-between items-end bg-white">
+                                                <div>
+                                                    <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2">{item.name}</h3>
+                                                    <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest">{item.city || 'LOCATION'}</p>
                                                 </div>
-                                                <button
-                                                    className="h-[42px] px-3 bg-black text-white text-[24px] font-medium rounded-[10px] uppercase transition-transform active:scale-95 leading-none flex items-center justify-center mb-5"
-                                                    style={{ fontFamily: "var(--font-anek-tamil-condensed), sans-serif" }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        router.push(`/play/${encodeURIComponent(item.name)}/book`);
-                                                    }}
-                                                >
-                                                    BOOK SLOTS
-                                                </button>
+                                                <div className="w-8 h-8 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-400">
+                                                    <ChevronRight size={18} />
+                                                </div>
                                             </div>
                                         </div>
                                     );
-                                }) : (
-                                    <div className="w-full flex items-center justify-center py-10">
-                                        <p className="text-zinc-400 text-[14px]">No play venues available</p>
-                                    </div>
-                                )}
+                                })}
                             </div>
+                        )}
+                    </section>
+                )}
+
+
+
+                {localPlays && localPlays.length > 0 && (
+                    <>
+                        {/* Play Near You Section */}
+                        <section>
+                            <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]">PLAY NEAR YOU</h2>
+                            {scrollPlay.length === 1 ? (
+                                <div className="flex justify-center items-center py-4 overflow-hidden w-full">
+                                    <div
+                                        onClick={() => router.push(`/play/${encodeURIComponent(scrollPlay[0].name)}`)}
+                                        className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] overflow-hidden p-[1px] cursor-pointer active:scale-95 transition-all duration-150"
+                                        style={{ transform: 'scale(1.05)', opacity: 1 }}
+                                    >
+                                        {/* Top Image Section */}
+                                        <div className="w-full aspect-[326/182] rounded-t-[19px] relative bg-zinc-100">
+                                            {scrollPlay[0].landscape_image_url ? (
+                                                <img src={scrollPlay[0].landscape_image_url} alt={scrollPlay[0].name} className="w-full h-full object-cover rounded-t-[19px]" />
+                                            ) : (
+                                                <div className="absolute inset-0 flex items-center justify-center text-zinc-400 font-bold uppercase tracking-widest text-xs">TURF IMAGE</div>
+                                            )}
+                                        </div>
+
+                                        {/* Horizontal Divider */}
+                                        <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
+
+                                        {/* Bottom Details Section */}
+                                        <div className="p-5 flex justify-between items-center bg-white rounded-b-[19px]">
+                                            <div className="flex flex-col gap-1">
+                                                <h3 className="text-[19px] font-medium text-black uppercase leading-none">
+                                                    {scrollPlay[0].name}
+                                                </h3>
+                                                <div className="flex items-center gap-1.5 -ml-0.5">
+                                                    <span className="text-[14px] font-medium text-[#866BFF] tracking-tighter">{scrollPlay[0].rating || '--'}</span>
+                                                    <Star size={12} className="text-[#866BFF] fill-[#866BFF]" />
+                                                </div>
+                                                <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-tight">
+                                                    {scrollPlay[0].city || 'LOCATION'}
+                                                </p>
+                                            </div>
+                                            <button
+                                                className="h-[42px] px-3 bg-black text-white text-[24px] font-medium rounded-[10px] uppercase transition-transform active:scale-95 leading-none flex items-center justify-center mb-5"
+                                                style={{ fontFamily: "var(--font-anek-tamil-condensed), sans-serif" }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/play/${encodeURIComponent(scrollPlay[0].name)}/book`);
+                                                }}
+                                            >
+                                                BOOK SLOTS
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div
+                                    ref={playRef}
+                                    onScroll={handlePlayScroll}
+                                    className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-4"
+                                >
+                                    {scrollPlay.length > 0 ? scrollPlay.map((item, idx) => {
+                                        const cardWidth = 326;
+                                        const gap = 24;
+                                        const totalCardWidth = cardWidth + gap;
+                                        const containerWidth = windowWidth;
+                                        const scrollCenter = playScrollX + containerWidth / 2;
+                                        const cardCenter = (idx * totalCardWidth) + (cardWidth / 2) + 24;
+
+                                        const distance = Math.abs(scrollCenter - cardCenter);
+                                        const threshold = totalCardWidth;
+                                        const t = Math.min(distance / threshold, 1);
+
+                                        const scale = 1.05 - t * 0.05;
+                                        const opacity = 1 - t * 0.2;
+
+                                        return (
+                                            <div
+                                                key={`play-${idx}`}
+                                                onClick={() => router.push(`/play/${encodeURIComponent(item.name)}`)}
+                                                className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden p-[1px] cursor-pointer active:scale-95"
+                                                style={{
+                                                    transform: `scale(${scale})`,
+                                                    opacity: opacity
+                                                }}
+                                            >
+                                                {/* Top Image Section */}
+                                                <div className="w-full aspect-[326/182] rounded-t-[19px] relative bg-zinc-100">
+                                                    {item.landscape_image_url ? (
+                                                        <img src={item.landscape_image_url} alt={item.name} className="w-full h-full object-cover rounded-t-[19px]" />
+                                                    ) : (
+                                                        <div className="absolute inset-0 flex items-center justify-center text-zinc-400 font-bold uppercase tracking-widest text-xs">TURF IMAGE</div>
+                                                    )}
+                                                </div>
+
+                                                {/* Horizontal Divider */}
+                                                <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
+
+                                                {/* Bottom Details Section */}
+                                                <div className="p-5 flex justify-between items-center bg-white rounded-b-[19px]">
+                                                    <div className="flex flex-col gap-1">
+                                                        <h3 className="text-[19px] font-medium text-black uppercase leading-none">
+                                                            {item.name}
+                                                        </h3>
+                                                        <div className="flex items-center gap-1.5 -ml-0.5">
+                                                            <span className="text-[14px] font-medium text-[#866BFF] tracking-tighter">{item.rating || '--'}</span>
+                                                            <Star size={12} className="text-[#866BFF] fill-[#866BFF]" />
+                                                        </div>
+                                                        <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-tight">
+                                                            {item.city || 'LOCATION'}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        className="h-[42px] px-3 bg-black text-white text-[24px] font-medium rounded-[10px] uppercase transition-transform active:scale-95 leading-none flex items-center justify-center mb-5"
+                                                        style={{ fontFamily: "var(--font-anek-tamil-condensed), sans-serif" }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/play/${encodeURIComponent(item.name)}/book`);
+                                                        }}
+                                                    >
+                                                        BOOK SLOTS
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    }) : (
+                                        <div className="w-full flex items-center justify-center py-10">
+                                            <p className="text-zinc-400 text-[14px]">No play venues available</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </section>
                     </>
                 )}
@@ -664,6 +829,9 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                         className="w-full rounded-[15px] overflow-hidden relative h-[80px] mt-[-25px] block active:scale-[0.98] transition-transform"
                     >
                         <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                            <span className="text-white text-[18px] font-bold tracking-widest uppercase border-2 border-white/60 px-4 py-1 rounded-[8px] bg-black/20 font-[family-name:var(--font-anek-latin)]">COMING SOON</span>
+                        </div>
                     </button>
                 </div>
             </main>

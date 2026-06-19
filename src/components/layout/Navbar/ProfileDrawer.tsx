@@ -199,7 +199,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                 {isAdmin ? 'Admin' : (activeRole === 'organizer' ? (organizerProfile?.name || 'Organizer') : (userSession?.name || 'User'))}
                             </h3>
                             <p className="text-zinc-500 text-[14px] truncate">
-                                {activeRole === 'organizer' ? (session?.email || '+91 9887654356') : (userSession?.phone || userSession?.email || '+91 9887654356')}
+                                {activeRole === 'organizer' ? (session?.email || '') : (userSession?.phone || userSession?.email || '')}
                             </p>
                         </div>
                     </div>
@@ -294,46 +294,6 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                     <ChevronRight size={18} className="text-zinc-400" />
                                 </button>
 
-                                {!isAdmin && pass && pass.status === 'active' && (
-                                    <div
-                                        onClick={() => navigateTo('/pass')}
-                                        className="relative w-full h-[110px] rounded-[30px] overflow-hidden cursor-pointer active:scale-[0.98] transition-all group border-2 border-white/50 shadow-lg shadow-[#7B2FF7]/20"
-                                        style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #3A1A8C 100%)' }}
-                                    >
-                                        {/* Grid Pattern */}
-                                        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
-
-                                        <div className="flex items-center h-full px-5 gap-5 relative z-10">
-                                            {/* Logo Section */}
-                                            <div className="shrink-0 flex flex-col items-center">
-                                                <span className="text-[9px] font-black tracking-[0.2em] text-white/60 mb-0.5 leading-none uppercase">TICPIN</span>
-                                                <span className="text-[26px] font-black tracking-widest text-white leading-none italic">PASS</span>
-                                            </div>
-
-                                            {/* Separator */}
-                                            <div className="w-[1px] h-12 bg-white/20" />
-
-                                            {/* Benefits Counters */}
-                                            <div className="flex-1 flex justify-around">
-                                                <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-[16px] w-[60px] h-[60px] border border-white/10">
-                                                    <span className="text-[18px] font-black text-white leading-none">{pass.benefits?.turf_bookings?.remaining || 0}</span>
-                                                    <div className="w-5 h-[1px] bg-white/20 my-1" />
-                                                    <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest">Play</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-[16px] w-[60px] h-[60px] border border-white/10">
-                                                    <span className="text-[18px] font-black text-white leading-none">{pass.benefits?.dining_vouchers?.remaining || 0}</span>
-                                                    <div className="w-5 h-[1px] bg-white/20 my-1" />
-                                                    <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest">Dining</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-[16px] w-[60px] h-[60px] border border-white/10">
-                                                    <span className="text-[18px] font-black text-white leading-none">{pass.benefits?.events_discount_active ? 'YES' : 'NO'}</span>
-                                                    <div className="w-5 h-[1px] bg-white/20 my-1" />
-                                                    <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest">Events</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
 
                                 <div className="space-y-3">
                                     <h4 className="text-[13px] font-bold text-zinc-400  tracking-widest px-1" style={{ letterSpacing: '0px' }}>Support</h4>
@@ -446,27 +406,12 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                 {isAdmin ? 'Admin' : (activeRole === 'organizer' ? (organizerProfile?.name || 'Organizer') : (userSession?.name || 'User'))}
                             </h2>
                             <p className="text-[15px] font-normal text-black leading-none">
-                                {activeRole === 'organizer' ? (session?.email || '+91 9887654356') : (userSession?.phone || userSession?.email || '+91 9887654356')}
+                                {activeRole === 'organizer' ? (session?.email || '') : (userSession?.phone || userSession?.email || '')}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {!isAdmin && pass && pass.status === 'active' && (
-                    <div 
-                        onClick={() => navigateTo('/my-pass')}
-                        className="relative w-full h-[64px] rounded-[15px] overflow-hidden cursor-pointer active:scale-[0.98] transition-all group border border-[#D0D0D0] mb-[20px] shadow-sm flex items-center px-4 justify-between"
-                        style={{ background: 'linear-gradient(135deg, #7B2FF7 0%, #3A1A8C 100%)' }}
-                    >
-                        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
-                        <div className="flex items-center gap-3 relative z-10">
-                            <span className="text-[16px] font-black tracking-widest text-white leading-none italic">TICPIN PASS</span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="text-[11px] text-white/70 font-semibold uppercase tracking-wider">Active</span>
-                        </div>
-                        <ChevronRight size={18} className="text-white relative z-10" />
-                    </div>
-                )}
 
                 {activeRole === 'organizer' ? (
                     /* Mobile Organizer View */
