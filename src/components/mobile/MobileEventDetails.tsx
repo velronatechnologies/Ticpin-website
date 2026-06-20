@@ -1,17 +1,14 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, Hourglass, X, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
-import dynamic from 'next/dynamic';
 import { toast } from '@/components/ui/Toast';
 import { bookingApi } from '@/lib/api/booking';
-
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
-
+import { getMinPrice } from '@/lib/utils';
 
 interface OfferRecord {
     id: string;
@@ -68,6 +65,7 @@ interface MobileEventDetailsProps {
             gates_open_before?: boolean;
             gates_open_before_value?: number;
             gates_open_before_unit?: string;
+            facilities?: string[];
         };
         faqs?: { question: string; answer: string }[];
         terms?: string;
@@ -80,15 +78,13 @@ interface MobileEventDetailsProps {
     offers: OfferRecord[];
 }
 
-import { getMinPrice } from '@/lib/utils';
-
 export default function MobileEventDetails({ event, offers }: MobileEventDetailsProps) {
     const router = useRouter();
     const session = useUserSession();
 
     const bookingStatus = useMemo(() => {
         if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
-        
+
         if (event.is_sales_paused || event.is_canceled) {
             return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
         }
@@ -107,28 +103,29 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
             }
         }
-        
+
         if (event.ticket_close_date) {
             const closeDate = new Date(event.ticket_close_date);
             if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
                 return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
             }
         }
-        
+
         if (event.event_end_date) {
             const endDate = new Date(event.event_end_date);
             if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
                 return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
             }
         }
-        
+
         return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
     }, [event]);
 
     const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [showFullDesc, setShowFullDesc] = useState(false);
+    const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+    const [isThingsToKnowOpen, setIsThingsToKnowOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [animateLike, setAnimateLike] = useState(false);
 
@@ -146,17 +143,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     .then(data => {
                         setIsLiked(data.liked);
                         if (data.liked) {
-                            toast.success('Saved to liked events');
+                            // toast.success('Saved to liked events');
                             setAnimateLike(true);
                             setTimeout(() => setAnimateLike(false), 400);
                         }
                     })
-                    .catch(() => {});
+                    .catch(() => { });
             } else {
                 fetch(`/backend/api/user/likes/${event.id}`, { credentials: 'include' })
                     .then(res => res.ok ? res.json() : Promise.reject())
                     .then(data => setIsLiked(data.liked))
-                    .catch(() => {});
+                    .catch(() => { });
             }
         } else {
             setIsLiked(false);
@@ -179,11 +176,11 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 const data = await res.json();
                 setIsLiked(data.liked);
                 if (data.liked) {
-                    toast.success('Saved to liked events');
+                    // toast.success('Saved to liked events');
                     setAnimateLike(true);
                     setTimeout(() => setAnimateLike(false), 400);
                 } else {
-                    toast.success('Removed from saved events');
+                    // toast.success('Removed from saved events');
                 }
             } else {
                 toast.error('Failed to update saved events.');
@@ -229,7 +226,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             return;
         }
         if (!session) {
-            setIsLoginModalOpen(true);
+            router.push(`/login?redirect=${encodeURIComponent(`/events/${encodeURIComponent(event.name)}/book`)}`);
             return;
         }
         router.push(`/events/${encodeURIComponent(event.name)}/book`);
@@ -247,6 +244,20 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             if (isNaN(d.getTime())) return event.date;
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        } catch {
+            return event.date;
+        }
+    }, [event.date]);
+
+    // Format date nicely with day of week
+    const fullFormattedDate = useMemo(() => {
+        if (!event.date) return 'Date TBA';
+        try {
+            const d = new Date(event.date);
+            if (isNaN(d.getTime())) return event.date;
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
         } catch {
             return event.date;
         }
@@ -274,14 +285,77 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const displayTime = formatTime(event.time) || 'Time TBA';
     const displayPrice = minPrice > 0 ? `₹${minPrice}` : 'TBA';
 
-    // Get languages from guide
+    const displayGatesOpenTime = useMemo(() => {
+        if (!event.time) return 'TBA';
+        try {
+            const [hStr, mStr] = event.time.split(':');
+            let h = parseInt(hStr, 10);
+            let m = parseInt(mStr, 10);
+            if (isNaN(h) || isNaN(m)) return formatTime(event.time) || 'TBA';
+
+            // Subtract gates open before value (default 30 mins)
+            const subtractMins = event.guide?.gates_open_before_value || 30;
+            let totalMins = h * 60 + m - subtractMins;
+            if (totalMins < 0) totalMins += 24 * 60;
+
+            const newH = Math.floor(totalMins / 60) % 24;
+            const newM = totalMins % 60;
+
+            const ampm = newH >= 12 ? 'PM' : 'AM';
+            const h12 = newH % 12 || 12;
+            const mm = newM.toString().padStart(2, '0');
+            return `${h12}:${mm} ${ampm}`;
+        } catch {
+            return formatTime(event.time) || 'TBA';
+        }
+    }, [event.time, event.guide?.gates_open_before_value]);
+
+    const displayEndTime = useMemo(() => {
+        if (!event.time) return 'TBA';
+        try {
+            const [hStr, mStr] = event.time.split(':');
+            let h = parseInt(hStr, 10);
+            let m = parseInt(mStr, 10);
+            if (isNaN(h) || isNaN(m)) return 'TBA';
+
+            let durationMins = 0;
+            const dur = (event.duration || '').toLowerCase();
+
+            if (dur.includes('hour') || dur.includes('hr')) {
+                const match = dur.match(/([\d.]+)/);
+                if (match) durationMins = parseFloat(match[1]) * 60;
+            } else if (dur.includes('min')) {
+                const match = dur.match(/(\d+)/);
+                if (match) durationMins = parseInt(match[1], 10);
+            } else if (dur.includes('h') || dur.includes('m')) {
+                const hMatch = dur.match(/(\d+)h/);
+                const mMatch = dur.match(/(\d+)m/);
+                if (hMatch) durationMins += parseInt(hMatch[1], 10) * 60;
+                if (mMatch) durationMins += parseInt(mMatch[1], 10);
+            } else {
+                const match = dur.match(/(\d+)/);
+                if (match) durationMins = parseInt(match[1], 10);
+            }
+
+            if (durationMins <= 0) return 'TBA';
+
+            let totalMins = h * 60 + m + durationMins;
+            const newH = Math.floor(totalMins / 60) % 24;
+            const newM = Math.round(totalMins % 60);
+
+            const ampm = newH >= 12 ? 'PM' : 'AM';
+            const h12 = newH % 12 || 12;
+            const mm = newM.toString().padStart(2, '0');
+            return `${h12}:${mm} ${ampm}`;
+        } catch {
+            return 'TBA';
+        }
+    }, [event.time, event.duration]);
+
     const languages = event.guide?.languages?.join(', ') || event.language || null;
-    // Get min age from guide
     const minAge = event.guide?.min_age || event.age_limit || null;
-    // Get ticket required age threshold
     const ticketRequiredAboveAge = event.guide?.ticket_required_above_age || null;
 
-    // Process description - render HTML properly
     const processedDesc = useMemo(() => {
         if (!event.description) return { html: '', plain: '', isLong: false };
         const sanitized = DOMPurify.sanitize(event.description);
@@ -293,18 +367,35 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         };
     }, [event.description]);
 
+    const googleMapUrl = useMemo(() => {
+        const query = event.venue_address || event.venue_name || event.city;
+        return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
+    }, [event.venue_address, event.venue_name, event.city]);
+
+    const eventTags = useMemo(() => {
+        const tags: string[] = [];
+        if (event.category) tags.push(event.category);
+        if (event.event_category && event.event_category !== event.category) tags.push(event.event_category);
+        if (event.language) tags.push(event.language);
+        if (event.age_limit) tags.push(event.age_limit);
+        if (event.guide?.venue_type) tags.push(event.guide.venue_type);
+        if (event.guide?.audience_type) tags.push(event.guide.audience_type);
+        return tags.map(t => t.toUpperCase());
+    }, [event.category, event.event_category, event.language, event.age_limit, event.guide?.venue_type, event.guide?.audience_type]);
+
     return (
         <div className="md:hidden min-h-screen w-full bg-[#EAEAEA] font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-            {/* 1. Top Image Section */}
+            {/* 1. Top Image Section - 10.1 1 */}
             <div className="relative w-full h-[536px] bg-[#110D2C] shrink-0">
-                {event.landscape_image_url || event.portrait_image_url ? (
+                {event.portrait_image_url || event.landscape_image_url ? (
                     <img
-                        src={event.landscape_image_url || event.portrait_image_url!}
+                        src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
                         alt={event.name}
                         className="w-full h-full object-cover"
                     />
                 ) : (
                     <div className="w-full h-full p-6 flex flex-col items-center justify-center relative bg-[#110D2C]">
+                        {/* Reusing the fancy background from MobileHome */}
                         <div className="absolute inset-0 opacity-40">
                             <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
                         </div>
@@ -322,23 +413,18 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 )}
 
                 {/* Overlaid Buttons */}
-                <div className="absolute top-6 left-4 flex gap-2">
-                    <button onClick={() => router.back()} className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md">
-                        <ChevronLeft size={20} className="text-black" />
-                    </button>
-                </div>
+
 
                 <div className="absolute top-6 right-4 flex gap-3">
                     <button
                         onClick={handleLikeToggle}
-                        className={`w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
-                            animateLike ? 'scale-125 rotate-12 bg-red-50' : 'active:scale-90'
-                        }`}
+                        className={`w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${animateLike ? 'scale-125 rotate-12 bg-red-50' : 'active:scale-90'
+                            }`}
                     >
                         <img
                             src="/mobile_icons/event clicking/Vector 1.svg"
                             alt="Like"
-                            className={`w-4 h-4 transition-all duration-300 ${animateLike ? 'scale-110' : ''}`}
+                            className={`w-4 h-4 transition-all duration-300 ${animateLike ? 'animate-bounce' : ''}`}
                             style={{ filter: isLiked ? 'invert(27%) sepia(100%) saturate(7000%) hue-rotate(0deg) brightness(95%) contrast(110%)' : 'none' }}
                         />
                     </button>
@@ -347,14 +433,14 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     </button>
                 </div>
 
-                {/* Progress Indicators */}
+                {/* Progress Indicators - Ellipse 32, 33 */}
                 <div className="absolute bottom-[24px] left-0 right-0 flex justify-center gap-1.5 z-20">
                     <div className="w-1 h-1 rounded-full bg-white shadow-sm" />
                     <div className="w-1 h-1 rounded-full bg-[#686868]" />
                 </div>
             </div>
 
-            {/* 2. Content Section */}
+            {/* 2. Content Section - Rectangle 320 */}
             <div className="relative -mt-[11px] w-full bg-white rounded-t-[15px] px-6 pt-6 pb-32 min-h-[1000px]">
                 {/* Event Name & Date */}
                 <div className="mb-6">
@@ -362,19 +448,22 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                         {event.name}
                     </h1>
                     <p className="text-[15px] font-medium text-[#5331EA]" style={{ lineHeight: '16px' }}>
-                        {formattedDate} | {displayTime}
+                        {formattedDate} {displayTime}
                     </p>
                 </div>
 
                 {/* Venue & Gates Open */}
                 <div className="space-y-4 mb-10">
-                    <div className="flex items-center justify-between group">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                    <div
+                        onClick={() => googleMapUrl && window.open(googleMapUrl, '_blank')}
+                        className={`flex items-start justify-between group ${googleMapUrl ? 'cursor-pointer' : ''}`}
+                    >
+                        <div className="flex items-start gap-4 flex-1 min-w-0 pr-2">
+                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
                                 <MapPin size={20} className="text-black opacity-70" />
                             </div>
-                            <div>
-                                <p className="text-[15px] font-medium text-black leading-tight">
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[15px] font-medium text-black leading-tight break-words">
                                     {(() => {
                                         const firstPart = event.venue_address ? event.venue_address.split(',')[0].trim() : event.venue_name;
                                         if (firstPart && event.city) {
@@ -383,177 +472,131 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                         return firstPart || event.city || 'Venue TBA';
                                     })()}
                                 </p>
-                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">{event.venue_address || 'Location TBA'}</p>
+                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider break-words mt-1">{event.venue_address || 'Location TBA'}</p>
                             </div>
                         </div>
-                        <ChevronRight size={18} className="text-[#686868]" />
+                        <ChevronRight size={18} className="text-[#686868] shrink-0 mt-3" />
                     </div>
 
                     <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
-
-                    <div className="flex items-center justify-between group">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
+                    <div
+                        onClick={() => setIsTimelineOpen(true)}
+                        className="flex items-start justify-between group cursor-pointer"
+                    >
+                        <div className="flex items-start gap-4 flex-1 min-w-0 pr-2">
+                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
                                 <Clock size={20} className="text-black opacity-70" />
                             </div>
-                            <div>
-                                <p className="text-[15px] font-medium text-black leading-tight">{displayTime}</p>
-                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">
-                                    {event.duration ? `Duration: ${event.duration}` : 'View full schedule & timeline'}
-                                </p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[15px] font-medium text-black leading-tight">Gates Open: {displayGatesOpenTime}</p>
+                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider mt-1">View full schedule & timeline</p>
                             </div>
                         </div>
-                        <ChevronRight size={18} className="text-[#686868]" />
+                        <ChevronRight size={18} className="text-[#686868] shrink-0 mt-3" />
                     </div>
+                </div>
 
-                    {event.guide?.gates_open_before && (
-                        <>
-                            <div className="w-full h-[0.5px] bg-[#AEAEAE]" />
-                            <div className="flex items-center justify-between group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                        <Clock size={20} className="text-black opacity-70" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[15px] font-medium text-black leading-tight">
-                                            Gates Open: {event.guide.gates_open_before_value || 30} {event.guide.gates_open_before_unit || 'mins'} before
-                                        </p>
-                                        <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider">
-                                            Please arrive early for security check
-                                        </p>
-                                    </div>
-                                </div>
-                                <ChevronRight size={18} className="text-[#686868]" />
-                            </div>
-                        </>
+                {/* About the event */}
+                <div className="mb-12">
+                    <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
+
+                    {processedDesc.plain && (
+                        <div
+                            className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-4 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
+                            dangerouslySetInnerHTML={{ __html: processedDesc.html }}
+                        />
+                    )}
+                    {processedDesc.isLong && (
+                        <button
+                            onClick={() => setShowFullDesc(!showFullDesc)}
+                            className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none mt-2"
+                        >
+                            {showFullDesc ? 'Show less' : 'Read more'}
+                            <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
+                        </button>
                     )}
                 </div>
 
-                 {/* About the event — render HTML properly */}
-                 {processedDesc.plain && (
-                     <div className="mb-12">
-                         <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
-                         <div
-                             className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-4 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
-                             dangerouslySetInnerHTML={{ __html: processedDesc.html }}
-                         />
-                         {processedDesc.isLong && (
-                             <button
-                                 onClick={() => setShowFullDesc(!showFullDesc)}
-                                 className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
-                             >
-                                 {showFullDesc ? 'Show less' : 'Read more'}
-                                 <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
-                             </button>
-                         )}
-                     </div>
-                 )}
- 
-                 {/* Things to Know — from backend guide data */}
-                 {(languages || (minAge !== null && minAge !== undefined) || (ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined)) && (
-                     <div className="mb-12 mt-[-15px]">
-                         <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
-                         <div className="space-y-4 mb-4">
-                             {languages && (
-                                 <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                         <img src="/mobile_icons/event clicking/language.svg" className="w-[23px] h-[23px]" alt="Language" />
-                                     </div>
-                                     <p className="text-[15px] font-medium text-black">{languages}</p>
-                                 </div>
-                             )}
-                             {(minAge !== null && minAge !== undefined) && (
-                                 <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                         <img src="/mobile_icons/event clicking/users-alt.svg" className="w-[23px] h-[23px]" alt="Age" />
-                                     </div>
-                                     <p className="text-[15px] font-medium text-black">
-                                         Min Age: {minAge === 0 ? 'All ages allowed' : (typeof minAge === 'number' ? `${minAge}+ years` : minAge)}
-                                     </p>
-                                 </div>
-                             )}
-                             {(ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined) && (
-                                 <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                         <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Ticket Age" />
-                                     </div>
-                                     <p className="text-[15px] font-medium text-black">
-                                         {ticketRequiredAboveAge === 0 ? 'Ticket required for all ages' : `Ticket required for ages ${ticketRequiredAboveAge} and above`}
-                                     </p>
-                                 </div>
-                             )}
-                             <div className="flex items-center gap-4">
-                                 <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                     <img src="/mobile_icons/event clicking/ticket.svg" className="w-[22px] h-[22px]" alt="Entry" />
-                                 </div>
-                                 <p className="text-[15px] font-medium text-black">Ticket Required for Entry</p>
-                             </div>
-                             {event.guide?.venue_type && (
-                                 <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center">
-                                         <MapPin size={20} className="text-black opacity-70" />
-                                     </div>
-                                     <p className="text-[15px] font-medium text-black">{event.guide.venue_type} · {event.guide?.audience_type || 'General'}</p>
-                                 </div>
-                             )}
-                         </div>
-                     </div>
-                 )}
- 
-                 {/* More Section — FAQs & Terms with expand/collapse */}
-                 <div className="space-y-4 mb-12 mt-[-15px]">
-                     <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
-                     <div className="space-y-4">
-                         {/* FAQs */}
-                         <div>
-                             <button
-                                 onClick={() => toggleAccordion('faqs')}
-                                 className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
-                             >
-                                 <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
-                                 {openAccordion === 'faqs' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
-                             </button>
-                             {openAccordion === 'faqs' && (
-                                 <div className="mt-2 px-2 space-y-3">
-                                     {event.faqs && event.faqs.length > 0 ? (
-                                         event.faqs.map((faq, idx) => (
-                                             <div key={idx} className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                                 <p className="text-[14px] font-semibold text-black mb-1">{faq.question}</p>
-                                                 <p className="text-[13px] text-zinc-600">{faq.answer}</p>
-                                             </div>
-                                         ))
-                                     ) : (
-                                         <div className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                             <p className="text-[13px] text-zinc-600">No FAQ</p>
-                                         </div>
-                                     )}
-                                 </div>
-                             )}
-                         </div>
- 
-                         {/* Terms */}
-                         <div>
-                             <button
-                                 onClick={() => toggleAccordion('terms')}
-                                 className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5"
-                             >
-                                 <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
-                                 {openAccordion === 'terms' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
-                             </button>
-                             {openAccordion === 'terms' && (
-                                 <div className="mt-2 px-2">
-                                     <div className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                         {event.terms ? (
-                                             <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms}</p>
-                                         ) : (
-                                             <p className="text-[13px] text-zinc-600">Events terms and conditions apply</p>
-                                         )}
-                                     </div>
-                                 </div>
-                             )}
-                         </div>
-                     </div>
-                 </div>
+                {/* Things to Know */}
+                <div className="mb-12 mt-[-15px]">
+                    <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
+                    <div className="space-y-4 mb-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
+                                <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <p className="text-[15px] font-medium text-black">
+                                {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
+                                    ? (ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`)
+                                    : 'Ticket needed for ages 3 and above'}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsThingsToKnowOpen(true)}
+                        className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
+                    >
+                        Read more
+                        <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
+                    </button>
+                </div>
+
+                {/* More Section */}
+                <div className="space-y-4 mb-12 mt-[-15px]">
+                    <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
+                    <div className="space-y-4">
+                        {/* FAQs Accordion */}
+                        <div>
+                            <button
+                                onClick={() => toggleAccordion('faqs')}
+                                className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5 active:scale-[0.99] transition-all"
+                            >
+                                <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
+                                {openAccordion === 'faqs' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                            </button>
+                            {openAccordion === 'faqs' && (
+                                <div className="mt-2 px-2 space-y-3">
+                                    {event.faqs && event.faqs.length > 0 ? (
+                                        event.faqs.map((faq, idx) => (
+                                            <div key={idx} className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                                <p className="text-[14px] font-semibold text-black mb-1">{faq.question}</p>
+                                                <p className="text-[13px] text-zinc-600">{faq.answer}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                            <p className="text-[13px] text-zinc-600">No FAQ available</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Terms Accordion */}
+                        <div>
+                            <button
+                                onClick={() => toggleAccordion('terms')}
+                                className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5 active:scale-[0.99] transition-all"
+                            >
+                                <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
+                                {openAccordion === 'terms' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                            </button>
+                            {openAccordion === 'terms' && (
+                                <div className="mt-2 px-2">
+                                    <div className="bg-[#F5F5F5] rounded-[10px] p-4">
+                                        {event.terms ? (
+                                            <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms}</p>
+                                        ) : (
+                                            <p className="text-[13px] text-zinc-600">Event terms and conditions apply</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
                 {/* Ask Anything AI */}
                 <div className="flex justify-center mb-10">
@@ -567,30 +610,239 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             </div>
 
             {/* Sticky Footer */}
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] h-[83px] bg-[#F5F5F5] rounded-[40px] flex items-center justify-between px-8 z-[100]">
-                <div className="flex items-center gap-1.5">
-                    <span className="text-[18px] font-semibold text-black uppercase">{displayPrice}</span>
-                    <span className="text-[12px] font-medium text-[#686868]">onwards</span>
+            {!isTimelineOpen && !isThingsToKnowOpen && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] h-[83px] bg-[#F5F5F5] rounded-[40px] flex items-center justify-between px-8 z-[100]">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[18px] font-semibold text-black uppercase">{displayPrice}</span>
+                        <span className="text-[12px] font-medium text-[#686868]">onwards</span>
+                    </div>
+                    <button
+                        onClick={handleBook}
+                        disabled={closedBooking}
+                        className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${closedBooking
+                                ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
+                                : 'bg-black text-white text-[18px] w-[138px]'
+                            }`}
+                    >
+                        {bookingStatus.text}
+                    </button>
                 </div>
-                <button 
-                    onClick={handleBook}
-                    disabled={closedBooking}
-                    className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${
-                        closedBooking
-                        ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
-                        : 'bg-black text-white text-[18px] w-[138px]'
-                    }`}
-                >
-                    {bookingStatus.text}
-                </button>
-            </div>
+            )}
 
-            <AuthModal
-                isOpen={isLoginModalOpen}
-                onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/events/${encodeURIComponent(event.name)}/book`)}
-            />
+            {/* 1. Schedule and Timeline Bottom Sheet */}
+            {isTimelineOpen && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+                        onClick={() => setIsTimelineOpen(false)}
+                    />
 
+                    {/* Sheet Content */}
+                    <div className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-all transform duration-300 translate-y-0 animate-in slide-in-from-bottom">
+                        {/* Drag indicator / top bar */}
+                        <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6" />
+
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-[20px] font-semibold text-black tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                Schedule and timeline
+                            </h3>
+                            <button
+                                onClick={() => setIsTimelineOpen(false)}
+                                className="w-[30px] h-[30px] rounded-full bg-[#E5E5E5]/50 flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                                <X size={16} className="text-black" />
+                            </button>
+                        </div>
+
+                        {/* Event Date Header */}
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-9 h-9 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
+                                <Calendar size={18} className="text-black opacity-70" />
+                            </div>
+                            <span className="text-[16px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                {fullFormattedDate}
+                            </span>
+                        </div>
+
+                        {/* Timeline List */}
+                        <div className="space-y-0 pl-1">
+                            {/* Gates Open */}
+                            <div className="flex gap-4 items-start relative pb-8">
+                                <div className="absolute top-6 bottom-0 left-[11px] w-[2px] bg-[#10B981]" />
+                                <div className="w-6 h-6 rounded-full bg-[#10B981] text-white flex items-center justify-center shrink-0 z-10 shadow-sm shadow-emerald-500/30">
+                                    <Check size={14} className="stroke-[3]" />
+                                </div>
+                                <div className="flex justify-between w-full items-center pl-2">
+                                    <span className="text-[16px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Gates open</span>
+                                    <span className="text-[16px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{displayGatesOpenTime}</span>
+                                </div>
+                            </div>
+
+                            {/* Event Starts */}
+                            <div className="flex gap-4 items-start relative pb-8">
+                                <div className="absolute top-6 bottom-0 left-[11px] w-[2px] bg-zinc-200" />
+                                <div className="w-6 h-6 rounded-full border-2 border-zinc-400 bg-white flex items-center justify-center shrink-0 z-10" />
+                                <div className="flex justify-between w-full items-center pl-2">
+                                    <span className="text-[16px] font-medium text-zinc-500" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Event starts</span>
+                                    <span className="text-[16px] font-semibold text-zinc-500" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{displayTime}</span>
+                                </div>
+                            </div>
+
+                            {/* Event Ends */}
+                            <div className="flex gap-4 items-start relative">
+                                <div className="w-6 h-6 rounded-full border-2 border-zinc-400 bg-white flex items-center justify-center shrink-0 z-10" />
+                                <div className="flex justify-between w-full items-center pl-2">
+                                    <span className="text-[16px] font-medium text-zinc-500" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Event ends</span>
+                                    <span className="text-[16px] font-semibold text-zinc-500" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{displayEndTime}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Things to Know Bottom Sheet */}
+            {isThingsToKnowOpen && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+                        onClick={() => setIsThingsToKnowOpen(false)}
+                    />
+
+                    {/* Sheet Content */}
+                    <div className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-all transform duration-300 translate-y-0 animate-in slide-in-from-bottom">
+                        {/* Drag indicator / top bar */}
+                        <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6" />
+
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-[20px] font-semibold text-black tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                Things to know
+                            </h3>
+                            <button
+                                onClick={() => setIsThingsToKnowOpen(false)}
+                                className="w-[30px] h-[30px] rounded-full bg-[#E5E5E5]/50 flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                                <X size={16} className="text-black" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* EVENT INFO Section */}
+                            <div>
+                                <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                    EVENT INFO
+                                </h4>
+                                <div className="space-y-4">
+                                    {/* Ticket Required Age */}
+                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                            {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
+                                                ? (ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`)
+                                                : 'Ticket needed for ages 3 and above'}
+                                        </span>
+                                    </div>
+
+                                    {/* Min Age Entry */}
+                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                        </svg>
+                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                            {minAge !== null && minAge !== undefined
+                                                ? (minAge === 0 ? 'Entry allowed for all ages' : `Entry allowed for all ages`)
+                                                : 'Entry allowed for all ages'}
+                                        </span>
+                                    </div>
+
+                                    {/* Kid Friendly */}
+                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+                                        </svg>
+                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                            {event.guide?.is_kid_friendly !== undefined
+                                                ? (event.guide.is_kid_friendly ? 'Kid friendly' : 'Not kid friendly')
+                                                : 'Kid friendly'}
+                                        </span>
+                                    </div>
+
+                                    {/* Pet Friendly */}
+                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 8l8 8" />
+                                        </svg>
+                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                            {event.guide?.is_pet_friendly !== undefined
+                                                ? (event.guide.is_pet_friendly ? 'Pets allowed' : 'Pets not allowed')
+                                                : 'Pets not allowed'}
+                                        </span>
+                                    </div>
+
+                                    {/* Language */}
+                                    {languages && (
+                                        <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                            <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 0c-.439 1.891-1.357 3.598-2.622 5.053M12 20a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                            <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                Language: {languages}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* AMENITIES Section */}
+                            <div>
+                                <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                    AMENITIES
+                                </h4>
+                                <div className="space-y-4">
+                                    {event.guide?.facilities && event.guide.facilities.length > 0 ? (
+                                        event.guide.facilities.map((fac, idx) => (
+                                            <div key={idx} className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    {fac}
+                                                </span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 3h12l-2 16a2 2 0 01-2 2h-4a2 2 0 01-2-2L6 3z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 8h12" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    Free water stations
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18c0-2-2-4-6-4s-6 2-6 4M12 4a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    Washrooms available
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

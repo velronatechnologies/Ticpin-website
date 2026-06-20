@@ -1,19 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, ChevronRight, Star, Bell, Calendar, Utensils, PlayCircle, Loader2 } from 'lucide-react';
+import { Search, MapPin, ChevronRight, PlayCircle, Star, Bell, Calendar, Utensils, Loader2 } from 'lucide-react';
 import { useLocation } from '@/lib/useLocation';
 import { useLocationStore } from '@/store/useLocationStore';
-import { useUserSession } from '@/lib/auth/user';
 import Image from 'next/image';
-
 import dynamic from 'next/dynamic';
 import { useIdentityStore } from '@/store/useIdentityStore';
-import MobileEventCard from '@/components/mobile/MobileEventCard';
+import { toast } from '@/components/ui/Toast';
 
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
 
@@ -56,34 +53,119 @@ interface Play {
 }
 
 interface MobileHomeProps {
-    events: Event[];
-    dinings: Dining[];
-    plays: Play[];
+    events?: Event[];
+    dinings?: Dining[];
+    plays?: Play[];
 }
 
-export default function MobileHome({ events, dinings, plays }: MobileHomeProps) {
+const formatEventDate = (date?: string, time?: string) => {
+    if (!date) return 'Date TBA';
+    try {
+        const d = new Date(date);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const tStr = time ? time : '';
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}${tStr ? ` | ${tStr}` : ''}`;
+    } catch {
+        return date;
+    }
+};
+
+const CARD_WIDTH = 280;
+const CARD_HEIGHT_RATIO = "280/390";
+
+export default function MobileHome({ events = [], dinings = [], plays = [] }: MobileHomeProps) {
     const router = useRouter();
     const city = useLocation();
     const { userSession, organizerSession, sync, logoutUser, logoutOrganizer } = useIdentityStore();
-    const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+    
     // Organizer takes priority when dual-logged-in; user as fallback.
-    // This drives which avatar/name is shown in the header.
     const activeSession = organizerSession || userSession;
-    const session = activeSession; // keep alias for existing usage below
+    const session = activeSession;
     const { setLocation } = useLocationStore();
-    const [windowWidth, setWindowWidth] = useState(390); // fixed default to avoid SSR hydration mismatch
+    const [windowWidth, setWindowWidth] = useState(390); // default to avoid SSR hydration mismatch
 
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const placeholders = ["events", "dining", "play"];
-    const [activeTab, setActiveTab] = useState<'events' | 'dining' | 'play'>('events');
 
     // Local self-healing states to support independent entry routes (like /play on mobile)
-    const [localEvents, setLocalEvents] = useState<Event[]>(events || []);
-    const [localDinings, setLocalDinings] = useState<Dining[]>(dinings || []);
-    const [localPlays, setLocalPlays] = useState<Play[]>(plays || []);
+    const [localEvents, setLocalEvents] = useState<Event[]>(events);
+    const [localDinings, setLocalDinings] = useState<Dining[]>(dinings);
+    const [localPlays, setLocalPlays] = useState<Play[]>(plays);
+
+    const [likedEventIds, setLikedEventIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (userSession?.id) {
+            fetch('/backend/api/user/likes', { credentials: 'include' })
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(data => {
+                    if (data && Array.isArray(data.likedEventIds)) {
+                        setLikedEventIds(data.likedEventIds);
+                    }
+                })
+                .catch(() => {
+                    try {
+                        const local = JSON.parse(localStorage.getItem('liked_events') || '[]');
+                        setLikedEventIds(local.map((le: any) => le.id));
+                    } catch { /* ignore */ }
+                });
+        } else {
+            try {
+                const local = JSON.parse(localStorage.getItem('liked_events') || '[]');
+                setLikedEventIds(local.map((le: any) => le.id));
+            } catch { /* ignore */ }
+        }
+    }, [userSession?.id]);
+
+    const handleLikeToggle = async (eventId: string, eventName: string, date: string, time: string, priceStartsFrom: number, portraitImageUrl: string, venueName: string, city: string, e?: React.MouseEvent) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        if (!userSession?.id) {
+            localStorage.setItem('pending_like_event_id', String(eventId));
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            return;
+        }
+
+        try {
+            const res = await fetch(`/backend/api/user/likes/${eventId}`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.liked) {
+                    setLikedEventIds(prev => [...prev, eventId]);
+                    // toast.success('Saved to liked events');
+                    try {
+                        let liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
+                        if (!liked.some((le: any) => le.id === eventId)) {
+                            liked.push({ id: eventId, name: eventName, date, time, price_starts_from: priceStartsFrom, portrait_image_url: portraitImageUrl, venue_name: venueName, city });
+                        }
+                        localStorage.setItem('liked_events', JSON.stringify(liked));
+                    } catch { /* ignore */ }
+                } else {
+                    setLikedEventIds(prev => prev.filter(id => id !== eventId));
+                    toast.success('Removed from saved events');
+                    try {
+                        let liked = JSON.parse(localStorage.getItem('liked_events') || '[]');
+                        liked = liked.filter((le: any) => le.id !== eventId);
+                        localStorage.setItem('liked_events', JSON.stringify(liked));
+                    } catch { /* ignore */ }
+                }
+            } else {
+                toast.error('Failed to update saved events.');
+            }
+        } catch (err) {
+            console.error('Failed to toggle like on backend:', err);
+            toast.error('Failed to update saved events.');
+        }
+    };
 
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -164,23 +246,13 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
         if (plays && plays.length > 0) setLocalPlays(plays);
     }, [events, dinings, plays]);
 
-    // Automatically set default active tab based on which props have data on load
-    useEffect(() => {
-        if (events && events.length === 0 && dinings && dinings.length === 0 && plays && plays.length > 0) {
-            setActiveTab('play');
-        } else if (events && events.length === 0 && dinings && dinings.length > 0) {
-            setActiveTab('dining');
-        }
-    }, [events, dinings, plays]);
-
     // Client-side self-healing dynamic loader to fetch complete data for other tabs
     useEffect(() => {
-        // Only fetch if we are missing data
         if (localEvents.length > 0 && localDinings.length > 0 && localPlays.length > 0) return;
 
         fetch('/backend/api/mobile/home')
             .then(res => {
-                if (!res.ok) return null; // backend offline — silently skip, no error thrown
+                if (!res.ok) return null;
                 return res.json();
             })
             .then(data => {
@@ -196,7 +268,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 }
             })
             .catch(() => { /* backend offline — silently ignore */ });
-    }, []); // Only run on mount, and only if data is missing
+    }, []);
 
     useEffect(() => {
         sync();
@@ -234,7 +306,6 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
     })();
 
     useEffect(() => {
-        // Set the real width on mount (client only, after hydration)
         setWindowWidth(window.innerWidth);
         const handleResize = () => setWindowWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
@@ -280,7 +351,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 setPlayScrollX(initialScroll);
             }
         }
-    }, [localEvents.length, localDinings.length, localPlays.length]);
+    }, [localEvents.length, localDinings.length, localPlays.length, isProfileDrawerOpen]);
 
     const handleScroll = () => {
         if (!carouselRef.current || localEvents.length === 0) return;
@@ -341,39 +412,33 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
             {/* 1. Header Section */}
             <header className="px-6 pt-7 pb-4">
                 <div className="flex justify-between items-center mb-10">
-                    <div className="flex items-center gap-4">
-
-                        <button
-                            className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
-                            onClick={() => setIsLocationOpen(true)}
-                        >
-                            <MapPin size={15} className="text-zinc-800" />
-                            <span className="text-[14px] font-medium text-black leading-none truncate max-w-[100px]">{city || 'Location'}</span>
-                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="mt-0.5">
-                                <path d="M2 4L6 8L10 4" stroke="#686868" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </button>
-                    </div>
+                    <button
+                        className="flex items-center gap-2 active:opacity-70 transition-opacity"
+                        onClick={() => setIsLocationOpen(true)}
+                    >
+                        <MapPin size={17} className="text-zinc-800" />
+                        <span className="text-[15px] font-medium text-black leading-none">{city || 'Location'}</span>
+                    </button>
                     <div
-                        className="w-[42px] h-[42px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
+                        className="w-[35px] h-[35px] rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden cursor-pointer"
                         onClick={() => {
                             if (session) {
                                 setIsProfileDrawerOpen(true);
                             } else {
-                                setIsAuthOpen(true);
+                                router.push('/login');
                             }
                         }}
                     >
                         {(organizerSession as any)?.profilePhoto ? (
-                            <Image src={(organizerSession as any).profilePhoto} alt="Profile" width={42} height={42} className="object-cover" />
+                            <Image src={(organizerSession as any).profilePhoto} alt="Profile" width={35} height={35} className="object-cover" />
                         ) : userSession?.profilePhoto ? (
-                            <Image src={userSession.profilePhoto} alt="Profile" width={42} height={42} className="object-cover" />
+                            <Image src={userSession.profilePhoto} alt="Profile" width={35} height={35} className="object-cover" />
                         ) : (organizerSession || userSession) ? (
                             <span className="text-white text-[14px] font-bold uppercase bg-[#866BFF] w-full h-full rounded-full flex items-center justify-center">
                                 {(organizerSession?.email || userSession?.name || userSession?.email || 'U').charAt(0).toUpperCase()}
                             </span>
                         ) : (
-                            <img src="/profile icon.svg" alt="Profile" className="w-6 h-6" />
+                            <img src="/profile icon.svg" alt="Profile" className="w-5 h-5" />
                         )}
                     </div>
                 </div>
@@ -456,7 +521,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                                 </div>
                             ) : (
                                 <div className="px-4 py-8 text-center">
-                                    <p className="text-sm text-gray-500 font-medium font-[family-name:var(--font-anek-latin)]">
+                                    <p className="text-sm text-gray-500 font-medium">
                                         No results found for "{searchQuery}"
                                     </p>
                                 </div>
@@ -469,12 +534,13 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 <div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
 
                 {/* 4. Categories Section */}
-                <div className="grid grid-cols-3 gap-4 px-1 text-center">
+                <div className="grid grid-cols-3 gap-4 px-1">
                     {/* Dining */}
-                    <div className="flex flex-col items-center" onClick={() => router.push('/dining')}>
+                    <div className="flex flex-col items-center">
                         <div
-                            className="w-full aspect-[106/125] rounded-[25px] border border-[#D9D9D9] flex flex-col items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all duration-300"
+                            className="w-full aspect-[106/125] rounded-[25px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
                             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
+                            onClick={() => router.push('/dining')}
                         >
                             <img src="/mobile_icons/Dining 1.svg" alt="Dining" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">DINING</span>
@@ -482,10 +548,11 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     </div>
 
                     {/* Events */}
-                    <div className="flex flex-col items-center" onClick={() => router.push('/events')}>
+                    <div className="flex flex-col items-center">
                         <div
-                            className="w-full aspect-[106/125] rounded-[30px] flex flex-col items-center justify-center gap-2 cursor-pointer border border-[#D9D9D9] active:scale-95 transition-all duration-300"
+                            className="w-full aspect-[106/125] rounded-[30px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
                             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #E2D9FF 100%)' }}
+                            onClick={() => router.push('/events')}
                         >
                             <img src="/mobile_icons/Events 1.svg" alt="Events" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">EVENTS</span>
@@ -493,10 +560,11 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     </div>
 
                     {/* Play */}
-                    <div className="flex flex-col items-center" onClick={() => router.push('/play')}>
+                    <div className="flex flex-col items-center">
                         <div
-                            className="w-full aspect-[106/125] rounded-[30px] flex flex-col items-center justify-center gap-2 cursor-pointer border border-[#D9D9D9] active:scale-95 transition-all duration-300"
+                            className="w-full aspect-[106/125] rounded-[30px] border-[#D9D9D9] border flex flex-col items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
                             style={{ background: 'linear-gradient(180deg, #FFFFFF 50%, #FFF4C1 100%)' }}
+                            onClick={() => router.push('/play')}
                         >
                             <img src="/mobile_icons/Pickelball 1.svg" alt="Play" className="w-[60%] h-[60%] object-contain" />
                             <span className="text-[15px] font-medium text-black uppercase tracking-tight">PLAY</span>
@@ -514,26 +582,126 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                             <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-35px]">HOT RIGHT NOW</h2>
                             {scrollEvents.length === 1 ? (
                                 <div className="flex justify-center items-center py-8 overflow-hidden w-full">
-                                    <MobileEventCard
-                                        key={scrollEvents[0].id}
-                                        id={scrollEvents[0].id}
-                                        name={scrollEvents[0].name}
-                                        date={scrollEvents[0].date}
-                                        time={scrollEvents[0].time}
-                                        location={scrollEvents[0].location}
-                                        venue_name={scrollEvents[0].venue_name}
-                                        city={scrollEvents[0].city}
-                                        portrait_image_url={scrollEvents[0].portrait_image_url}
-                                        price_starts_from={scrollEvents[0].price_starts_from}
-                                        scale={1.1}
-                                        opacity={1}
-                                    />
+                                    <div
+                                        onClick={() => router.push(`/events/${encodeURIComponent(scrollEvents[0].name)}`)}
+                                        className="flex-shrink-0 w-[280px] max-w-[85vw] bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden transition-all duration-150 ease-out cursor-pointer active:scale-95 animate-in fade-in duration-350"
+                                        style={{
+                                            transform: 'scale(1.1)',
+                                            opacity: 1
+                                        }}
+                                    >
+                                        {/* Top Poster Section */}
+                                        <div className="w-full aspect-[280/390] relative overflow-hidden bg-[#110D2C]">
+                                            {scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url ? (
+                                                <img
+                                                    src={(scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url)!.startsWith('.') ? (scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url)!.substring(1) : (scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url)}
+                                                    alt={scrollEvents[0].name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
+                                                    {/* Abstract Wavy Background Effect */}
+                                                    <div className="absolute inset-0 opacity-40">
+                                                        <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
+                                                    </div>
+
+                                                    {/* Sparkles */}
+                                                    <div className="absolute top-[25%] left-[20%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse" />
+                                                    <div className="absolute top-[18%] right-[25%] w-0.5 h-0.5 bg-[#DFFF00] rounded-full blur-[0.5px] animate-pulse delay-700" />
+                                                    <div className="absolute bottom-[35%] left-[30%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse delay-[1500ms]" />
+                                                    <div className="absolute top-[45%] right-[15%] w-1 h-1 bg-[#DFFF00] rounded-full blur-[1px] animate-pulse delay-300" />
+
+                                                    {/* Main Content */}
+                                                    <div className="relative z-10 flex flex-col items-center">
+                                                        <h1 className="text-[36px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase text-center"
+                                                            style={{
+                                                                fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
+                                                                transform: 'skewX(-16deg) scaleY(1.3)',
+                                                                textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
+                                                            }}>
+                                                            THE TICPIN<br />PLAY<br />FESTIVAL
+                                                        </h1>
+
+                                                        {/* Divider */}
+                                                        <div className="flex items-center gap-2.5 w-full max-w-[180px] my-6 relative">
+                                                            <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
+                                                            <div className="w-[8px] h-[8px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
+                                                            <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                                        </div>
+
+                                                        {/* Offer Text */}
+                                                        <div className="text-center group">
+                                                            <p className="text-[20px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>
+                                                                GET UP TO
+                                                            </p>
+                                                            <p className="text-[34px] font-bold text-white leading-[0.85] mt-1 group-hover:scale-105 transition-transform duration-500" style={{ fontFamily: 'serif' }}>
+                                                                50% off*
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Logo at bottom */}
+                                                        <div className="mt-8 flex flex-col items-center">
+                                                            <p className="text-[9px] text-white/70 tracking-[0.4em] font-semibold mb-1.5 uppercase">ONLY ON</p>
+                                                            <div className="flex items-center gap-0.5">
+                                                                <span className="text-[24px] font-black text-white tracking-tighter">TIC</span>
+                                                                <span className="text-[24px] font-black text-white tracking-tighter flex items-center -ml-1">
+                                                                    P <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5 mt-1 animate-pulse" /> IN
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Overlay Icons */}
+                                          
+                                        </div>
+
+                                        {/* Bottom Details Section */}
+                                        <div className="p-3 relative bg-white">
+                                            <p className="text-[11px] font-medium text-[#5331EA] mb-0.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {formatEventDate(scrollEvents[0].date, scrollEvents[0].time).toUpperCase()}
+                                            </p>
+                                            <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {scrollEvents[0].name || "{EVENT NAME}"}
+                                            </h3>
+                                            <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {scrollEvents[0].venue_name || scrollEvents[0].city || scrollEvents[0].location || "{EVENT LOCATION}"}
+                                            </p>
+                                            <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {scrollEvents[0].price_starts_from ? `Starts at ₹ ${scrollEvents[0].price_starts_from}` : "{EVENT STARTING PRICE}"}
+                                            </p>
+
+                                            {/* Fire/Hot Icon */}
+                                            <div 
+                                                onClick={(e) => handleLikeToggle(
+                                                    scrollEvents[0].id,
+                                                    scrollEvents[0].name || '',
+                                                    scrollEvents[0].date || '',
+                                                    scrollEvents[0].time || '',
+                                                    scrollEvents[0].price_starts_from || 0,
+                                                    scrollEvents[0].portrait_image_url || '',
+                                                    scrollEvents[0].venue_name || '',
+                                                    scrollEvents[0].city || '',
+                                                    e
+                                                )}
+                                                className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-10 active:scale-90 ${likedEventIds.includes(scrollEvents[0]?.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
+                                            >
+                                                <img 
+                                                    src="/mobile_icons/Vector 2.svg" 
+                                                    alt="Hot" 
+                                                    className="w-[17px] h-[17px] object-contain" 
+                                                    style={{ filter: likedEventIds.includes(scrollEvents[0]?.id) ? 'brightness(0) invert(1)' : 'none' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div
                                     ref={carouselRef}
                                     onScroll={handleScroll}
-                                    className="flex gap-6 overflow-x-auto px-32 scrollbar-hide snap-x snap-mandatory items-center py-8"
+                                    className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-8"
                                 >
                                     {scrollEvents.length > 0 ? scrollEvents.map((event, idx) => {
                                         const cardWidth = 280;
@@ -548,21 +716,126 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                                         const scale = 1.1 - t * 0.10;
                                         const opacity = 1 - t * 0;
 
+                                        const eventImg = event.portrait_image_url || event.landscape_image_url;
+
                                         return (
-                                            <MobileEventCard
+                                            <div
                                                 key={`${event.id}-${idx}`}
-                                                id={event.id}
-                                                name={event.name}
-                                                date={event.date}
-                                                time={event.time}
-                                                location={event.location}
-                                                venue_name={event.venue_name}
-                                                city={event.city}
-                                                portrait_image_url={event.portrait_image_url}
-                                                price_starts_from={event.price_starts_from}
-                                                scale={scale}
-                                                opacity={opacity}
-                                            />
+                                                onClick={() => router.push(`/events/${encodeURIComponent(event.name)}`)}
+                                                className="flex-shrink-0 w-[280px] max-w-[85vw] bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden snap-center snap-always transition-all duration-150 ease-out origin-center cursor-pointer active:scale-95"
+                                                style={{
+                                                    transform: `scale(${scale})`,
+                                                    opacity: opacity
+                                                }}
+                                            >
+                                                {/* Top Poster Section */}
+                                                <div className="w-full aspect-[280/390] relative overflow-hidden bg-[#110D2C]">
+                                                    {eventImg ? (
+                                                        <img
+                                                            src={eventImg.startsWith('.') ? eventImg.substring(1) : eventImg}
+                                                            alt={event.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
+                                                            {/* Abstract Wavy Background Effect */}
+                                                            <div className="absolute inset-0 opacity-40">
+                                                                <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
+                                                            </div>
+
+                                                            {/* Sparkles */}
+                                                            <div className="absolute top-[25%] left-[20%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse" />
+                                                            <div className="absolute top-[18%] right-[25%] w-0.5 h-0.5 bg-[#DFFF00] rounded-full blur-[0.5px] animate-pulse delay-700" />
+                                                            <div className="absolute bottom-[35%] left-[30%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse delay-[1500ms]" />
+                                                            <div className="absolute top-[45%] right-[15%] w-1 h-1 bg-[#DFFF00] rounded-full blur-[1px] animate-pulse delay-300" />
+
+                                                            {/* Main Content */}
+                                                            <div className="relative z-10 flex flex-col items-center">
+                                                                <h1 className="text-[36px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase text-center"
+                                                                    style={{
+                                                                        fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
+                                                                        transform: 'skewX(-16deg) scaleY(1.3)',
+                                                                        textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
+                                                                    }}>
+                                                                    THE TICPIN<br />PLAY<br />FESTIVAL
+                                                                </h1>
+
+                                                                {/* Divider */}
+                                                                <div className="flex items-center gap-2.5 w-full max-w-[180px] my-6 relative">
+                                                                    <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
+                                                                    <div className="w-[8px] h-[8px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
+                                                                    <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                                                </div>
+
+                                                                {/* Offer Text */}
+                                                                <div className="text-center group">
+                                                                    <p className="text-[20px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>
+                                                                        GET UP TO
+                                                                    </p>
+                                                                    <p className="text-[34px] font-bold text-white leading-[0.85] mt-1 group-hover:scale-105 transition-transform duration-500" style={{ fontFamily: 'serif' }}>
+                                                                        50% off*
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Logo at bottom */}
+                                                                <div className="mt-8 flex flex-col items-center">
+                                                                    <p className="text-[9px] text-white/70 tracking-[0.4em] font-semibold mb-1.5 uppercase">ONLY ON</p>
+                                                                    <div className="flex items-center gap-0.5">
+                                                                        <span className="text-[24px] font-black text-white tracking-tighter">TIC</span>
+                                                                        <span className="text-[24px] font-black text-white tracking-tighter flex items-center -ml-1">
+                                                                            P <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5 mt-1 animate-pulse" /> IN
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Overlay Icons */}
+                                                    <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white flex items-center justify-center border border-white">
+                                                        <img src="/mobile_icons/fluent_speaker-2-28-regular.svg" alt="Mute/Unmute" className="w-[20px] h-[20px]" />
+                                                    </div>
+                                                </div>
+
+                                                {/* Bottom Details Section */}
+                                                <div className="p-3 relative bg-white">
+                                                    <p className="text-[11px] font-medium text-[#5331EA] mb-0.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                        {formatEventDate(event.date, event.time).toUpperCase()}
+                                                    </p>
+                                                    <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                        {event.name || "{EVENT NAME}"}
+                                                    </h3>
+                                                    <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                        {event.venue_name || event.city || event.location || "{EVENT LOCATION}"}
+                                                    </p>
+                                                    <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                        {event.price_starts_from ? `Starts at ₹ ${event.price_starts_from}` : "{EVENT STARTING PRICE}"}
+                                                    </p>
+
+                                                    {/* Fire/Hot Icon */}
+                                                    <div 
+                                                        onClick={(e) => handleLikeToggle(
+                                                            event.id,
+                                                            event.name || '',
+                                                            event.date || '',
+                                                            event.time || '',
+                                                            event.price_starts_from || 0,
+                                                            event.portrait_image_url || '',
+                                                            event.venue_name || '',
+                                                            event.city || '',
+                                                            e
+                                                        )}
+                                                        className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-10 active:scale-90 ${likedEventIds.includes(event.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
+                                                    >
+                                                        <img 
+                                                            src="/mobile_icons/Vector 2.svg" 
+                                                            alt="Hot" 
+                                                            className="w-[17px] h-[17px] object-contain" 
+                                                            style={{ filter: likedEventIds.includes(event.id) ? 'brightness(0) invert(1)' : 'none' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
                                         );
                                     }) : (
                                         <div className="w-full flex items-center justify-center py-10">
@@ -573,29 +846,28 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                             )}
                         </section>
 
-
-                        {/* Circular Artist squircle section matching image 1 */}
-                        {/* Artist Section — from backend event data */}
+                        {/* Artist Section */}
                         {uniqueArtists.length > 0 && (
-                            <section className="px-6 mt-[-10px]">
-                                <h2 className="text-[20px] font-medium text-black text-center mb-6 uppercase tracking-wide">ARTIST</h2>
-                                <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide justify-start">
+                            <section>
+                                <h2 className="text-[22px] font-medium text-black text-center mb-8 uppercase tracking-normal mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>ARTIST</h2>
+                                <div className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x ml-[20px]">
                                     {uniqueArtists.map((art, idx) => (
                                         <div
                                             key={idx}
-                                            className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+                                            className="flex-shrink-0 w-[138px] snap-start cursor-pointer active:scale-95 transition-transform"
                                             onClick={() => router.push(`/events/artist/${encodeURIComponent(art.name)}`)}
                                         >
-                                            <div className="w-[85px] h-[85px] rounded-[24px] bg-gradient-to-tr from-[#ECE8FD] to-[#D5C9FF] border border-[#AC9BF7]/50 flex items-center justify-center mb-2 shadow-sm overflow-hidden">
+                                            <div className="w-[138px] h-[146px] rounded-[13px] bg-[#AC9BF7] overflow-hidden group relative">
                                                 {art.image_url ? (
-                                                    <img src={art.image_url} alt={art.name} className="w-full h-full object-cover" />
+                                                    <img src={art.image_url} alt={art.name} className="w-full h-full object-cover mix-blend-multiply opacity-90" />
                                                 ) : (
-                                                    <span className="text-[28px] font-bold text-[#5331EA] italic leading-none">{art.name.charAt(0).toUpperCase()}</span>
+                                                    <div className="w-full h-full flex items-center justify-center bg-[#AC9BF7] mix-blend-multiply opacity-90">
+                                                        <span className="text-[36px] font-bold text-white uppercase italic leading-none">{art.name.charAt(0).toUpperCase()}</span>
+                                                    </div>
                                                 )}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                                             </div>
-                                            <span className="text-[11px] font-bold text-zinc-800 uppercase tracking-tight text-center max-w-[85px] truncate">
-                                                {art.name.toUpperCase()}
-                                            </span>
+                                            <p className="text-[14px] font-medium text-black mt-3 text-center uppercase tracking-wider truncate max-w-[138px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{art.name}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -607,7 +879,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                 {/* In Limelight Section */}
                 {localDinings && localDinings.length > 0 && (
                     <section>
-                        <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]">IN LIMELIGHT</h2>
+                        <h2 className="text-[22px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-30px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>IN LIMELIGHT</h2>
                         {scrollLimelight.length === 1 ? (
                             <div className="flex justify-center items-center py-4 mt-[-30px] overflow-hidden w-full">
                                 <div
@@ -621,11 +893,17 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                                         ) : (
                                             <div className="absolute inset-0 flex items-center justify-center text-zinc-300 font-bold tracking-widest text-xs">DINING PREVIEW</div>
                                         )}
+                                        <div className="absolute h-[29px] bottom-0 left-0 right-0 bg-[#AC9BF7] flex items-center px-4 z-10">
+                                            <div className="flex items-center gap-1.5">
+                                                <Star size={14} className="text-[#5331EA] fill-[#5331EA]" />
+                                                <span className="text-white text-[14px] font-medium">Flat 40% OFF</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="p-5 flex justify-between items-end bg-white">
                                         <div>
-                                            <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2">{scrollLimelight[0].name}</h3>
-                                            <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest">{scrollLimelight[0].city || 'LOCATION'}</p>
+                                            <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{scrollLimelight[0].name}</h3>
+                                            <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{scrollLimelight[0].city || 'LOCATION'}</p>
                                         </div>
                                         <div className="w-8 h-8 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-400">
                                             <ChevronRight size={18} />
@@ -637,7 +915,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                             <div
                                 ref={limelightRef}
                                 onScroll={handleLimelightScroll}
-                                className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-4 mt-[-30px]"
+                                className="flex gap-6 overflow-x-auto px-6 scrollbar-hide snap-x snap-mandatory items-center py-8 mt-[-30px]"
                             >
                                 {scrollLimelight.map((item, idx) => {
                                     const cardWidth = 326;
@@ -670,11 +948,17 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                                                 ) : (
                                                     <div className="absolute inset-0 flex items-center justify-center text-zinc-300 font-bold tracking-widest text-xs">DINING PREVIEW</div>
                                                 )}
+                                                <div className="absolute h-[29px] bottom-0 left-0 right-0 bg-[#AC9BF7] flex items-center px-4 z-10">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Star size={14} className="text-[#5331EA] fill-[#5331EA]" />
+                                                        <span className="text-white text-[14px] font-medium">Flat 40% OFF</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="p-5 flex justify-between items-end bg-white">
                                                 <div>
-                                                    <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2">{item.name}</h3>
-                                                    <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest">{item.city || 'LOCATION'}</p>
+                                                    <h3 className="text-[17px] font-bold text-black uppercase line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{item.name}</h3>
+                                                    <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-widest" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{item.city || 'LOCATION'}</p>
                                                 </div>
                                                 <div className="w-8 h-8 rounded-full border border-zinc-100 flex items-center justify-center text-zinc-400">
                                                     <ChevronRight size={18} />
@@ -694,7 +978,7 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     <>
                         {/* Play Near You Section */}
                         <section>
-                            <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]">PLAY NEAR YOU</h2>
+                            <h2 className="text-[20px] font-medium text-black text-center mb-8 uppercase tracking-wide mt-[-20px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>PLAY NEAR YOU</h2>
                             {scrollPlay.length === 1 ? (
                                 <div className="flex justify-center items-center py-4 overflow-hidden w-full">
                                     <div
@@ -787,14 +1071,14 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                                                 {/* Bottom Details Section */}
                                                 <div className="p-5 flex justify-between items-center bg-white rounded-b-[19px]">
                                                     <div className="flex flex-col gap-1">
-                                                        <h3 className="text-[19px] font-medium text-black uppercase leading-none">
+                                                        <h3 className="text-[19px] font-medium text-black uppercase leading-none" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                             {item.name}
                                                         </h3>
                                                         <div className="flex items-center gap-1.5 -ml-0.5">
                                                             <span className="text-[14px] font-medium text-[#866BFF] tracking-tighter">{item.rating || '--'}</span>
                                                             <Star size={12} className="text-[#866BFF] fill-[#866BFF]" />
                                                         </div>
-                                                        <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-tight">
+                                                        <p className="text-[12px] font-medium text-zinc-500 uppercase tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                             {item.city || 'LOCATION'}
                                                         </p>
                                                     </div>
@@ -822,15 +1106,15 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     </>
                 )}
 
-                {/* Footer Banner — Ticpin Pass */}
-                <div className="px-6 mb-6">
-                    <Link href="/pass" className="block w-full max-w-[340px] mx-auto aspect-[3/1] rounded-[12px] overflow-hidden group relative cursor-pointer">
-                        <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full object-cover" />
+                {/* 6. Footer Banner (Ticpin Pass) */}
+                <div className="px-6">
+                    <Link href="/ticpass" className="block rounded-[15px] overflow-hidden group relative h-[120px] mt-[-25px] cursor-pointer">
+                        <img src="/ticpin banner.jpg" alt="Ticpin Pass" className="w-full h-full" />
                     </Link>
                 </div>
             </main>
 
-            {/* Footer Section */}
+            {/* 7. Footer Section */}
             <footer className="bg-[#212121] px-8 py-10 flex flex-col items-center text-center w-full">
                 <div className="mb-6">
                     <img src="/ticpin-logo-black.png" alt="TICPIN" className="h-[32px] w-auto invert brightness-0" />
@@ -849,30 +1133,16 @@ export default function MobileHome({ events, dinings, plays }: MobileHomeProps) 
                     By accessing this page, you confirm that you have read, understood, and agreed to our Terms of Service, Cookie Policy, Privacy Policy, and Content Guidelines. All rights reserved.
                 </p>
 
-                <div className="flex gap-4 items-center">
-                    <a href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-6 h-6 invert brightness-0" />
-                    </a>
-                    <a href="https://www.facebook.com/profile.php?id=61579518933930#" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/facebook.svg" alt="Facebook" className="w-6 h-6 invert brightness-0" />
-                    </a>
-                    <a href="https://www.instagram.com/ticpinindia/" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/instagram.svg" alt="Instagram" className="w-6 h-6 invert brightness-0" />
-                    </a>
-                    <a href="https://x.com/ticpin" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/x.svg" alt="X" className="w-6 h-6 invert brightness-0" />
-                    </a>
-                    <a href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw" className="w-8 h-8 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
-                        <img src="/social icons/youtube.svg" alt="YouTube" className="w-6 h-6 invert brightness-0" />
-                    </a>
+                <div className="flex gap-2 items-center">
+                    <Link href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412"><img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8" /></Link>
+                    <Link href="https://www.facebook.com/profile.php?id=61579518933930#"><img src="/social icons/facebook.svg" alt="Facebook" className="w-8 h-8" /></Link>
+                    <Link href="https://www.instagram.com/ticpinindia/"><img src="/social icons/instagram.svg" alt="Instagram" className="w-8 h-8" /></Link>
+                    <Link href="https://x.com/ticpin"><img src="/social icons/x.svg" alt="X" className="w-8 h-8" /></Link>
+                    <Link href="https://www.youtube.com/channel/UCrGSN3cv3q1x3yI5q7LILtw"><img src="/social icons/youtube.svg" alt="YouTube" className="w-8 h-8" /></Link>
                 </div>
             </footer>
 
-            <AuthModal
-                isOpen={isAuthOpen}
-                onClose={() => setIsAuthOpen(false)}
-                onSuccess={() => sync()}
-            />
+
             <LocationModal
                 isOpen={isLocationOpen}
                 onClose={() => setIsLocationOpen(false)}

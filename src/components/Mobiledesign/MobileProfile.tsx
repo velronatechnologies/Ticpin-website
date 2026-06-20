@@ -51,9 +51,9 @@ export default function MobileProfile({ onBack }: MobileProfileProps) {
         {
             items: [
                 { icon: <img src="/mobile_icons/profile_page/Vector 1.svg" alt="ticklist" className="w-6 h-6 object-contain" />, label: "Ticlists", onClick: () => router.push('/ticlists') },
-                { icon: <img src="/mobile_icons/profile_page/dining-table.svg" alt="Dining" className="w-6 h-6 object-contain" />, label: "Dining reminders", onClick: () => router.push('/bookings?type=dining') },
-                { icon: <img src="/mobile_icons/profile_page/guitar.svg" alt="Events" className="w-6 h-6 object-contain" />, label: "Event reminders", onClick: () => router.push('/bookings?type=events') },
-                { icon: <PlayCircle size={22} className="text-[#686868]" />, label: "Play reminders", onClick: () => router.push('/bookings?type=play') },
+                { icon: <img src="/mobile_icons/profile_page/dining-table.svg" alt="Dining" className="w-6 h-6 object-contain" />, label: "Dining reminders", onClick: () => router.push('/myboooking?type=dining') },
+                { icon: <img src="/mobile_icons/profile_page/guitar.svg" alt="Events" className="w-6 h-6 object-contain" />, label: "Event reminders", onClick: () => router.push('/myboooking?type=events') },
+                { icon: <PlayCircle size={22} className="text-[#686868]" />, label: "Play reminders", onClick: () => router.push('/myboooking?type=play') },
             ]
         },
         {
@@ -127,9 +127,9 @@ export default function MobileProfile({ onBack }: MobileProfileProps) {
                 </h3>
                 <div className="flex gap-[15px] overflow-x-auto pb-2 scrollbar-hide">
                     {[
-                        { icon: <img src="/mobile_icons/profile_page/dining-table.svg" alt="Dining" className="w-8 h-8 object-contain" />, label: "Dining bookings", onClick: () => router.push('/bookings?type=dining') },
-                        { icon: <img src="/mobile_icons/profile_page/guitar.svg" alt="Events" className="w-8 h-8 object-contain" />, label: "Event tickets", onClick: () => router.push('/bookings?type=events') },
-                        { icon: <PlayCircle size={32} className="text-black" />, label: "Play bookings", onClick: () => router.push('/bookings?type=play') }
+                        { icon: <img src="/mobile_icons/profile_page/dining-table.svg" alt="Dining" className="w-8 h-8 object-contain" />, label: "Dining bookings", onClick: () => router.push('/myboooking?type=dining') },
+                        { icon: <img src="/mobile_icons/profile_page/guitar.svg" alt="Events" className="w-8 h-8 object-contain" />, label: "Event tickets", onClick: () => router.push('/myboooking?type=events') },
+                        { icon: <PlayCircle size={32} className="text-black" />, label: "Play bookings", onClick: () => router.push('/myboooking?type=play') }
                     ].map((item, i) => (
                         <div 
                             key={i} 

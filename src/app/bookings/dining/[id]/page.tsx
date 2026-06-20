@@ -38,6 +38,21 @@ export default function DiningBookingDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const checkMobile = () => {
+      if (window.innerWidth < 768) {
+        document.cookie = "device_view=mobile; path=/; max-age=31536000";
+        const search = window.location.search || '';
+        router.replace(`/myboooking/${bookingId}${search}`);
+      } else {
+        document.cookie = "device_view=desktop; path=/; max-age=31536000";
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [router, bookingId]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setHasCheckedSession(true);
     }, 150);

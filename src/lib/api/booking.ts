@@ -283,6 +283,38 @@ export const bookingApi = {
         return data;
     },
 
+    /** Fetch all bookings for a user formatted for mobile */
+    getMobileUserBookings: async ({ email, phone, userId }: { email?: string; phone?: string; userId?: string }): Promise<any[]> => {
+        const params = new URLSearchParams();
+        if (email) params.append('email', email);
+        if (phone) params.append('phone', phone);
+        if (userId) params.append('userId', userId);
+        
+        const res = await fetch(`${BASE}/mobile/bookings?${params.toString()}`, {
+            credentials: 'include',
+        });
+        if (res.status === 401) {
+            throw new Error('UNAUTHORIZED');
+        }
+        const data = await res.json();
+        if (!res.ok) return [];
+        return Array.isArray(data) ? data : [];
+    },
+
+    /** Get detailed booking information for mobile by ID */
+    getMobileBookingDetails: async (bookingId: string, userId?: string): Promise<any> => {
+        const url = userId
+            ? `${BASE}/mobile/bookings/${bookingId}?user_id=${encodeURIComponent(userId)}`
+            : `${BASE}/mobile/bookings/${bookingId}`;
+        const res = await fetch(url, {
+            credentials: 'include',
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to get booking details');
+        return data;
+    },
+
+
     cancelBooking: async (id: string, category: string, reason?: string, donationAmount?: number): Promise<{ message: string }> => {
         const bodyData: any = {};
         if (reason) bodyData.reason = reason;

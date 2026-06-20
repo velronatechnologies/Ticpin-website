@@ -5,14 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
-
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 
 export default function MobileProfile() {
     const router = useRouter();
     const { userSession, organizerSession, sync, logoutUser } = useIdentityStore();
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
     const [organizerProfile, setOrganizerProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [pass, setPass] = useState<any>(null);
@@ -82,12 +79,6 @@ export default function MobileProfile() {
         return (
             <div className="md:hidden min-h-screen w-full bg-[#F5F5F5] font-sans px-5 py-6 overflow-x-hidden" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                 <header className="flex items-center gap-[10px] mb-8">
-                    <button
-                        onClick={() => router.back()}
-                        className="w-[35px] h-[35px] bg-white rounded-full flex items-center justify-center border border-[#E5E5E5] active:scale-90 transition-transform"
-                    >
-                        <ChevronLeft size={20} className="text-black" />
-                    </button>
                     <span className="text-[18px] font-semibold text-black">Profile</span>
                 </header>
 
@@ -97,32 +88,22 @@ export default function MobileProfile() {
                     </div>
                     <p className="text-[16px] text-zinc-500 mb-6 text-center font-medium">Sign in to view your profile and bookings</p>
                     <button
-                        onClick={() => setIsLoginModalOpen(true)}
+                        onClick={() => router.push('/login')}
                         className="w-full max-w-[200px] h-[48px] bg-black text-white rounded-full text-[16px] font-medium active:scale-95 transition-all shadow-md"
                     >
                         Sign In
                     </button>
                 </div>
 
-                <AuthModal
-                    isOpen={isLoginModalOpen}
-                    onClose={() => setIsLoginModalOpen(false)}
-                    onSuccess={() => sync()}
-                />
+
             </div>
         );
     }
 
     return (
         <div className="md:hidden min-h-screen w-full bg-[#F5F5F5] font-sans px-5 pt-6 pb-20 overflow-x-hidden" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-            {/* Header with simple back icon and title */}
+            {/* Header with simple title */}
             <header className="flex items-center gap-[10px] mb-6">
-                <button
-                    onClick={() => router.back()}
-                    className="w-[35px] h-[35px] bg-white rounded-full flex items-center justify-center border border-[#E5E5E5] active:scale-90 transition-transform"
-                >
-                    <ChevronLeft size={20} className="text-black" />
-                </button>
                 <span className="text-[18px] font-semibold text-black">Profile</span>
             </header>
 
@@ -147,7 +128,7 @@ export default function MobileProfile() {
                 <div className="grid grid-cols-3 gap-3">
                     {/* Dining Bookings */}
                     <div 
-                        onClick={() => router.push('/bookings?type=dining')} 
+                        onClick={() => router.push('/myboooking?type=dining')} 
                         className="bg-white border border-[#E5E5E5] rounded-[20px] p-4 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all h-[110px]"
                     >
                         <div className="w-10 h-10 rounded-full bg-[#F5F5F7] flex items-center justify-center mb-2">
@@ -158,7 +139,7 @@ export default function MobileProfile() {
 
                     {/* Event Tickets */}
                     <div 
-                        onClick={() => router.push('/bookings?type=events')} 
+                        onClick={() => router.push('/myboooking?type=events')} 
                         className="bg-white border border-[#E5E5E5] rounded-[20px] p-4 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all h-[110px]"
                     >
                         <div className="w-10 h-10 rounded-full bg-[#F5F5F7] flex items-center justify-center mb-2">
@@ -169,7 +150,7 @@ export default function MobileProfile() {
 
                     {/* Play Bookings */}
                     <div 
-                        onClick={() => router.push('/bookings?type=play')} 
+                        onClick={() => router.push('/myboooking?type=play')} 
                         className="bg-white border border-[#E5E5E5] rounded-[20px] p-4 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all h-[110px]"
                     >
                         <div className="w-10 h-10 rounded-full bg-[#F5F5F7] flex items-center justify-center mb-2">
@@ -184,9 +165,9 @@ export default function MobileProfile() {
             <div className="bg-white rounded-[20px] border border-[#E5E5E5] overflow-hidden mb-4">
                 {[
                     { icon: <Heart size={20} className="text-zinc-600" />, label: 'Ticlists', onClick: () => router.push('/ticlists') },
-                    { icon: <Bell size={20} className="text-zinc-600" />, label: 'Dining reminders', onClick: () => router.push('/bookings?type=dining') },
-                    { icon: <Bell size={20} className="text-zinc-600" />, label: 'Event reminders', onClick: () => router.push('/bookings?type=events') },
-                    { icon: <Bell size={20} className="text-zinc-600" />, label: 'Play reminders', onClick: () => router.push('/bookings?type=play') },
+                    { icon: <Bell size={20} className="text-zinc-600" />, label: 'Dining reminders', onClick: () => router.push('/myboooking?type=dining') },
+                    { icon: <Bell size={20} className="text-zinc-600" />, label: 'Event reminders', onClick: () => router.push('/myboooking?type=events') },
+                    { icon: <Bell size={20} className="text-zinc-600" />, label: 'Play reminders', onClick: () => router.push('/myboooking?type=play') },
                 ].map((item, i, arr) => (
                     <div key={i}>
                         <button onClick={item.onClick} className="w-full flex items-center justify-between px-5 h-[56px] active:bg-zinc-50 transition-colors">

@@ -86,14 +86,7 @@ export default function MobilePlayBooking({
         <div className="md:hidden fixed inset-0 z-[120] bg-white font-sans overflow-y-auto pb-28" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* Header */}
             <header className="relative w-full h-[80px] bg-white border-b border-zinc-100 flex items-center px-4 shrink-0">
-                <button
-                    onClick={() => router.back()}
-                    className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-sm border border-zinc-100"
-                >
-                    <ChevronLeft size={18} className="text-black" />
-                </button>
-
-                <div className="flex-1 flex flex-col items-center mr-[31px]">
+                <div className="flex-1 flex flex-col items-center">
                     <h1 className="text-[20px] font-semibold text-black uppercase tracking-tight">{venue.sub_category || 'Book Turf'}</h1>
                     <p className="text-[10px] font-medium text-[#686868] uppercase truncate max-w-[200px]">{venue.name}</p>
                 </div>

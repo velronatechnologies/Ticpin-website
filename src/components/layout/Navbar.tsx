@@ -70,6 +70,20 @@ export default function Navbar() {
         };
     }, [syncAuth, currentLocation]);
 
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.get('showLogin') === 'true') {
+            setAuthView('number');
+            setIsAuthOpen(true);
+            
+            // Clean up only showLogin parameter from URL
+            searchParams.delete('showLogin');
+            const paramStr = searchParams.toString();
+            const cleanUrl = window.location.pathname + (paramStr ? '?' + paramStr : '');
+            window.history.replaceState({}, '', cleanUrl);
+        }
+    }, []);
+
     const hideNavbar =
         pathname?.startsWith('/organizer') ||
         pathname?.startsWith('/ticket') ||

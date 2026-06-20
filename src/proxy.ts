@@ -8,6 +8,7 @@ const PROTECTED_ROUTES = [
     '/my-pass',
     '/logout',
     '/ticlists',
+    '/myboooking',
 ];
 
 const ADMIN_ROUTES = [
@@ -17,6 +18,55 @@ const ADMIN_ROUTES = [
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     
+    // User-agent mobile vs desktop routing redirection
+    const userAgent = request.headers.get('user-agent') || '';
+    const deviceCookie = request.cookies.get('device_view')?.value;
+    const isMobileUA = deviceCookie === 'mobile' || (deviceCookie !== 'desktop' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent));
+
+    if (isMobileUA) {
+        if (pathname.startsWith('/bookings')) {
+            const search = request.nextUrl.search || '';
+            
+            if (pathname === '/bookings') {
+                const type = request.nextUrl.searchParams.get('type') || 'events';
+                return NextResponse.redirect(new URL(`/myboooking?type=${type}`, request.url));
+            }
+            if (pathname === '/bookings/dining' || pathname === '/bookings/dining-tickets') {
+                return NextResponse.redirect(new URL('/myboooking?type=dining', request.url));
+            } else if (pathname === '/bookings/events' || pathname === '/bookings/event-tickets') {
+                return NextResponse.redirect(new URL('/myboooking?type=events', request.url));
+            } else if (pathname === '/bookings/play' || pathname === '/bookings/play-tickets') {
+                return NextResponse.redirect(new URL('/myboooking?type=play', request.url));
+            }
+            
+            const categoryMatch = pathname.match(/^\/bookings\/(dining|events|play)\/([^\/]+)$/);
+            if (categoryMatch) {
+                const id = categoryMatch[2];
+                return NextResponse.redirect(new URL(`/myboooking/${id}${search}`, request.url));
+            }
+            
+            const generalMatch = pathname.match(/^\/bookings\/([^\/]+)$/);
+            if (generalMatch) {
+                const id = generalMatch[1];
+                return NextResponse.redirect(new URL(`/myboooking/${id}${search}`, request.url));
+            }
+        }
+    } else {
+        if (pathname.startsWith('/myboooking')) {
+            const search = request.nextUrl.search || '';
+            
+            const detailMatch = pathname.match(/^\/myboooking\/([^\/]+)$/);
+            if (detailMatch) {
+                const id = detailMatch[1];
+                return NextResponse.redirect(new URL(`/bookings/${id}${search}`, request.url));
+            }
+            
+            if (pathname === '/myboooking') {
+                return NextResponse.redirect(new URL(`/bookings${search}`, request.url));
+            }
+        }
+    }
+
     // Enforce no-cache for slot-booking pages (must always show latest lock state from DB)
     if (pathname.includes('/book/')) {
         const response = NextResponse.next();
@@ -37,7 +87,8 @@ export function proxy(request: NextRequest) {
     // Auth logic for normal users
     if (isProtected && !userSession) {
         // Redirect to login page if not logged in
-        return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url));
+        const search = request.nextUrl.search || '';
+        return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname + search)}`, request.url));
     }
 
     // Auth logic for organizer dashboard pages
@@ -114,6 +165,7 @@ export const config = {
         '/bookings/:path*',
         '/my-pass/:path*',
         '/organizer/:path*',
-        '/ticlists/:path*'
+        '/ticlists/:path*',
+        '/myboooking/:path*'
     ],
 };

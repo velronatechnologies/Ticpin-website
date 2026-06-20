@@ -99,9 +99,9 @@ const LoginView: React.FC<LoginViewProps> = ({
                                 onClick={handleSendOtp}
                                 disabled={number.length !== 10 || loading}
                                 className={`w-full h-[55px] text-base font-bold rounded-[15px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2
-                                    ${loading 
-                                        ? 'bg-black text-white cursor-wait' 
-                                        : 'bg-black text-white hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:cursor-not-allowed'
+                                    ${number.length === 10 
+                                        ? 'bg-black text-white hover:bg-zinc-800' 
+                                        : 'bg-[#DEDEDE] text-black cursor-not-allowed'
                                     }`}
                             >
                                 {loading ? (
@@ -161,9 +161,9 @@ const LoginView: React.FC<LoginViewProps> = ({
                                     onClick={handleVerifyOtp}
                                     disabled={otp.some(d => !d) || loading}
                                     className={`w-full h-[55px] text-base font-bold rounded-[15px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2
-                                        ${loading 
-                                            ? 'bg-black text-white cursor-wait' 
-                                            : 'bg-black text-white hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:cursor-not-allowed'
+                                        ${!otp.some(d => !d) 
+                                            ? 'bg-black text-white hover:bg-zinc-800' 
+                                            : 'bg-[#DEDEDE] text-black cursor-not-allowed'
                                         }`}
                                 >
                                     {loading ? (

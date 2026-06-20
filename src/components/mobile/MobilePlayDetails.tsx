@@ -6,10 +6,7 @@ import { useUserSession } from '@/lib/auth/user';
 import { useOrganizerSession } from '@/lib/auth/organizer';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
-
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 
 interface OfferRecord {
     id: string;
@@ -36,6 +33,7 @@ interface MobilePlayDetailsProps {
         city?: string;
         venue_name?: string;
         venue_address?: string;
+        google_map_link?: string;
         portrait_image_url?: string;
         landscape_image_url?: string;
         gallery_urls?: string[];
@@ -60,7 +58,6 @@ interface MobilePlayDetailsProps {
 export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDetailsProps) {
     const router = useRouter();
     const session = useUserSession();
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isOrgLogoutModalOpen, setIsOrgLogoutModalOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [isLiked, setIsLiked] = useState(false);
@@ -104,7 +101,7 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
                     price_starts_from: venue.price_starts_from
                 });
                 setIsLiked(true);
-                toast.success('Saved to Ticlists');
+                // toast.success('Saved to Ticlists');
             }
             localStorage.setItem('liked_play', JSON.stringify(liked));
             return;
@@ -128,7 +125,7 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
     const handleBook = () => {
         // 1. If no User session, show generic login
         if (!session) {
-            setIsLoginModalOpen(true);
+            router.push(`/login?redirect=${encodeURIComponent(`/play/${encodeURIComponent(venue.name)}/book`)}`);
             return;
         }
 
@@ -162,9 +159,6 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
                 />
 
                 {/* Overlaid Buttons */}
-                <div className="absolute top-[18px] left-[15px] w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-sm cursor-pointer" onClick={() => router.back()}>
-                    <ChevronLeft size={16} className="text-black" />
-                </div>
 
                 <div className="absolute top-[18px] right-[56px] w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-sm cursor-pointer active:scale-95 transition-transform" onClick={handleLikeToggle}>
                     <Heart size={16} className={isLiked ? "fill-[#866BFF] text-[#866BFF]" : "text-black"} />
@@ -339,11 +333,7 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
                 </div>
             </div>
 
-            <AuthModal
-                isOpen={isLoginModalOpen}
-                onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/play/${encodeURIComponent(venue.name)}/book`)}
-            />
+
         </div>
     );
 }

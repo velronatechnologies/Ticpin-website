@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronLeft, Percent, Tag, ChevronRight, Clock, User, ChevronDown, TriangleAlert, Edit2, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, Percent, Tag, ChevronRight, Clock, User, ChevronDown, TriangleAlert, Edit2, Info, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
+import { useIdentityStore } from '@/store/useIdentityStore';
 
 interface CartData {
     eventId: string;
@@ -74,6 +75,15 @@ interface MobileReviewBookingProps {
     removeTicket: (index: number) => void;
     phoneInputValue: string;
     handlePhoneChange: (e: any) => void;
+    
+    // New props passed from page.tsx
+    onBack: () => void;
+    donationAmount: number;
+    setDonationAmount: (val: number) => void;
+    isDonationAdded: boolean;
+    setIsDonationAdded: (val: boolean) => void;
+    isDonationEdited: boolean;
+    setIsDonationEdited: (val: boolean) => void;
 }
 
 const STATES = [
@@ -114,9 +124,51 @@ export default function MobileReviewBooking({
     setBookingError,
     bookingLoading,
     removeTicket,
+    onBack,
+    donationAmount,
+    setDonationAmount,
+    isDonationAdded,
+    setIsDonationAdded,
+    isDonationEdited,
+    setIsDonationEdited,
+    acceptedTerms,
+    setAcceptedTerms,
 }: MobileReviewBookingProps) {
-    const router = useRouter();
+    const identity = useIdentityStore();
+    const userSession = identity.userSession;
+
     const [showGstDetails, setShowGstDetails] = useState(false);
+    const [isEditingBilling, setIsEditingBilling] = useState(false);
+
+    // Auto-fetch profile fields on mount or when userSession/identity updates
+    useEffect(() => {
+        if (userSession) {
+            if (!billing.name && userSession.name) {
+                setBilling((prev: any) => ({ ...prev, name: userSession.name }));
+            }
+            if (!billing.phone && userSession.phone) {
+                setBilling((prev: any) => ({ ...prev, phone: userSession.phone }));
+            }
+            if (!email && userSession.email) {
+                setEmail(userSession.email);
+            }
+        }
+
+        // Also fetch from rememberedBilling in the identity store if available
+        const remembered = identity.rememberedBilling;
+        if (remembered) {
+            setBilling((prev: any) => ({
+                ...prev,
+                name: prev.name || remembered.name || '',
+                phone: prev.phone || remembered.phone || '',
+                state: prev.state || remembered.state || '',
+                nationality: prev.nationality || remembered.nationality || 'Indian resident',
+                address: prev.address || remembered.address || '',
+                city: prev.city || remembered.city || '',
+                pincode: prev.pincode || remembered.pincode || '',
+            }));
+        }
+    }, [userSession, identity.rememberedBilling, setBilling, setEmail]);
 
     if (!cart) return null;
 
@@ -132,11 +184,25 @@ export default function MobileReviewBooking({
     const venueName = venueFirstSegment || eventData?.venue_name || '';
     const cityName = eventData?.city || cart.city || '';
 
+    // Active Display Variables
+    const activeName = billing.name || userSession?.name || '';
+    const activePhone = billing.phone || userSession?.phone || '';
+    const activeEmail = email || userSession?.email || '';
+    const activeState = billing.state || '';
+
+    const hasMissingDetails = !activeName || !activePhone || !activeEmail || !activeState;
+
+    useEffect(() => {
+        if (hasMissingDetails) {
+            setIsEditingBilling(true);
+        }
+    }, [hasMissingDetails]);
+
     return (
         <div className="md:hidden fixed inset-0 z-[140] bg-white font-sans overflow-y-auto pb-32 flex flex-col" style={{ fontFamily: "'Anek Latin', sans-serif" }}>
             {/* Header Section */}
-            <div className="fixed top-0 left-0 w-full bg-white h-[60px] shrink-0 flex items-center justify-center px-4 z-50 border-b border-[#EFEFEF]">
-                <h1 className="text-[18px] font-semibold text-black">Review your booking</h1>
+            <div className="fixed top-0 left-0 w-full bg-white h-[60px] shrink-0 flex items-center px-4 z-50 border-b border-[#EFEFEF]">
+                <h1 className="ml-2 text-[18px] font-semibold text-black">Review your booking</h1>
             </div>
 
             {/* Main Content Area - Scrollable */}
@@ -367,73 +433,147 @@ export default function MobileReviewBooking({
                         <h3 className="text-[13px] font-medium text-[#3B3B3B] tracking-[0.1em] uppercase shrink-0">BILLING DETAILS</h3>
                         <div className="flex-1 h-[0.7px] bg-[#D9D9D9]" />
                     </div>
-                    <div className="border border-[#AEAEAE] rounded-[9px] p-4 bg-white space-y-4">
-                        <div className="space-y-3">
-                            <div className="space-y-1">
-                                <label className="text-[12px] font-semibold text-zinc-500">Name</label>
-                                <input 
-                                    type="text" 
-                                    value={billing.name || ''}
-                                    onChange={e => {
-                                        setBilling((prev: any) => ({ ...prev, name: e.target.value }));
-                                        setBookingError('');
-                                    }}
-                                    placeholder="Enter Name"
-                                    className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-3 text-[14px] font-medium outline-none text-black bg-white"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[12px] font-semibold text-zinc-500">Phone</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-[14px] font-semibold">+91</span>
-                                    <input 
-                                        type="tel" 
-                                        maxLength={10}
-                                        value={billing.phone || ''}
-                                        onChange={e => {
-                                            setBilling((prev: any) => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }));
-                                            setBookingError('');
-                                        }}
-                                        placeholder="Enter Phone Number"
-                                        className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] pl-12 pr-3 text-[14px] font-medium outline-none text-black bg-white"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[12px] font-semibold text-zinc-500">Email</label>
-                                <input 
-                                    type="email" 
-                                    value={email || ''}
-                                    onChange={e => {
-                                        setEmail(e.target.value);
-                                        setBookingError('');
-                                    }}
-                                    placeholder="Enter Email"
-                                    className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-3 text-[14px] font-medium outline-none text-black bg-white"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[12px] font-semibold text-zinc-500">State</label>
-                                <select 
-                                    value={billing.state || ''}
-                                    onChange={e => {
-                                        setBilling((prev: any) => ({ ...prev, state: e.target.value }));
-                                        setBookingError('');
-                                    }}
-                                    className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-2 text-[14px] font-medium outline-none bg-white text-black scrollbar-hide"
+                    {isEditingBilling ? (
+                        <div className="border border-[#AEAEAE] rounded-[9px] p-4 bg-white space-y-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[15px] font-medium text-black">Edit Billing Details</span>
+                                <button 
+                                    onClick={() => setIsEditingBilling(false)}
+                                    className="text-[12px] font-semibold text-black border border-black rounded-[5px] px-2 py-0.5 hover:bg-black hover:text-white transition-colors"
                                 >
-                                    <option value="">Select State</option>
-                                    {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                    Save
+                                </button>
                             </div>
                             
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-[12px] font-semibold text-zinc-500">Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={billing.name || ''}
+                                        onChange={e => {
+                                            setBilling((prev: any) => ({ ...prev, name: e.target.value }));
+                                            setBookingError('');
+                                        }}
+                                        placeholder="Enter Name"
+                                        className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-3 text-[14px] font-medium outline-none text-black bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[12px] font-semibold text-zinc-500">Phone</label>
+                                    <div className="relative flex items-center">
+                                        <div className="absolute left-3 flex items-center gap-1.5 pointer-events-none">
+                                            {/* India Flag */}
+                                            <div className="flex flex-col w-[13.39px] h-[12.54px] rounded-[1px] overflow-hidden shrink-0">
+                                                <div className="h-[4.18px] bg-[#F28623]" />
+                                                <div className="h-[4.18px] bg-[#F0F5F9] flex items-center justify-center">
+                                                    <div className="w-[3px] h-[3px] rounded-full bg-[#00247D]" />
+                                                </div>
+                                                <div className="h-[4.18px] bg-[#65B54E]" />
+                                            </div>
+                                            <span className="text-zinc-500 text-[14px] font-semibold">+91</span>
+                                        </div>
+                                        <input 
+                                            type="tel" 
+                                            maxLength={10}
+                                            value={billing.phone || ''}
+                                            onChange={e => {
+                                                setBilling((prev: any) => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }));
+                                                setBookingError('');
+                                            }}
+                                            placeholder="Enter Phone Number"
+                                            className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] pr-3 text-[14px] font-medium outline-none text-black bg-white"
+                                            style={{ paddingLeft: '64px' }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[12px] font-semibold text-zinc-500">Email</label>
+                                    <input 
+                                        type="email" 
+                                        value={email || ''}
+                                        onChange={e => {
+                                            setEmail(e.target.value);
+                                            setBookingError('');
+                                        }}
+                                        placeholder="Enter Email"
+                                        className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-3 text-[14px] font-medium outline-none text-black bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[12px] font-semibold text-zinc-500">Nationality</label>
+                                    <select 
+                                        value={billing.nationality || 'Indian resident'}
+                                        onChange={e => {
+                                            setBilling((prev: any) => ({ ...prev, nationality: e.target.value }));
+                                            setBookingError('');
+                                        }}
+                                        className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-2 text-[14px] font-medium outline-none bg-white text-black scrollbar-hide"
+                                    >
+                                        <option value="Indian resident">Indian resident</option>
+                                        <option value="International resident">International resident</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[12px] font-semibold text-zinc-500">State</label>
+                                    <select 
+                                        value={billing.state || ''}
+                                        onChange={e => {
+                                            setBilling((prev: any) => ({ ...prev, state: e.target.value }));
+                                            setBookingError('');
+                                        }}
+                                        className="w-full h-[40px] border border-[#D9D9D9] rounded-[8px] px-2 text-[14px] font-medium outline-none bg-white text-black scrollbar-hide"
+                                    >
+                                        <option value="">Select State</option>
+                                        {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border border-[#AEAEAE] rounded-[9px] p-4 bg-white">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-5 h-5 flex items-center justify-center">
+                                        <User size={20} className="text-zinc-600" />
+                                    </div>
+                                    <span className="text-[15px] font-medium text-black">{activeName || '{AUTO FETCH}'}</span>
+                                </div>
+                                <button 
+                                    onClick={() => setIsEditingBilling(true)}
+                                    className="text-[12px] font-normal text-black flex items-center gap-1 hover:underline active:scale-95 transition-transform"
+                                >
+                                    Edit <ChevronRight size={12} />
+                                </button>
+                            </div>
+                            <div className="ml-8 space-y-2 text-[13px] font-normal text-black">
+                                <p>{activePhone || '{AUTO FETCH}'}</p>
+                                <p>{activeEmail || '{AUTO FETCH}'}</p>
+                                <p>{activeState || '{AUTO FETCH}'}</p>
+                                <p>{billing.nationality || 'Indian resident'}</p>
+                            </div>
+
                             <div className="w-full h-[0.7px] bg-[#D9D9D9] my-4" />
 
                             <p className="text-[12px] font-normal text-[#686868] leading-tight">
                                 Information mentioned above will be used for generating the invoice and sending out the tickets.
                             </p>
                         </div>
-                    </div>
+                    )}
+                </div>
+
+                {/* Terms and Conditions Checkbox */}
+                <div className="px-4 mt-6 mb-8 flex items-start gap-2.5">
+                    <input
+                        type="checkbox"
+                        id="mobile-terms"
+                        checked={acceptedTerms}
+                        onChange={e => setAcceptedTerms(e.target.checked)}
+                        className="mt-1 w-4 h-4 rounded border-gray-300 text-black focus:ring-black accent-black shrink-0"
+                    />
+                    <label htmlFor="mobile-terms" className="text-[12px] font-normal text-[#686868] leading-tight select-none">
+                        I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline cursor-pointer text-black font-semibold">Terms and Conditions</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline cursor-pointer text-black font-semibold">Privacy Policy</a>.
+                    </label>
                 </div>
             </div>
 
@@ -450,7 +590,11 @@ export default function MobileReviewBooking({
                     disabled={bookingLoading}
                     className="w-[148px] h-[44px] bg-black text-white rounded-[14px] font-semibold text-[15px] flex items-center justify-center active:scale-95 transition-all disabled:opacity-50"
                 >
-                    {bookingLoading ? 'Processing...' : 'Checkout'}
+                    {bookingLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-white" />
+                    ) : (
+                        'Checkout'
+                    )}
                 </button>
             </div>
         </div>

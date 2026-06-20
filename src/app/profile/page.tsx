@@ -131,15 +131,15 @@ function UserProfileContent() {
                     <div className="space-y-3">
                         <h2 className="text-[14px] font-bold text-black">Your bookings</h2>
                         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                            <button onClick={() => router.push('/bookings?type=dining')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
+                            <button onClick={() => router.push('/myboooking?type=dining')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
                                 <Utensils size={20} className="text-zinc-700" />
                                 <span className="text-[11px] font-semibold text-black tracking-tight">Dining bookings</span>
                             </button>
-                            <button onClick={() => router.push('/bookings?type=events')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
+                            <button onClick={() => router.push('/myboooking?type=events')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
                                 <Music size={20} className="text-zinc-700" />
                                 <span className="text-[11px] font-semibold text-black tracking-tight">Event tickets</span>
                             </button>
-                            <button onClick={() => router.push('/bookings?type=play')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
+                            <button onClick={() => router.push('/myboooking?type=play')} className="flex flex-col items-center justify-center gap-2 min-w-[105px] h-[75px] bg-white border border-[#E5E5E5] rounded-[20px]">
                                 <Trophy size={20} className="text-zinc-700" />
                                 <span className="text-[11px] font-semibold text-black tracking-tight">Play book</span>
                             </button>
@@ -155,21 +155,21 @@ function UserProfileContent() {
                             </div>
                             <ChevronRight size={16} className="text-zinc-400" />
                         </button>
-                        <button onClick={() => router.push('/bookings?type=dining')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
+                        <button onClick={() => router.push('/myboooking?type=dining')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
                             <div className="flex items-center gap-3">
                                 <Utensils size={18} className="text-zinc-600" />
                                 <span className="text-[13px] font-semibold text-black">Dining reminders</span>
                             </div>
                             <ChevronRight size={16} className="text-zinc-400" />
                         </button>
-                        <button onClick={() => router.push('/bookings?type=events')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
+                        <button onClick={() => router.push('/myboooking?type=events')} className="w-full flex items-center justify-between p-4 border-b border-[#E5E5E5] active:bg-zinc-50">
                             <div className="flex items-center gap-3">
                                 <Music size={18} className="text-zinc-600" />
                                 <span className="text-[13px] font-semibold text-black">Event reminders</span>
                             </div>
                             <ChevronRight size={16} className="text-zinc-400" />
                         </button>
-                        <button onClick={() => router.push('/bookings?type=play')} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
+                        <button onClick={() => router.push('/myboooking?type=play')} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
                             <div className="flex items-center gap-3">
                                 <Trophy size={18} className="text-zinc-600" />
                                 <span className="text-[13px] font-semibold text-black">Play reminders</span>

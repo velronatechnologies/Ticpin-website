@@ -19,6 +19,21 @@ function BookingsContent() {
     const typeParam = searchParams.get('type') as any;
     const activeTab = typeParam && ['dining', 'events', 'play'].includes(typeParam) ? typeParam : 'play';
 
+    useEffect(() => {
+        const checkMobile = () => {
+            if (window.innerWidth < 768) {
+                document.cookie = "device_view=mobile; path=/; max-age=31536000";
+                const search = window.location.search || '';
+                router.replace(`/myboooking${search}`);
+            } else {
+                document.cookie = "device_view=desktop; path=/; max-age=31536000";
+            }
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, [router]);
+
     const [bookings, setBookings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -87,7 +102,7 @@ function BookingsContent() {
     useEffect(() => {
         if (session?.id) {
             fetchBookings();
-        } else if (!loading) {
+        } else {
             setLoading(false);
         }
     }, [session?.id, fetchBookings]);

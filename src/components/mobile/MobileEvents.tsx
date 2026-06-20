@@ -11,7 +11,6 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { toast } from '@/components/ui/Toast';
 
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
 const FilterModal = dynamic(() => import('@/components/modals/FilterModal'), { ssr: false });
@@ -59,7 +58,6 @@ export default function MobileEvents({ events }: MobileEventsProps) {
     const { userSession, organizerSession, sync } = useIdentityStore();
     const session = userSession || organizerSession;
 
-    const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -73,6 +71,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
     const [activeFilter, setActiveFilter] = useState('All');
     const placeholders = ["events", "dining", "play"];
     const [likedEventIds, setLikedEventIds] = useState<string[]>([]);
+    const [animatingId, setAnimatingId] = useState<string | null>(null);
 
     useEffect(() => {
         if (session?.id) {
@@ -80,7 +79,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                 .then(res => res.ok ? res.json() : Promise.reject())
                 .then(async (data) => {
                     let likedIds = data.likedEventIds || data.events || [];
-                    
+
                     // Check for pending like
                     const pendingLikeId = localStorage.getItem('pending_like_event_id');
                     if (pendingLikeId && !likedIds.includes(pendingLikeId)) {
@@ -94,14 +93,16 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                 const toggleData = await res.json();
                                 if (toggleData.liked) {
                                     likedIds = [...likedIds, pendingLikeId];
-                                    toast.success('Saved to liked events');
+                                    setAnimatingId(pendingLikeId);
+                                    setTimeout(() => setAnimatingId(null), 500);
+                                    // toast.success('Saved to liked events');
                                 }
                             }
-                        } catch (err) {}
+                        } catch (err) { }
                     }
                     setLikedEventIds(likedIds);
                 })
-                .catch(() => {});
+                .catch(() => { });
         } else {
             setLikedEventIds([]);
         }
@@ -109,7 +110,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
     const handleLikeToggle = async (e: React.MouseEvent, event: RealEvent) => {
         e.stopPropagation(); // Don't navigate to event details
-        
+
         if (!session?.id) {
             localStorage.setItem('pending_like_event_id', String(event.id));
             router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
@@ -125,7 +126,9 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                 const data = await res.json();
                 if (data.liked) {
                     setLikedEventIds(prev => [...prev, event.id]);
-                    toast.success('Saved to liked events');
+                    setAnimatingId(String(event.id));
+                    setTimeout(() => setAnimatingId(null), 500);
+                    // toast.success('Saved to liked events');
                 } else {
                     setLikedEventIds(prev => prev.filter(id => id !== event.id));
                     toast.success('Removed from saved events');
@@ -302,8 +305,8 @@ export default function MobileEvents({ events }: MobileEventsProps) {
     return (
         <div className="md:hidden min-h-screen bg-white font-sans overflow-x-hidden pb-10" style={{ fontFamily: "'Anek Latin', sans-serif" }}>
             {/* 1. Header Section */}
-            <header className="px-6 pt-7 pb-4">
-                <div className="flex justify-between items-center mb-10">
+            <header className="px-6 pt-4 pb-4">
+                <div className="flex justify-between items-center mb-5">
                     <div className="flex items-center gap-4">
                         {/* <Link href="/">
                             <Image src="/ticpin-logo-black.png" alt="TICPIN" width={90} height={20} className="h-5 w-auto object-contain" />
@@ -323,7 +326,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                             if (session) {
                                 setIsProfileDrawerOpen(true);
                             } else {
-                                setIsAuthOpen(true);
+                                router.push('/login');
                             }
                         }}
                     >
@@ -336,7 +339,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                 </div>
 
                 {/* 2. Search Bar */}
-                <div className="relative w-full h-[48px] bg-white rounded-[28px] border border-[#AEAEAE] flex items-center px-5 mb-14">
+                <div className="relative w-full h-[48px] bg-white rounded-[28px] border border-[#AEAEAE] flex items-center px-5 mb-6">
                     <Search size={22} className="text-[#AEAEAE] flex-shrink-0" />
                     <input
                         type="text"
@@ -365,7 +368,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                     }
                 </div>
                 {searchQuery.trim().length > 0 && (
-                    <div className="absolute top-[180px] left-6 right-6 bg-white border border-[#AEAEAE] rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute top-[136px] left-6 right-6 bg-white border border-[#AEAEAE] rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200">
                         {isSearching ? (
                             <div className="px-4 py-8 flex items-center justify-center gap-2 text-zinc-500">
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -425,13 +428,13 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                 )}
 
                 {/* 3. Horizontal Divider */}
-                <div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-6 mt-[-20px]" />
+                <div className="w-full h-[1px] bg-[#AEAEAE] opacity-100 mb-3 " />
             </header>
 
             {/* Explore Events Section */}
-            <section className="mt-[12px]">
-                <h2 className="text-[20px] font-medium text-black mb-[20px] px-[18px]">Explore events</h2>
-                <div className="grid grid-rows-2 grid-flow-col gap-[15px] overflow-x-auto scrollbar-hide px-[18px] pb-4">
+            <section className="mt-[-10px]">
+                <h2 className="text-[20px] font-medium text-black mb-[12px] px-[18px]">Explore events</h2>
+                <div className="grid grid-rows-2 grid-flow-col gap-[15px] overflow-x-auto scrollbar-hide px-[18px] pb-1">
                     {categories.map((cat, i) => {
                         const isSelected = activeFilter === cat.name;
                         return (
@@ -447,11 +450,10 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                 className="flex flex-col items-center gap-[10px] flex-shrink-0 w-[89px]"
                             >
                                 <div
-                                    className={`w-[89px] h-[120px] rounded-[25px] border flex flex-col items-center pt-[15px] relative transition-all duration-150 ${
-                                        isSelected
+                                    className={`w-[89px] h-[120px] rounded-[25px] border flex flex-col items-center pt-[15px] relative transition-all duration-150 ${isSelected
                                             ? 'border-black ring-1 ring-black'
                                             : ''
-                                    }`}
+                                        }`}
                                     style={{ background: cat.bg }}
                                 >
                                     <div className="px-1 text-center">
@@ -475,12 +477,12 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
             {/* Artist Section */}
             {dynamicArtists.length > 0 && (
-                <section className="mt-[42px] px-[18px]">
-                    <h2 className="text-[20px] font-medium text-black mb-[20px]">Artists in your Ticpin</h2>
+                <section className="mt-[24px] px-[18px]">
+                    <h2 className="text-[20px] font-medium text-black mb-[12px]">Artists in your Ticpin</h2>
                     <div className="flex gap-[20px] overflow-x-auto scrollbar-hide">
                         {dynamicArtists.map((artist, idx) => (
-                            <div 
-                                key={idx} 
+                            <div
+                                key={idx}
                                 onClick={() => router.push(`/events/artist/${encodeURIComponent(artist.name)}`)}
                                 className="flex flex-col items-center gap-[10px] flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
                             >
@@ -495,8 +497,8 @@ export default function MobileEvents({ events }: MobileEventsProps) {
             )}
 
             {/* Filters */}
-            <div className="mt-[32px] px-[18px] flex items-center gap-[10px] overflow-x-auto scrollbar-hide">
-                <button 
+            <div className="mt-[20px] px-[18px] flex items-center gap-[10px] overflow-x-auto scrollbar-hide">
+                <button
                     onClick={() => setIsFilterModalOpen(true)}
                     className="h-[31px] px-3 border border-black rounded-[9px] flex items-center gap-2 flex-shrink-0 active:bg-zinc-100"
                 >
@@ -507,9 +509,8 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                     <button
                         key={filter}
                         onClick={() => setActiveFilter(filter)}
-                        className={`h-[31px] px-4 border border-black rounded-[9px] flex-shrink-0 text-[15px] font-medium transition-colors ${
-                            activeFilter === filter ? 'bg-black text-white' : 'bg-transparent text-black'
-                        }`}
+                        className={`h-[31px] px-4 border border-black rounded-[9px] flex-shrink-0 text-[15px] font-medium transition-colors ${activeFilter === filter ? 'bg-black text-white' : 'bg-transparent text-black'
+                            }`}
                     >
                         {filter}
                     </button>
@@ -518,26 +519,32 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
             {/* Event Grid */}
             {filteredAndSearchedEvents.length > 0 ? (
-                <div className="mt-[30px] px-[18px] grid grid-cols-2 gap-[16px]">
+                <div className="mt-[18px] px-[8px] grid grid-cols-2 gap-[10px]">
                     {filteredAndSearchedEvents.map((event) => (
                         <div
                             key={event.id}
                             className="flex flex-col bg-white rounded-[30px] border-[0.5px] border-black overflow-hidden active:scale-95 transition-all duration-150 cursor-pointer"
                             onClick={() => router.push(`/events/${encodeURIComponent(event.name)}`)}
                         >
-                            <div className="aspect-[175/233] relative bg-[#E4E4E4] overflow-hidden">
+                            <div className="aspect-[175/200] relative bg-[#E4E4E4] overflow-hidden">
                                 <img
                                     src={event.portrait_image_url || event.landscape_image_url || "/login/banner.jpeg"}
                                     alt={event.name}
                                     className="w-full h-full object-cover"
                                 />
-                                <button 
+                                <button
                                     onClick={(e) => handleLikeToggle(e, event)}
-                                    className={`absolute top-[12px] right-[12px] w-[28px] h-[28px] ${likedEventIds.includes(event.id) ? 'bg-[#5331EA]' : 'bg-[#E4E4E4]/90'} rounded-[8px] flex items-center justify-center backdrop-blur-sm shadow-sm transition-all z-10 active:scale-90`}
+                                    className="absolute top-[12px] right-[12px] w-[28px] h-[28px] bg-[#E4E4E4]/90 rounded-[8px] flex items-center justify-center backdrop-blur-sm shadow-sm transition-all z-10 active:scale-90"
                                 >
-                                    <Heart 
-                                        size={15} 
-                                        className={`${likedEventIds.includes(event.id) ? 'fill-white text-white' : 'text-zinc-600'} transition-colors`} 
+                                    <img
+                                        src="/mobile_icons/event clicking/Vector 1.svg"
+                                        alt="Like"
+                                        className={`w-4 h-4 transition-all duration-300 ${animatingId === String(event.id) ? 'animate-bounce' : ''}`}
+                                        style={{
+                                            filter: likedEventIds.includes(event.id)
+                                                ? 'invert(27%) sepia(100%) saturate(7000%) hue-rotate(0deg) brightness(95%) contrast(110%)'
+                                                : 'none'
+                                        }}
                                     />
                                 </button>
                             </div>
@@ -592,19 +599,15 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                     setIsLocationOpen(false);
                 }}
             />
-            <AuthModal
-                isOpen={isAuthOpen}
-                onClose={() => setIsAuthOpen(false)}
-                onSuccess={() => sync()}
-            />
-<FilterModal
+
+            <FilterModal
                 isOpen={isFilterModalOpen}
                 onClose={() => setIsFilterModalOpen(false)}
                 type="events"
                 onApply={setModalFilters}
             />
 
-            <ProfileDrawer 
+            <ProfileDrawer
                 isOpen={isProfileDrawerOpen}
                 onClose={() => setIsProfileDrawerOpen(false)}
             />

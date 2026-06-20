@@ -32,6 +32,8 @@ import { useRef } from "react";
 import { MobileVisualMap, DesktopVisualMap } from "./VisualMap";
 import { toast } from "@/components/ui/Toast";
 import { formatPrice } from "@/lib/utils";
+import MobileChooseTickets from "@/components/mobile/Choosetickects";
+
 
 interface TicketCategory {
   name: string;
@@ -60,6 +62,8 @@ interface EventData {
   is_layout_based?: boolean;
   layout_json?: string;
   status?: string;
+  landscape_image_url?: string;
+  portrait_image_url?: string;
 }
 
 export default function TicketSelectionPage() {
@@ -67,7 +71,8 @@ export default function TicketSelectionPage() {
   const params = useParams();
   const name = params?.name as string;
   const isAllRoute = useMemo(() => {
-    return !params?.category || params.category.toLowerCase() === "all";
+    const cat = params?.category;
+    return !cat || (typeof cat === "string" ? cat : cat[0]).toLowerCase() === "all";
   }, [params]);
 
   const [event, setEvent] = useState<EventData | null>(null);
@@ -90,6 +95,15 @@ export default function TicketSelectionPage() {
   const organizerSession = useOrganizerSession();
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
 
   // Enforce logged-in session: redirect to event details if not authenticated
   useEffect(() => {
@@ -631,6 +645,8 @@ export default function TicketSelectionPage() {
       eventId: event?.id,
       eventName: event?.name,
       city: event?.city,
+      landscape_image_url: event?.landscape_image_url,
+      portrait_image_url: event?.portrait_image_url,
       tickets: categories
         .map((cat, i) => ({
           name: cat.name,
@@ -720,7 +736,17 @@ export default function TicketSelectionPage() {
       </div>
     );
 
+  if (isMobile) {
+    return (
+      <MobileChooseTickets
+        eventName={name}
+        onBack={() => router.back()}
+      />
+    );
+  }
+
   return (
+
     <div className="min-h-screen overflow-x-hidden flex flex-col font-[family-name:var(--font-anek-latin)] bg-white select-none">
       <AuthModal
         isOpen={showAuthModal}

@@ -222,14 +222,26 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: number }),
             });
+            const d = await res.json();
             if (!res.ok) {
-                const d = await res.json();
                 setView('number');
                 setTimeLeft(0);
                 setError(d.error || 'Failed to send OTP');
                 return;
             }
-            localStorage.setItem(`user_otp_sent_at_${number}`, Date.now().toString());
+
+            const isAlreadySent = d.already_sent;
+            const remaining = d.remaining_cooldown ?? 120;
+
+            if (isAlreadySent) {
+                const originalSentAt = Date.now() - (120 - remaining) * 1000;
+                localStorage.setItem(`user_otp_sent_at_${number}`, originalSentAt.toString());
+            } else {
+                localStorage.setItem(`user_otp_sent_at_${number}`, Date.now().toString());
+            }
+
+            setView('otp');
+            setTimeLeft(remaining);
         } catch (err: any) {
             console.error('Send OTP Error:', err);
             setView('number');

@@ -9,7 +9,6 @@ import { useLocationStore } from '@/store/useLocationStore';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import dynamic from 'next/dynamic';
 
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
 const FilterModal = dynamic(() => import('@/components/modals/FilterModal'), { ssr: false });
@@ -52,7 +51,6 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
     const { userSession, organizerSession, sync } = useIdentityStore();
     const session = userSession || organizerSession;
 
-    const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -249,7 +247,7 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                             if (session) {
                                 setIsProfileDrawerOpen(true);
                             } else {
-                                setIsAuthOpen(true);
+                                router.push('/login');
                             }
                         }}
                     >
@@ -536,11 +534,7 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                     setIsLocationOpen(false);
                 }}
             />
-            <AuthModal
-                isOpen={isAuthOpen}
-                onClose={() => setIsAuthOpen(false)}
-                onSuccess={() => sync()}
-            />
+
             <FilterModal
                 isOpen={isFilterModalOpen}
                 onClose={() => setIsFilterModalOpen(false)}

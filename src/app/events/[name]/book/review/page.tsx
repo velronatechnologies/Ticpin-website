@@ -304,7 +304,7 @@ export default function ReviewBookingPage() {
         const parsedCart = JSON.parse(savedCart);
         setCart(parsedCart);
         if (parsedCart.type === "event" && parsedCart.eventId) {
-          setEventData({ id: parsedCart.eventId, name: parsedCart.eventName });
+          setEventData((prev: any) => ({ ...prev, id: parsedCart.eventId, name: parsedCart.eventName }));
         }
         setIsValidating(false);
         return;
@@ -347,6 +347,8 @@ export default function ReviewBookingPage() {
               eventId: eventData.id,
               eventName: eventData.name,
               city: eventData.city,
+              landscape_image_url: eventData.landscape_image_url,
+              portrait_image_url: eventData.portrait_image_url,
               tickets: mappedTickets,
               totalPrice: mappedTickets.reduce(
                 (sum: number, t: any) => sum + t.price * t.quantity,
@@ -359,7 +361,13 @@ export default function ReviewBookingPage() {
               JSON.stringify(reconstructedCart),
             );
             setCart(reconstructedCart);
-            setEventData({ id: eventData.id, name: eventData.name });
+            setEventData((prev: any) => ({
+              ...prev,
+              id: eventData.id,
+              name: eventData.name,
+              landscape_image_url: eventData.landscape_image_url,
+              portrait_image_url: eventData.portrait_image_url,
+            }));
 
             reservationStore.setReservation(
               activeRes.reservation_id,
@@ -512,7 +520,13 @@ export default function ReviewBookingPage() {
 
       // Set eventData when cart is loaded for events
       if (cartData.type === "event" && cartData.eventId) {
-        setEventData({ id: cartData.eventId, name: cartData.eventName });
+        setEventData((prev: any) => ({
+          ...prev,
+          id: cartData.eventId,
+          name: cartData.eventName,
+          landscape_image_url: cartData.landscape_image_url,
+          portrait_image_url: cartData.portrait_image_url,
+        }));
       }
     }
 
@@ -550,7 +564,7 @@ export default function ReviewBookingPage() {
           if (p.cart) {
             setCart(p.cart);
             if (p.cart.type === "event" && p.cart.eventId) {
-              setEventData({ id: p.cart.eventId, name: p.cart.eventName });
+              setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
             }
             window.history.replaceState(null, "", window.location.pathname);
             showSuccessImmediately(p.orderID);
@@ -655,7 +669,7 @@ export default function ReviewBookingPage() {
               pincode:
                 prev.pincode ||
                 latestBooking?.pincode ||
-                profile?.pincode ||
+                (profile as any)?.pincode ||
                 "",
             };
             sessionStorage.setItem(
@@ -1667,6 +1681,13 @@ export default function ReviewBookingPage() {
         removeTicket={removeTicket}
         phoneInputValue={phoneInputValue}
         handlePhoneChange={handlePhoneChange}
+        onBack={() => router.back()}
+        donationAmount={donationAmount}
+        setDonationAmount={setDonationAmount}
+        isDonationAdded={isDonationAdded}
+        setIsDonationAdded={setIsDonationAdded}
+        isDonationEdited={isDonationEdited}
+        setIsDonationEdited={setIsDonationEdited}
       />
     );
   }

@@ -120,19 +120,7 @@ export default function MobileDiningReview({
         <div className="md:hidden fixed inset-0 z-[140] bg-white font-sans overflow-y-auto pb-32" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* Header */}
             <header className="fixed top-0 left-0 w-full h-[60px] bg-white border-b border-zinc-100 flex items-center px-4 z-50">
-                <button
-                    onClick={() => {
-                        if (step === 'billing') {
-                            setStep('review');
-                        } else {
-                            router.push(`/dining/venue/${venueName}/book`);
-                        }
-                    }}
-                    className="w-[31px] h-[31px] flex items-center justify-center"
-                >
-                    <ChevronLeft size={24} className="text-black" />
-                </button>
-                <h1 className="ml-4 text-[18px] font-bold text-black tracking-tight">
+                <h1 className="ml-2 text-[18px] font-bold text-black tracking-tight">
                     {step === 'billing' ? 'Billing Details' : 'Review your booking'}
                 </h1>
             </header>
@@ -222,7 +210,7 @@ export default function MobileDiningReview({
                                     onChange={() => { setAcceptedTerms(!acceptedTerms); setBookingError(''); }}
                                 />
                                 <span className="text-[13px] font-medium text-zinc-700 leading-tight">
-                                    I have read and accepted the <span className="underline text-amber-600 font-semibold">terms and conditions</span>
+                                    I have read and accepted the <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-amber-600 font-semibold">terms and conditions</a>
                                 </span>
                             </label>
                         </div>
@@ -281,7 +269,7 @@ export default function MobileDiningReview({
                                         maxLength={10}
                                         value={billing.phone}
                                         onChange={e => { setBilling({ ...billing, phone: e.target.value.replace(/\D/g, '') }); setBookingError(''); }}
-                                        className="w-full h-11 border border-[#AEAEAE] rounded-[8px] pl-12 pr-3 focus:outline-none focus:border-black text-[14px]"
+                                        className="w-full h-11 border border-[#AEAEAE] rounded-[8px] pl-16 pr-3 focus:outline-none focus:border-black text-[14px]"
                                     />
                                 </div>
                             </div>

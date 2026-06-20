@@ -36,7 +36,7 @@ export default function MobileReviewBooking({ event, quantity, pricePerTicket, o
         try {
             // Simulated transaction call
             await new Promise((resolve) => setTimeout(resolve, 1500));
-            router.replace('/bookings?success=true');
+            router.replace('/myboooking?success=true');
         } catch (err) {
             setIsSubmitting(false);
         }

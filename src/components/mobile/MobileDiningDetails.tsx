@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
-
-const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
 
 interface OfferRecord {
     id: string;
@@ -47,7 +44,6 @@ interface MobileDiningDetailsProps {
 export default function MobileDiningDetails({ venue, offers }: MobileDiningDetailsProps) {
     const router = useRouter();
     const session = useUserSession();
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [guests, setGuests] = useState(2);
     const [isLiked, setIsLiked] = useState(false);
@@ -115,7 +111,7 @@ export default function MobileDiningDetails({ venue, offers }: MobileDiningDetai
 
     const handleBook = () => {
         if (!session) {
-            setIsLoginModalOpen(true);
+            router.push(`/login?redirect=${encodeURIComponent(`/dining/venue/${encodeURIComponent(venue.name)}/book`)}`);
             return;
         }
         router.push(`/dining/venue/${encodeURIComponent(venue.name)}/book`);
@@ -141,9 +137,6 @@ export default function MobileDiningDetails({ venue, offers }: MobileDiningDetai
                 />
 
                 {/* Overlaid Buttons */}
-                <div className="absolute top-[18px] left-[15px] w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-sm cursor-pointer" onClick={() => router.back()}>
-                    <ChevronLeft size={16} className="text-black" />
-                </div>
 
                 <div className="absolute top-[18px] right-[56px] w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-sm cursor-pointer active:scale-95 transition-transform" onClick={handleLikeToggle}>
                     <Heart size={16} className={isLiked ? "fill-[#866BFF] text-[#866BFF]" : "text-black"} />
@@ -332,11 +325,7 @@ export default function MobileDiningDetails({ venue, offers }: MobileDiningDetai
                 </div>
             </div>
 
-            <AuthModal
-                isOpen={isLoginModalOpen}
-                onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/dining/venue/${encodeURIComponent(venue.name)}/book`)}
-            />
+
 
         </div>
     );
