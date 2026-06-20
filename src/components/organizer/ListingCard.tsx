@@ -40,7 +40,7 @@ export default function ListingCard({ listing, vertical, onDelete }: ListingCard
     const statusCfg = STATUS_CONFIG[status] ?? { label: status, bg: 'bg-zinc-100', text: 'text-zinc-600', icon: AlertCircle };
 
     const handleEdit = () => {
-        router.push(`/${vertical}/edit/${listing.id}`);
+        router.push(`/organizer/overview?id=${listing.id}&vertical=${vertical}`);
     };
 
     const handleDelete = async (e: React.MouseEvent) => {

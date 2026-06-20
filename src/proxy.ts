@@ -18,6 +18,17 @@ const ADMIN_ROUTES = [
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     
+    // Redirect list-your-* onboarding pages to the restored dark gradient coming soon pages
+    if (pathname === '/list-your-dining') {
+        return NextResponse.redirect(new URL('/dining', request.url));
+    }
+    if (pathname === '/list-your-events') {
+        return NextResponse.redirect(new URL('/pass', request.url));
+    }
+    if (pathname === '/list-your-play') {
+        return NextResponse.redirect(new URL('/my-pass', request.url));
+    }
+    
     // User-agent mobile vs desktop routing redirection
     const userAgent = request.headers.get('user-agent') || '';
     const deviceCookie = request.cookies.get('device_view')?.value;
@@ -101,6 +112,9 @@ export function proxy(request: NextRequest) {
 
     // Auth logic for admin pages
     if (isAdminProtected) {
+        if (pathname === '/admin/newadminpanel') {
+            return NextResponse.redirect(new URL('/admin', request.url));
+        }
         // Exclude /admin/login from protection
         if (pathname === '/admin/login') {
             return NextResponse.next();
@@ -166,6 +180,9 @@ export const config = {
         '/my-pass/:path*',
         '/organizer/:path*',
         '/ticlists/:path*',
-        '/myboooking/:path*'
+        '/myboooking/:path*',
+        '/list-your-dining',
+        '/list-your-events',
+        '/list-your-play'
     ],
 };

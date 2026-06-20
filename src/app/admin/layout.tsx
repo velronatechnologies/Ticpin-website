@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         if (!hasCheckedSession) return;
         
-        if (pathname?.startsWith('/admin/login')) {
+        if (pathname?.startsWith('/admin/login') || pathname?.startsWith('/admin/newadminpanel')) {
             setAuthorized(true);
             return;
         }

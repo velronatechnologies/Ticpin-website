@@ -8,7 +8,7 @@ export default function TicpassComingSoon() {
     <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between items-center px-6 py-12 relative overflow-hidden font-sans">
       {/* Soft blurred ambient glows to match the Prismania design */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div 
+        <div
           className="absolute w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-40 translate-x-[-15%] translate-y-[-10%]"
           style={{
             background: 'radial-gradient(circle, rgba(253,218,210,1) 0%, rgba(253,218,210,0) 70%)',
@@ -16,7 +16,7 @@ export default function TicpassComingSoon() {
             left: '0%',
           }}
         />
-        <div 
+        <div
           className="absolute w-[70vw] h-[70vw] rounded-full blur-[140px] opacity-50 translate-y-[-20%]"
           style={{
             background: 'radial-gradient(circle, rgba(254,251,223,1) 0%, rgba(254,251,223,0) 70%)',
@@ -24,7 +24,7 @@ export default function TicpassComingSoon() {
             left: '15%',
           }}
         />
-        <div 
+        <div
           className="absolute w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-40 translate-x-[15%] translate-y-[-10%]"
           style={{
             background: 'radial-gradient(circle, rgba(220,237,253,1) 0%, rgba(220,237,253,0) 70%)',
@@ -36,10 +36,10 @@ export default function TicpassComingSoon() {
 
       {/* Header Branding with Logo */}
       <header className="w-full max-w-[800px] flex justify-center relative z-10 pt-4">
-        <img 
-          src="/ticpin-logo-black.png" 
-          alt="Ticpin" 
-          className="h-10 sm:h-12 w-auto object-contain select-none" 
+        <img
+          src="/ticpin-logo-black.png"
+          alt="Ticpin"
+          className="h-10 sm:h-12 w-auto object-contain select-none"
         />
       </header>
 
@@ -48,14 +48,14 @@ export default function TicpassComingSoon() {
         <h1 className="text-[42px] sm:text-[62px] font-semibold text-black tracking-tight leading-tight mb-5">
           Great things coming soon.
         </h1>
-        
+
         <p className="text-[#555555] text-[15px] sm:text-[16px] max-w-[460px] leading-relaxed mb-8 font-normal">
           We are working on an exclusive membership pass to unlock free turf bookings, dining vouchers, and premium event discounts. Stay tuned!
         </p>
 
         <div>
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="inline-flex items-center justify-center px-6 py-2.5 border border-black/25 rounded-[4px] text-[11px] font-bold tracking-wider text-black bg-white/40 hover:bg-black hover:text-white transition-all uppercase select-none active:scale-[0.98]"
           >
             LEARN MORE &rarr;

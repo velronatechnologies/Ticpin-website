@@ -653,3 +653,77 @@ export async function uploadMedia(file: File): Promise<string> {
     if (!res.ok) throw new Error(data.error ?? 'Upload failed');
     return data.url as string;
 }
+
+export const newAdminApi = {
+    // Events
+    listEvents: (page = 1, limit = 20, search = '') => 
+        adminRequest<{ data: any[]; total: number; page: number; limit: number }>(
+            `/newadmin/events?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        ),
+    getEvent: (id: string) => adminRequest<any>(`/newadmin/events/${id}`),
+    createEvent: (payload: any) => adminRequest<{ message: string; data: any }>('/newadmin/events', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    }),
+    updateEvent: (id: string, payload: any) => adminRequest<{ message: string; data: any }>(`/newadmin/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    }),
+    deleteEvent: (id: string) => adminRequest<{ message: string }>(`/newadmin/events/${id}`, {
+        method: 'DELETE',
+    }),
+
+    // Play
+    listPlays: (page = 1, limit = 20, search = '') => 
+        adminRequest<{ data: any[]; total: number; page: number; limit: number }>(
+            `/newadmin/play?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        ),
+    getPlay: (id: string) => adminRequest<any>(`/newadmin/play/${id}`),
+    createPlay: (payload: any) => adminRequest<{ message: string; data: any }>('/newadmin/play', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    }),
+    updatePlay: (id: string, payload: any) => adminRequest<{ message: string; data: any }>(`/newadmin/play/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    }),
+    deletePlay: (id: string) => adminRequest<{ message: string }>(`/newadmin/play/${id}`, {
+        method: 'DELETE',
+    }),
+
+    // Dining
+    listDinings: (page = 1, limit = 20, search = '') => 
+        adminRequest<{ data: any[]; total: number; page: number; limit: number }>(
+            `/newadmin/dining?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        ),
+    getDining: (id: string) => adminRequest<any>(`/newadmin/dining/${id}`),
+    createDining: (payload: any) => adminRequest<{ message: string; data: any }>('/newadmin/dining', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    }),
+    updateDining: (id: string, payload: any) => adminRequest<{ message: string; data: any }>(`/newadmin/dining/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    }),
+    deleteDining: (id: string) => adminRequest<{ message: string }>(`/newadmin/dining/${id}`, {
+        method: 'DELETE',
+    }),
+
+    // Users
+    listUsers: (page = 1, limit = 20, search = '') => 
+        adminRequest<{ data: any[]; total: number; page: number; limit: number }>(
+            `/newadmin/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        ),
+    getUser: (id: string) => adminRequest<{ user: any; profile?: any }>(`/newadmin/users/${id}`),
+    createUser: (payload: any) => adminRequest<{ message: string; data: any }>('/newadmin/users', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    }),
+    updateUser: (id: string, payload: any) => adminRequest<{ message: string }>(`/newadmin/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    }),
+    deleteUser: (id: string) => adminRequest<{ message: string }>(`/newadmin/users/${id}`, {
+        method: 'DELETE',
+    }),
+};

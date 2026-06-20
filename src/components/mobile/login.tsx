@@ -71,7 +71,7 @@ export default function MobileLogin() {
         setLoading(true);
 
         try {
-            const res = await fetch('/backend/api/mobile/send-otp', {
+            const res = await fetch('/backend/api/user/send-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: number }),
@@ -144,7 +144,7 @@ export default function MobileLogin() {
 
         try {
             const token = `${number}:${otpCode}`;
-            const res = await fetch('/backend/api/mobile/verify-otp', {
+            const res = await fetch('/backend/api/user/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
