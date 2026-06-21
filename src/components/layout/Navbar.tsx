@@ -85,6 +85,7 @@ export default function Navbar() {
     }, []);
 
     const hideNavbar =
+        pathname?.startsWith('/organizer') ||
         pathname?.startsWith('/ticket') ||
         pathname?.startsWith('/admin') ||
         pathname === '/contact' ||

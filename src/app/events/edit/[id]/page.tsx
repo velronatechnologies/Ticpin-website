@@ -12,6 +12,68 @@ import { organizerApi } from '@/lib/api/organizer';
 import { toast } from '@/components/ui/Toast';
 import { ArtistSection, TicketSection } from '@/components/events/shared/FormSections';
 import InteractiveVenueMap from '@/components/events/InteractiveVenueMap';
+
+type EventPoc = { name: string; email: string; mobile: string };
+type EventSalesNotif = { email: string; mobile: string };
+type EventArtist = { id?: string | number; name: string; image_url: string; description: string };
+type EventTicketCategory = { id?: string | number; name: string; price: string; capacity: string; image_url: string; has_image: boolean };
+
+const normalizeKeyPart = (value: string | undefined) => (value ?? '').trim().toLowerCase();
+const contactKey = (contact: { email?: string; mobile?: string }) => `${normalizeKeyPart(contact.email)}|${normalizeKeyPart(contact.mobile)}`;
+
+const dedupePocs = (items: EventPoc[]) => {
+    const seen = new Map<string, EventPoc>();
+    items.forEach(item => {
+        const next = { name: item.name?.trim() ?? '', email: item.email?.trim() ?? '', mobile: item.mobile?.trim() ?? '' };
+        if (!next.email && !next.mobile) return;
+        const key = contactKey(next);
+        const existing = seen.get(key);
+        if (existing) {
+            if (!existing.name && next.name) existing.name = next.name;
+            return;
+        }
+        seen.set(key, next);
+    });
+    return Array.from(seen.values());
+};
+
+const dedupeSalesNotifs = (items: EventSalesNotif[]) => {
+    const seen = new Set<string>();
+    return items
+        .map(item => ({ email: item.email?.trim() ?? '', mobile: item.mobile?.trim() ?? '' }))
+        .filter(item => {
+            if (!item.email && !item.mobile) return false;
+            const key = contactKey(item);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
+const dedupeArtists = (items: EventArtist[]) => {
+    const seen = new Set<string>();
+    return items
+        .map(item => ({ ...item, name: item.name?.trim() ?? '', image_url: item.image_url?.trim() ?? '', description: item.description?.trim() ?? '' }))
+        .filter(item => {
+            const key = normalizeKeyPart(item.name);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
+const dedupeTicketCategories = (items: EventTicketCategory[]) => {
+    const seen = new Set<string>();
+    return items
+        .map(item => ({ ...item, name: item.name?.trim() ?? '', image_url: item.image_url?.trim() ?? '' }))
+        .filter(item => {
+            const key = normalizeKeyPart(item.name);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
 export default function EditEventPage() {
     const router = useRouter();
     const params = useParams();
@@ -76,8 +138,8 @@ export default function EditEventPage() {
         gatesOpenBeforeUnit: 'Minutes',
     });
     const [payment, setPayment] = useState({ organizerName: '', gstin: '', accountNumber: '', ifsc: '', accountType: '' });
-    const [pocs, setPocs] = useState<{ name: string; email: string; mobile: string }[]>([]);
-    const [salesNotifs, setSalesNotifs] = useState<{ email: string; mobile: string }[]>([]);
+    const [pocs, setPocs] = useState<EventPoc[]>([]);
+    const [salesNotifs, setSalesNotifs] = useState<EventSalesNotif[]>([]);
     const [newPoc, setNewPoc] = useState({ name: '', email: '', mobile: '' });
     const [newSales, setNewSales] = useState({ email: '', mobile: '' });
     const [showInstructions, setShowInstructions] = useState(false);
@@ -88,14 +150,14 @@ export default function EditEventPage() {
     const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('');
     const [prohibitedItems, setProhibitedItems] = useState<string[]>([]);
     const [newProhibitedItem, setNewProhibitedItem] = useState('');
-    const [faqs, setFaqs] = useState<{ question: string; answer: string }[]>([]);
+    const [faqs, setFaqs] = useState<{ id?: string | number; question: string; answer: string }[]>([]);
     const [newFaq, setNewFaq] = useState({ question: '', answer: '' });
 
     // Artists
-    const [artists, setArtists] = useState<{ name: string; image_url: string; description: string }[]>([]);
+    const [artists, setArtists] = useState<EventArtist[]>([]);
 
     // Ticket Categories
-    const [ticketCategories, setTicketCategories] = useState<{ name: string; price: string; capacity: string; image_url: string; has_image: boolean }[]>([]);
+    const [ticketCategories, setTicketCategories] = useState<EventTicketCategory[]>([]);
 
     // Layout-based event
     const [isLayoutBased, setIsLayoutBased] = useState(false);
@@ -370,7 +432,10 @@ export default function EditEventPage() {
                 if (d.ticket_open_date) {
                     const dt = new Date(d.ticket_open_date as string);
                     if (!isNaN(dt.getTime())) {
-                        setTicketOpenDate(dt.toISOString().split('T')[0]);
+                        const y = dt.getFullYear();
+                        const m = (dt.getMonth() + 1).toString().padStart(2, '0');
+                        const dayVal = dt.getDate().toString().padStart(2, '0');
+                        setTicketOpenDate(`${y}-${m}-${dayVal}`);
                         const h24 = dt.getHours();
                         const ampm = h24 >= 12 ? 'PM' : 'AM';
                         const h12 = (h24 % 12 || 12).toString();
@@ -383,7 +448,10 @@ export default function EditEventPage() {
                 if (d.ticket_close_date) {
                     const dt = new Date(d.ticket_close_date as string);
                     if (!isNaN(dt.getTime())) {
-                        setTicketCloseDate(dt.toISOString().split('T')[0]);
+                        const y = dt.getFullYear();
+                        const m = (dt.getMonth() + 1).toString().padStart(2, '0');
+                        const dayVal = dt.getDate().toString().padStart(2, '0');
+                        setTicketCloseDate(`${y}-${m}-${dayVal}`);
                         const h24 = dt.getHours();
                         const ampm = h24 >= 12 ? 'PM' : 'AM';
                         const h12 = (h24 % 12 || 12).toString();
@@ -396,7 +464,10 @@ export default function EditEventPage() {
                 if (d.event_end_date) {
                     const dt = new Date(d.event_end_date as string);
                     if (!isNaN(dt.getTime())) {
-                        setEventEndDate(dt.toISOString().split('T')[0]);
+                        const y = dt.getFullYear();
+                        const m = (dt.getMonth() + 1).toString().padStart(2, '0');
+                        const dayVal = dt.getDate().toString().padStart(2, '0');
+                        setEventEndDate(`${y}-${m}-${dayVal}`);
                         setOriginalEventEndDate(dt);
                         const h24 = dt.getHours();
                         const ampm = h24 >= 12 ? 'PM' : 'AM';
@@ -433,8 +504,10 @@ export default function EditEventPage() {
                     ifsc: (p.ifsc as string) ?? '',
                     accountType: (p.account_type as string) ?? '',
                 });
-                setPocs(((d.points_of_contact as { name: string; email: string; mobile: string }[]) ?? []));
-                setSalesNotifs(((d.sales_notifications as { email: string; mobile: string }[]) ?? []));
+                const cleanedPocs = dedupePocs(((d.points_of_contact as EventPoc[]) ?? []));
+                const cleanedSalesNotifs = dedupeSalesNotifs(((d.sales_notifications as EventSalesNotif[]) ?? []));
+                setPocs(cleanedPocs);
+                setSalesNotifs(cleanedSalesNotifs);
                 const instructions = (d.event_instructions as string) ?? '';
                 if (instructions) { setEventInstructions(instructions); setShowInstructions(true); }
                 const yt = (d.youtube_video_url as string) ?? '';
@@ -444,11 +517,11 @@ export default function EditEventPage() {
                 const faqList = (d.faqs as { question: string; answer: string }[]) ?? [];
                 if (faqList.length) { setFaqs(faqList); setShowFaqs(true); }
                 // Artists
-                const artistList = (d.artists as { name: string; image_url: string; description: string }[]) ?? [];
+                const artistList = dedupeArtists((d.artists as EventArtist[]) ?? []);
                 if (artistList.length) setArtists(artistList);
                 // Ticket Categories
-                const ticketCatList = (d.ticket_categories as { name: string; price: number; capacity: number; image_url: string; has_image: boolean }[]) ?? [];
-                if (ticketCatList.length) setTicketCategories(ticketCatList.map(t => ({ ...t, price: String(t.price ?? ''), capacity: String(t.capacity ?? '') })));
+                const ticketCatList = dedupeTicketCategories(((d.ticket_categories as (Omit<EventTicketCategory, 'price' | 'capacity'> & { price: number; capacity: number })[]) ?? []).map(t => ({ ...t, price: String(t.price ?? ''), capacity: String(t.capacity ?? '') })));
+                if (ticketCatList.length) setTicketCategories(ticketCatList);
                 // Layout-based
                 const isLayoutBasedVal = (d.is_layout_based as boolean) ?? false;
                 const layoutJsonVal = (d.layout_json as string) ?? '';
@@ -472,14 +545,14 @@ export default function EditEventPage() {
                             try {
                                 const parsed = JSON.parse(lCats);
                                 if (Array.isArray(parsed) && parsed.length > 0) {
-                                    setTicketCategories(parsed);
+                                    setTicketCategories(dedupeTicketCategories(parsed));
                                 }
                                 sessionStorage.removeItem('ticket-layout-categories');
                             } catch (e) {
                                 console.error("Error parsing ticket-layout-categories:", e);
                             }
                         }
-                        if (draft.ticketCategories?.length) setTicketCategories(draft.ticketCategories);
+                        if (draft.ticketCategories?.length) setTicketCategories(dedupeTicketCategories(draft.ticketCategories));
                     } catch { /* ignore */ }
                 } else {
                     setIsLayoutBased(isLayoutBasedVal);
@@ -529,8 +602,8 @@ export default function EditEventPage() {
                         ifsc: (p.ifsc as string) ?? '',
                         account_type: (p.account_type as string) ?? '',
                     },
-                    points_of_contact: ((d.points_of_contact as any[]) ?? []).map(poc => ({ name: poc.name, email: poc.email, mobile: poc.mobile })),
-                    sales_notifications: ((d.sales_notifications as any[]) ?? []).map(s => ({ email: s.email, mobile: s.mobile })),
+                    points_of_contact: cleanedPocs,
+                    sales_notifications: cleanedSalesNotifs,
                     event_instructions: instructions,
                     youtube_video_url: yt,
                     prohibited_items: pi,
@@ -567,6 +640,21 @@ export default function EditEventPage() {
     const checkChanges = useCallback(() => {
         if (!originalData || Object.keys(originalData).length === 0) return;
 
+        const parseDateString = (date: string, hour: string, minute: string, ampm: string) => {
+            if (!date) return null;
+            let h24 = parseInt(hour) % 12;
+            if (ampm === 'PM') h24 += 12;
+            const hourStr = h24.toString().padStart(2, '0');
+            const minuteStr = minute.padStart(2, '0');
+            try {
+                const localISO = `${date}T${hourStr}:${minuteStr}:00`;
+                const d = new Date(localISO);
+                return d.toISOString();
+            } catch (e) {
+                return null;
+            }
+        };
+
         const currentData = {
             name: eventName,
             description: description,
@@ -581,6 +669,9 @@ export default function EditEventPage() {
             card_video_url: videoUrl,
             gallery_urls: galleryUrls,
             date: eventDate,
+            ticket_open_date: parseDateString(ticketOpenDate, ticketOpenHour, ticketOpenMinute, ticketOpenAmpm),
+            ticket_close_date: parseDateString(ticketCloseDate, ticketCloseHour, ticketCloseMinute, ticketCloseAmpm),
+            event_end_date: parseDateString(eventEndDate, eventEndHour, eventEndMinute, eventEndAmpm),
             guide: {
                 languages: guide.languages.filter(Boolean),
                 min_age: guide.minAge,
@@ -600,14 +691,21 @@ export default function EditEventPage() {
                 ifsc: payment.ifsc,
                 account_type: payment.accountType,
             },
-            points_of_contact: pocs,
-            sales_notifications: salesNotifs,
+            points_of_contact: dedupePocs(pocs),
+            sales_notifications: dedupeSalesNotifs(salesNotifs),
             event_instructions: eventInstructions,
             youtube_video_url: youtubeVideoUrl,
             prohibited_items: prohibitedItems,
-            faqs: faqs.map(f => ({ question: f.question, answer: f.answer })),
-            artists: artists.filter(a => a.name.trim()).map(a => ({ name: a.name, image_url: a.image_url, description: a.description })),
-            ticket_categories: ticketCategories.filter(t => t.name.trim()).map(t => ({ name: t.name, price: t.price, capacity: t.capacity, image_url: t.image_url, has_image: t.has_image })),
+            faqs: faqs.map(f => ({ id: f.id, question: f.question, answer: f.answer })),
+            artists: dedupeArtists(artists).map(a => ({ id: a.id, name: a.name, image_url: a.image_url, description: a.description })),
+            ticket_categories: dedupeTicketCategories(ticketCategories).map(t => ({
+                id: t.id,
+                name: t.name,
+                price: parseFloat(t.price) || 0,
+                capacity: parseInt(t.capacity) || 0,
+                image_url: t.image_url,
+                has_image: t.has_image,
+            })),
             is_layout_based: isLayoutBased,
             layout_json: layoutJson,
             category: selections.category === 'Select Category' ? '' : selections.category,
@@ -617,7 +715,7 @@ export default function EditEventPage() {
 
         const hasFieldChanges = JSON.stringify(originalData) !== JSON.stringify(currentData);
         setHasChanges(hasFieldChanges);
-    }, [originalData, eventName, venueName, venueAddress, googleMapLink, instagramLink, eventTime, duration, portraitUrl, landscapeUrl, videoUrl, galleryUrls, eventDate, guide, payment, pocs, salesNotifs, eventInstructions, youtubeVideoUrl, prohibitedItems, faqs, artists, ticketCategories, selections, isLayoutBased, layoutJson]);
+    }, [originalData, eventName, venueName, venueAddress, googleMapLink, instagramLink, eventTime, duration, portraitUrl, landscapeUrl, videoUrl, galleryUrls, eventDate, ticketOpenDate, ticketOpenHour, ticketOpenMinute, ticketOpenAmpm, ticketCloseDate, ticketCloseHour, ticketCloseMinute, ticketCloseAmpm, eventEndDate, eventEndHour, eventEndMinute, eventEndAmpm, guide, payment, pocs, salesNotifs, eventInstructions, youtubeVideoUrl, prohibitedItems, faqs, artists, ticketCategories, selections, isLayoutBased, layoutJson]);
 
     useEffect(() => {
         checkChanges();
@@ -709,9 +807,10 @@ export default function EditEventPage() {
             const hourStr = h24.toString().padStart(2, '0');
             const minuteStr = minute.padStart(2, '0');
             try {
-                const localISO = `${date}T${hourStr}:${minuteStr}:00`;
-                const d = new Date(localISO);
-                return d.toISOString();
+                // ✅ FIXED: Construct UTC ISO string directly to avoid timezone shift
+                // When user enters "Dec 21, 2025 at 12:00 AM", send "2025-12-21T00:00:00Z"
+                const utcISO = `${date}T${hourStr}:${minuteStr}:00Z`;
+                return utcISO; // Return UTC string directly (no local conversion!)
             } catch (e) {
                 return null;
             }
@@ -788,12 +887,14 @@ export default function EditEventPage() {
                 youtube_video_url: youtubeVideoUrl,
                 prohibited_items: prohibitedItems,
                 faqs,
-                artists: artists.filter(a => a.name.trim()).map(a => ({
+                artists: dedupeArtists(artists).map(a => ({
+                    id: a.id,
                     name: a.name,
                     image_url: a.image_url,
                     description: a.description,
                 })),
-                ticket_categories: ticketCategories.filter(t => t.name.trim()).map(t => ({
+                ticket_categories: dedupeTicketCategories(ticketCategories).map(t => ({
+                    id: t.id,
                     name: t.name,
                     price: parseFloat(t.price) || 0,
                     capacity: parseInt(t.capacity) || 0,
@@ -809,8 +910,8 @@ export default function EditEventPage() {
                     ifsc: payment.ifsc,
                     account_type: payment.accountType,
                 },
-                points_of_contact: pocs,
-                sales_notifications: salesNotifs,
+                points_of_contact: dedupePocs(pocs),
+                sales_notifications: dedupeSalesNotifs(salesNotifs),
             });
             // cleanup session storage on success
             sessionStorage.removeItem(`event-edit-draft-${id}`);
@@ -835,9 +936,27 @@ export default function EditEventPage() {
         });
         setOpenDropdown(null);
     };
-    const addPoc = () => { if (!newPoc.name || !newPoc.email || !newPoc.mobile) return; setPocs([...pocs, newPoc]); setNewPoc({ name: '', email: '', mobile: '' }); };
+    const addPoc = () => {
+        if (!newPoc.name || !newPoc.email || !newPoc.mobile) return;
+        const nextPoc = { name: newPoc.name.trim(), email: newPoc.email.trim(), mobile: newPoc.mobile.trim() };
+        if (pocs.some(poc => contactKey(poc) === contactKey(nextPoc))) {
+            setSubmitMsg('This Point of Contact is already added.');
+            return;
+        }
+        setPocs(dedupePocs([...pocs, nextPoc]));
+        setNewPoc({ name: '', email: '', mobile: '' });
+    };
     const removePoc = (i: number) => setPocs(pocs.filter((_, idx) => idx !== i));
-    const addSalesNotif = () => { if (!newSales.email || !newSales.mobile) return; setSalesNotifs([...salesNotifs, newSales]); setNewSales({ email: '', mobile: '' }); };
+    const addSalesNotif = () => {
+        if (!newSales.email || !newSales.mobile) return;
+        const nextSales = { email: newSales.email.trim(), mobile: newSales.mobile.trim() };
+        if (salesNotifs.some(sales => contactKey(sales) === contactKey(nextSales))) {
+            setSubmitMsg('This sales notification contact is already added.');
+            return;
+        }
+        setSalesNotifs(dedupeSalesNotifs([...salesNotifs, nextSales]));
+        setNewSales({ email: '', mobile: '' });
+    };
     const removeSalesNotif = (i: number) => setSalesNotifs(salesNotifs.filter((_, idx) => idx !== i));
     const addProhibitedItem = () => { if (newProhibitedItem.trim()) { setProhibitedItems([...prohibitedItems, newProhibitedItem.trim()]); setNewProhibitedItem(''); } };
     const addFaq = () => { if (newFaq.question.trim() && newFaq.answer.trim()) { setFaqs([...faqs, newFaq]); setNewFaq({ question: '', answer: '' }); } };

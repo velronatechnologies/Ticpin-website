@@ -13,7 +13,7 @@ interface Artist {
     description?: string;
 }
 
-import { getMinPrice } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTC } from '@/lib/utils';
 
 interface RealEvent {
     id: string;
@@ -69,8 +69,7 @@ export default function ArtistDetailPage() {
     }, [artistNameDecoded]);
 
     const formatDate = (iso?: string) => {
-        if (!iso) return '';
-        return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return formatEventDateUTC(iso);
     };
 
     if (loading) {

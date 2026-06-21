@@ -69,6 +69,10 @@ export default function AdminLoginForm() {
             const identifier = loginMethod === 'email' ? email : phone;
             const data: any = await authApi.verifyOTP(identifier, code, 'admin');
 
+            if (!data.isAdmin) {
+                throw new Error('Access denied. This portal is restricted to administrators.');
+            }
+
             saveOrganizerSession({
                 id: data.id || data._id,
                 email: identifier,

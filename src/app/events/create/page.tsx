@@ -12,6 +12,67 @@ import { uploadMedia } from '@/lib/api/admin';
 import { eventsApi } from '@/lib/api/events';
 import { organizerApi } from '@/lib/api/organizer';
 
+type EventPoc = { name: string; email: string; mobile: string };
+type EventSalesNotif = { email: string; mobile: string };
+type EventArtist = { name: string; image_url: string; description: string };
+type EventTicketCategory = { id?: string | number; name: string; price: string; capacity: string; image_url: string; has_image: boolean };
+
+const normalizeKeyPart = (value: string | undefined) => (value ?? '').trim().toLowerCase();
+const contactKey = (contact: { email?: string; mobile?: string }) => `${normalizeKeyPart(contact.email)}|${normalizeKeyPart(contact.mobile)}`;
+
+const dedupePocs = (items: EventPoc[]) => {
+    const seen = new Map<string, EventPoc>();
+    items.forEach(item => {
+        const next = { name: item.name?.trim() ?? '', email: item.email?.trim() ?? '', mobile: item.mobile?.trim() ?? '' };
+        if (!next.email && !next.mobile) return;
+        const key = contactKey(next);
+        const existing = seen.get(key);
+        if (existing) {
+            if (!existing.name && next.name) existing.name = next.name;
+            return;
+        }
+        seen.set(key, next);
+    });
+    return Array.from(seen.values());
+};
+
+const dedupeSalesNotifs = (items: EventSalesNotif[]) => {
+    const seen = new Set<string>();
+    return items
+        .map(item => ({ email: item.email?.trim() ?? '', mobile: item.mobile?.trim() ?? '' }))
+        .filter(item => {
+            if (!item.email && !item.mobile) return false;
+            const key = contactKey(item);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
+const dedupeArtists = (items: EventArtist[]) => {
+    const seen = new Set<string>();
+    return items
+        .map(item => ({ name: item.name?.trim() ?? '', image_url: item.image_url?.trim() ?? '', description: item.description?.trim() ?? '' }))
+        .filter(item => {
+            const key = normalizeKeyPart(item.name);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
+const dedupeTicketCategories = (items: EventTicketCategory[]) => {
+    const seen = new Set<string>();
+    return items
+        .map(item => ({ ...item, name: item.name?.trim() ?? '', image_url: item.image_url?.trim() ?? '' }))
+        .filter(item => {
+            const key = normalizeKeyPart(item.name);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
 const CreateEventPage = () => {
     const router = useRouter();
     const editorRef = useRef<HTMLDivElement>(null);
@@ -78,8 +139,8 @@ const CreateEventPage = () => {
     });
 
     // Lists
-    const [pocs, setPocs] = useState<{ name: string, email: string, mobile: string }[]>([]);
-    const [salesNotifs, setSalesNotifs] = useState<{ email: string, mobile: string }[]>([]);
+    const [pocs, setPocs] = useState<EventPoc[]>([]);
+    const [salesNotifs, setSalesNotifs] = useState<EventSalesNotif[]>([]);
 
     // Temp state for adding to lists
     const [newPoc, setNewPoc] = useState({ name: '', email: '', mobile: '' });
@@ -100,10 +161,10 @@ const CreateEventPage = () => {
     const [newFaq, setNewFaq] = useState({ question: '', answer: '' });
 
     // Artists
-    const [artists, setArtists] = useState<{ name: string; image_url: string; description: string }[]>([]);
+    const [artists, setArtists] = useState<EventArtist[]>([]);
 
     // Ticket Categories
-    const [ticketCategories, setTicketCategories] = useState<{ name: string; price: string; capacity: string; image_url: string; has_image: boolean }[]>([]);
+    const [ticketCategories, setTicketCategories] = useState<EventTicketCategory[]>([]);
     const [description, setDescription] = useState('');
     const [isLayoutBased, setIsLayoutBased] = useState(false);
     const [layoutJson, setLayoutJson] = useState('');
@@ -121,7 +182,7 @@ const CreateEventPage = () => {
             const lCats = sessionStorage.getItem('ticket-layout-categories');
             if (lCats) {
                 try {
-                    setTicketCategories(JSON.parse(lCats));
+                    setTicketCategories(dedupeTicketCategories(JSON.parse(lCats)));
                 } catch (e) {
                     console.error(e);
                 }
@@ -161,13 +222,13 @@ const CreateEventPage = () => {
                 if (draft.totalTicketsAvailable) setTotalTicketsAvailable(draft.totalTicketsAvailable);
                 if (draft.guide) setGuide(draft.guide);
                 if (draft.payment) setPayment(draft.payment);
-                if (draft.pocs) setPocs(draft.pocs);
-                if (draft.salesNotifs) setSalesNotifs(draft.salesNotifs);
+                if (draft.pocs) setPocs(dedupePocs(draft.pocs));
+                if (draft.salesNotifs) setSalesNotifs(dedupeSalesNotifs(draft.salesNotifs));
                 if (draft.eventInstructions) setEventInstructions(draft.eventInstructions);
                 if (draft.youtubeVideoUrl) setYoutubeVideoUrl(draft.youtubeVideoUrl);
                 if (draft.prohibitedItems) setProhibitedItems(draft.prohibitedItems);
                 if (draft.faqs) setFaqs(draft.faqs);
-                if (draft.artists) setArtists(draft.artists);
+                if (draft.artists) setArtists(dedupeArtists(draft.artists));
 
                 setTimeout(() => {
                     if (editorRef.current && draft.description) {
@@ -557,9 +618,10 @@ const CreateEventPage = () => {
             const hourStr = h24.toString().padStart(2, '0');
             const minuteStr = minute.padStart(2, '0');
             try {
-                const localISO = `${date}T${hourStr}:${minuteStr}:00`;
-                const d = new Date(localISO);
-                return d.toISOString();
+                // ✅ FIXED: Construct UTC ISO string directly to avoid timezone shift
+                // When user enters "Dec 21, 2025 at 12:00 AM", send "2025-12-21T00:00:00Z"
+                const utcISO = `${date}T${hourStr}:${minuteStr}:00Z`;
+                return utcISO; // Return UTC string directly (no local conversion!)
             } catch (e) {
                 return null;
             }
@@ -630,12 +692,14 @@ const CreateEventPage = () => {
                 youtube_video_url: youtubeVideoUrl,
                 prohibited_items: prohibitedItems,
                 faqs: faqs,
-                artists: artists.filter(a => a.name.trim()).map(a => ({
+                artists: dedupeArtists(artists).map(a => ({
                     name: a.name,
                     image_url: a.image_url,
                     description: a.description,
                 })),
-                ticket_categories: ticketCategories.filter(t => t.name.trim()).map(t => ({
+                // Preserve id if present (for editing existing categories) and guard against NaN
+                ticket_categories: dedupeTicketCategories(ticketCategories).map(t => ({
+                    id: t.id,
                     name: t.name,
                     price: parseFloat(t.price) || 0,
                     capacity: parseInt(t.capacity) || 0,
@@ -649,8 +713,8 @@ const CreateEventPage = () => {
                     ifsc: payment.ifsc,
                     account_type: payment.accountType
                 },
-                points_of_contact: pocs,
-                sales_notifications: salesNotifs,
+                points_of_contact: dedupePocs(pocs),
+                sales_notifications: dedupeSalesNotifs(salesNotifs),
                 status: 'pending',
                 is_layout_based: isLayoutBased,
                 layout_json: layoutJson
@@ -737,7 +801,12 @@ const CreateEventPage = () => {
 
     const addPoc = () => {
         if (!newPoc.name || !newPoc.email || !newPoc.mobile) return;
-        setPocs([...pocs, newPoc]);
+        const nextPoc = { name: newPoc.name.trim(), email: newPoc.email.trim(), mobile: newPoc.mobile.trim() };
+        if (pocs.some(poc => contactKey(poc) === contactKey(nextPoc))) {
+            setSubmitMsg('This Point of Contact is already added.');
+            return;
+        }
+        setPocs(dedupePocs([...pocs, nextPoc]));
         setNewPoc({ name: '', email: '', mobile: '' });
     };
 
@@ -745,7 +814,12 @@ const CreateEventPage = () => {
 
     const addSalesNotif = () => {
         if (!newSales.email.trim()) return;
-        setSalesNotifs([...salesNotifs, { email: newSales.email.trim(), mobile: newSales.mobile.trim() }]);
+        const nextSales = { email: newSales.email.trim(), mobile: newSales.mobile.trim() };
+        if (salesNotifs.some(sales => contactKey(sales) === contactKey(nextSales))) {
+            setSubmitMsg('This sales notification contact is already added.');
+            return;
+        }
+        setSalesNotifs(dedupeSalesNotifs([...salesNotifs, nextSales]));
         setNewSales({ email: '', mobile: '' });
     };
 

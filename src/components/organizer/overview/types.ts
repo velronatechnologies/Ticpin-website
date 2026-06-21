@@ -18,8 +18,14 @@ export interface BookingData {
   }>;
 }
 
+export interface Gate {
+  id: string;
+  name: string;
+}
+
 export interface Verifier {
   phone: string;
+  name?: string;
   gate: string;
   password?: string;
   created_at?: string;

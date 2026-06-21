@@ -8,7 +8,7 @@ import Image from 'next/image';
 import FilterBar from '@/components/play/FilterBar';
 import { useMemo } from 'react';
 
-import { getMinPrice } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTC } from '@/lib/utils';
 
 interface RealEvent {
     id: string;
@@ -84,8 +84,7 @@ export default function EventCategoryClient({
     }, [events, activeFilter, modalFilters]);
 
     const formatDate = (iso?: string) => {
-        if (!iso) return '';
-        return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return formatEventDateUTC(iso);
     };
 
     return (

@@ -376,10 +376,12 @@ function AdminEventDetailView({ ev, onStatus, onUpdate, onDelete, onBack }: {
                     account_type: payment.accountType,
                 },
                 artists,
+                // Preserve id and ensure numeric fields are valid numbers
                 ticket_categories: ticketCategories.map(t => ({
                     ...t,
-                    price: Number(t.price),
-                    capacity: Number(t.capacity)
+                    id: t.id,
+                    price: Number(t.price) || 0,
+                    capacity: Number(t.capacity) || 0,
                 })),
                 points_of_contact: pocs,
                 sales_notifications: salesNotifs,

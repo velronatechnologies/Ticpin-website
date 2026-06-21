@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
   Plus, 
   Edit, 
   Eye, 
-  ArrowRightLeft, 
   Pause,
   ChevronDown,
   BarChart2,
@@ -50,83 +50,7 @@ interface OrganizedEvent {
   tiers: TicketTier[];
 }
 
-const initialEvents: OrganizedEvent[] = [
-  {
-    id: 'TechNova-Summit-2026',
-    name: 'TechNova Summit 2026',
-    category: 'Tech Summit',
-    catType: 'Tech',
-    dateTime: '11 May - 3:00 PM',
-    year: '2026',
-    status: 'Approved',
-    capacity: 5000,
-    sold: 1100,
-    remaining: 3900,
-    tiersCount: 3,
-    revenue: 4200000,
-    imageBg: 'bg-[#1e1b4b]', 
-    tiers: [
-      { name: 'Early Bird', price: 3000, capacity: 1000, sold: 1000, remaining: 0, salesProgress: 100, status: 'Sold Out' },
-      { name: 'General Admission', price: 4000, capacity: 3500, sold: 100, remaining: 3400, salesProgress: 3, status: 'Low Stock' },
-      { name: 'VIP Pass', price: 6000, capacity: 500, sold: 0, remaining: 500, salesProgress: 0, status: 'Available' }
-    ]
-  },
-  {
-    id: 'Indoor-Futsal-League',
-    name: 'Indoor Futsal League',
-    category: 'Sports Tournament',
-    catType: 'Sports',
-    dateTime: '11 May - 3:30 PM',
-    year: '2026',
-    status: 'Approved',
-    capacity: 1000,
-    sold: 750,
-    remaining: 250,
-    tiersCount: 2,
-    revenue: 420000,
-    imageBg: 'bg-emerald-950',
-    tiers: [
-      { name: 'Regular Entry', price: 500, capacity: 800, sold: 700, remaining: 100, salesProgress: 87.5, status: 'Low Stock' },
-      { name: 'Premium Seating', price: 1000, capacity: 200, sold: 50, remaining: 150, salesProgress: 25, status: 'Available' }
-    ]
-  },
-  {
-    id: 'Design-Expo-Workshop',
-    name: 'Design Expo & Workshop',
-    category: 'Design Exhibition',
-    catType: 'Expo',
-    dateTime: '20 May - 3:30 PM',
-    year: '2026',
-    status: 'Sales Paused',
-    capacity: 200,
-    sold: 65,
-    remaining: 135,
-    tiersCount: 1,
-    revenue: 3155000,
-    imageBg: 'bg-amber-950',
-    tiers: [
-      { name: 'Standard Ticket', price: 1500, capacity: 200, sold: 65, remaining: 135, salesProgress: 32.5, status: 'Available' }
-    ]
-  },
-  {
-    id: 'Music-Live-Concert',
-    name: 'Music Live Concert',
-    category: 'Concert Show',
-    catType: 'Concert',
-    dateTime: '12 May - 3:30 PM',
-    year: '2026',
-    status: 'Completed',
-    capacity: 100,
-    sold: 175,
-    remaining: 250,
-    tiersCount: 1,
-    revenue: 350000,
-    imageBg: 'bg-teal-950',
-    tiers: [
-      { name: 'Standard Entry', price: 2000, capacity: 100, sold: 175, remaining: 250, salesProgress: 100, status: 'Sold Out' }
-    ]
-  }
-];
+const initialEvents: OrganizedEvent[] = [];
 
 interface BookingItem {
   id: string;
@@ -145,125 +69,20 @@ interface BookingItem {
   refundId?: string;
 }
 
-// Generate 100 deterministic mock bookings for an event
-const generateMockBookings = (eventId: string, count: number): BookingItem[] => {
-  const firstNames = ['John', 'Jane', 'Michael', 'Emily', 'David', 'Sarah', 'James', 'Jessica', 'Robert', 'Karen', 'William', 'Ashley', 'Joseph', 'Amanda', 'Thomas', 'Megan', 'Charles', 'Stephanie', 'Christopher', 'Rachel', 'Oliver', 'Sophia', 'Daniel', 'Isabella', 'Matthew', 'Mia', 'Andrew', 'Evelyn', 'Joshua', 'Harper'];
-  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson'];
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'unsysdigital.com', 'corp.ticpin.in', 'academic.edu'];
-  
-  let tiers: string[] = [];
-  if (eventId === 'TechNova-Summit-2026') {
-    tiers = ['VIP Pass', 'Early Bird', 'General Admission'];
-  } else if (eventId === 'Indoor-Futsal-League') {
-    tiers = ['Regular Entry', 'Premium Seating'];
-  } else if (eventId === 'Design-Expo-Workshop') {
-    tiers = ['Standard Ticket'];
-  } else {
-    tiers = ['Standard Entry'];
-  }
 
-  const list: BookingItem[] = [];
-  const baseDate = new Date('2026-06-21');
-
-  for (let i = 1; i <= count; i++) {
-    const fn = firstNames[i % firstNames.length];
-    const ln = lastNames[(i * 7) % lastNames.length];
-    const name = `${fn} ${ln}`;
-    const email = `${fn.toLowerCase()}.${ln.toLowerCase()}@${domains[i % domains.length]}`;
-    const tier = tiers[i % tiers.length];
-    
-    let price = 1000;
-    if (tier === 'VIP Pass') price = 6000;
-    else if (tier === 'Early Bird') price = 3000;
-    else if (tier === 'General Admission') price = 4000;
-    else if (tier === 'Regular Entry') price = 500;
-    else if (tier === 'Premium Seating') price = 1000;
-    else if (tier === 'Standard Ticket') price = 1500;
-    else if (tier === 'Standard Entry') price = 2000;
-
-    const qty = (i % 7 === 0) ? 2 : 1;
-    const amount = price * qty;
-    
-    // Spread dates: index 1-10 are Yesterday, 11-30 are Previous 3 Days, 31-60 are Last Week, rest older
-    let dateOffset = 0;
-    if (i <= 12) {
-      dateOffset = 1; // Yesterday (Jun 20)
-    } else if (i <= 35) {
-      dateOffset = 2 + (i % 2); // Jun 19 or Jun 18 (Previous 3 days)
-    } else if (i <= 70) {
-      dateOffset = 4 + (i % 3); // Jun 17 - Jun 15 (Last Week)
-    } else {
-      dateOffset = 8 + (i % 7); // Older
-    }
-
-    const itemDate = new Date(baseDate);
-    itemDate.setDate(baseDate.getDate() - dateOffset);
-    itemDate.setHours(9 + (i % 12), (i * 13) % 60, 0);
-    
-    const dateIso = itemDate.toISOString().split('T')[0];
-    const dateStr = itemDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    const timeStr = itemDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    let status: 'Paid' | 'Pending' | 'Refunded' | 'Cancelled' | 'Expired' = 'Paid';
-    let cancelReason = '';
-    let refundAmount = 0;
-    let refundId = '';
-
-    if (i % 15 === 0) {
-      status = 'Cancelled';
-      cancelReason = 'User requested cancellation due to personal scheduling conflict.';
-      refundAmount = amount;
-      refundId = `RFD${9000 + i}`;
-    } else if (i % 22 === 0) {
-      status = 'Refunded';
-      cancelReason = 'Double booking occurred; duplicate ticket fee was auto-refunded.';
-      refundAmount = amount;
-      refundId = `RFD${9500 + i}`;
-    } else if (i % 28 === 0) {
-      status = 'Expired';
-      cancelReason = 'Payment link session timed out prior to bank confirmation.';
-      refundAmount = 0;
-      refundId = '';
-    } else if (i % 35 === 0) {
-      status = 'Pending';
-    }
-
-    const bgColors = ['bg-[#a78bfa]', 'bg-[#f472b6]', 'bg-[#60a5fa]', 'bg-[#fb7185]', 'bg-emerald-400', 'bg-amber-400', 'bg-teal-400'];
-    const imageBg = bgColors[i % bgColors.length];
-
-    list.push({
-      id: `ATN${7000 + i}`,
-      name,
-      email,
-      tier,
-      qty,
-      amount,
-      date: dateStr,
-      dateIso,
-      time: timeStr,
-      status,
-      imageBg,
-      cancelReason,
-      refundAmount,
-      refundId
-    });
-  }
-  return list;
-};
-
-// Generate dictionary containing 100 data records for each event
-const allMockBookings: Record<string, BookingItem[]> = {
-  'TechNova-Summit-2026': generateMockBookings('TechNova-Summit-2026', 100),
-  'Indoor-Futsal-League': generateMockBookings('Indoor-Futsal-League', 100),
-  'Design-Expo-Workshop': generateMockBookings('Design-Expo-Workshop', 100),
-  'Music-Live-Concert': generateMockBookings('Music-Live-Concert', 100)
-};
 
 export default function EventDetailsTab() {
   const router = useRouter();
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const defaultFromDate = new Date(today);
+  defaultFromDate.setDate(today.getDate() - 7);
+  const formatDateInput = (date: Date) => date.toISOString().slice(0, 10);
+  const yesterdayLabel = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-  const [events, setEvents] = useState<OrganizedEvent[]>(initialEvents);
-  const [selectedEventId, setSelectedEventId] = useState<string>('TechNova-Summit-2026');
+  const [events, setEvents] = useState<OrganizedEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Details Toggle Accordion State
@@ -277,18 +96,29 @@ export default function EventDetailsTab() {
   const [selectedTierFilter, setSelectedTierFilter] = useState<string>('All');
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('All');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('All');
-  const [customFromDate, setCustomFromDate] = useState<string>('2026-06-15');
-  const [customToDate, setCustomToDate] = useState<string>('2026-06-21');
+  const [customFromDate, setCustomFromDate] = useState<string>(formatDateInput(defaultFromDate));
+  const [customToDate, setCustomToDate] = useState<string>(formatDateInput(today));
   
-  // Row pagination limits (default 10)
   const [bookingLimit, setBookingLimit] = useState<number>(10);
   const [guestPage, setGuestPage] = useState<number>(1);
+
+  // Debounce search input — only fires API after 400ms of inactivity
+  const debouncedSearch = useDebounce(bookingSearch, 400);
 
   // Active ticket modal
   const [activeTicketBooking, setActiveTicketBooking] = useState<BookingItem | null>(null);
 
   // Toast state
   const [notification, setNotification] = useState<string | null>(null);
+
+  // API Loading & Data States
+  const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
+  const [loadingBookings, setLoadingBookings] = useState<boolean>(false);
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [totalBookingsCount, setTotalBookingsCount] = useState<number>(0);
+  const [totalTicketsQty, setTotalTicketsQty] = useState<number>(0);
+  const [totalAmountCollected, setTotalAmountCollected] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
   const triggerNotification = (msg: string) => {
     setNotification(msg);
@@ -297,29 +127,66 @@ export default function EventDetailsTab() {
     }, 3000);
   };
 
-  const selectedEvent = events.find(e => e.id === selectedEventId) || events[0] || initialEvents[0];
-
-  const handleToggleStatus = (eventId: string, tierIndex: number) => {
-    setEvents(prev => prev.map(evt => {
-      if (evt.id !== eventId) return evt;
-      const updatedTiers = [...evt.tiers];
-      const tier = updatedTiers[tierIndex];
-      tier.status = tier.status === 'Sold Out' ? 'Available' : 'Sold Out';
-      return { ...evt, tiers: updatedTiers };
-    }));
-    triggerNotification('Ticket category status toggled.');
+  const fetchEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      const res = await fetch('/backend/api/organizer/overview/myevents', {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to load events');
+      const json = await res.json();
+      if (json.success && json.data.events) {
+        setEvents(json.data.events);
+        if (json.data.events.length > 0) {
+          setSelectedEventId(json.data.events[0].id);
+        }
+      }
+    } catch (err: any) {
+      triggerNotification(err.message || 'Error fetching events list');
+    } finally {
+      setLoadingEvents(false);
+    }
   };
 
-  const handlePauseTier = (eventId: string, tierIndex: number) => {
-    setEvents(prev => prev.map(evt => {
-      if (evt.id !== eventId) return evt;
-      const updatedTiers = [...evt.tiers];
-      const tier = updatedTiers[tierIndex];
-      tier.status = tier.status === 'Available' || tier.status === 'Low Stock' ? 'Sold Out' : 'Available';
-      return { ...evt, tiers: updatedTiers };
-    }));
-    triggerNotification('Tier ticket sales paused / resumed.');
-  };
+
+  const fetchBookings = useCallback(async () => {
+    if (!selectedEventId) return;
+    setLoadingBookings(true);
+    try {
+      const url = `/backend/api/organizer/overview/myevents/bookings?eventId=${encodeURIComponent(selectedEventId)}&query=${encodeURIComponent(debouncedSearch)}&tier=${encodeURIComponent(selectedTierFilter)}&status=${encodeURIComponent(selectedStatusFilter)}&datePeriod=${encodeURIComponent(selectedDateFilter)}&fromDate=${encodeURIComponent(customFromDate)}&toDate=${encodeURIComponent(customToDate)}&page=${guestPage}&limit=${bookingLimit}`;
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to load guest bookings');
+      const json = await res.json();
+      if (json.success && json.data) {
+        setBookings(json.data.bookings || []);
+        setTotalBookingsCount(json.data.totalRecords || 0);
+        setTotalTicketsQty(json.data.totalQty || 0);
+        setTotalAmountCollected(json.data.totalAmount || 0);
+        setTotalPages(json.data.totalPages || 1);
+      }
+    } catch (err: any) {
+      triggerNotification(err.message || 'Error fetching guest bookings');
+    } finally {
+      setLoadingBookings(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEventId, debouncedSearch, selectedTierFilter, selectedStatusFilter, selectedDateFilter, customFromDate, customToDate, guestPage, bookingLimit]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEventId, debouncedSearch, selectedTierFilter, selectedStatusFilter, selectedDateFilter, customFromDate, customToDate, guestPage, bookingLimit]);
+
+  // Reset guest page index whenever filter changes (excluding page itself)
+  useEffect(() => {
+    setGuestPage(1);
+  }, [debouncedSearch, selectedTierFilter, selectedDateFilter, selectedStatusFilter, customFromDate, customToDate, bookingLimit, selectedEventId]);
+
+  const selectedEvent = events.find(e => e.id === selectedEventId) || events[0];
 
   const handleToggleCategory = (cat: string) => {
     setSelectedCategories(prev => 
@@ -338,11 +205,6 @@ export default function EventDetailsTab() {
     }
   };
 
-  // Reset guest page index whenever any filter selection changes
-  useEffect(() => {
-    setGuestPage(1);
-  }, [bookingSearch, selectedTierFilter, selectedDateFilter, selectedStatusFilter, customFromDate, customToDate, bookingLimit, selectedEventId]);
-
   // Event list filters
   const filteredEvents = events.filter(evt => {
     const matchesSearch = evt.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -351,62 +213,7 @@ export default function EventDetailsTab() {
     return matchesSearch && matchesCategory;
   });
 
-  // Relative Date Calculations (Reference Date: 2026-06-21)
-  const filterByDate = (b: BookingItem) => {
-    if (selectedDateFilter === 'All') return true;
-    
-    const itemDate = new Date(b.dateIso);
-    const targetDate = new Date('2026-06-21');
-    
-    if (selectedDateFilter === 'Yesterday') {
-      return b.dateIso === '2026-06-20';
-    }
-    
-    if (selectedDateFilter === 'Prev3Days') {
-      const diffTime = targetDate.getTime() - itemDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= 1 && diffDays <= 3;
-    }
-    
-    if (selectedDateFilter === 'LastWeek') {
-      const diffTime = targetDate.getTime() - itemDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= 1 && diffDays <= 7;
-    }
-
-    if (selectedDateFilter === 'Custom') {
-      const from = new Date(customFromDate);
-      const to = new Date(customToDate);
-      return itemDate >= from && itemDate <= to;
-    }
-
-    return true;
-  };
-
-  // Guest Filtering is processed across the entire 100 record array first
-  const eventBookings = allMockBookings[selectedEvent.id] || [];
-  const filteredBookings = eventBookings
-    .filter(b => {
-      const matchesText = b.name.toLowerCase().includes(bookingSearch.toLowerCase()) ||
-                          b.id.toLowerCase().includes(bookingSearch.toLowerCase()) ||
-                          b.email.toLowerCase().includes(bookingSearch.toLowerCase());
-      const matchesTier = selectedTierFilter === 'All' ? true : b.tier === selectedTierFilter;
-      const matchesDate = filterByDate(b);
-      const matchesStatus = selectedStatusFilter === 'All' ? true : b.status === selectedStatusFilter;
-      return matchesText && matchesTier && matchesDate && matchesStatus;
-    });
-
-  // Guest Directory Page Slices (Dynamic Pagination)
-  const totalPages = Math.ceil(filteredBookings.length / bookingLimit) || 1;
-  const startIndex = (guestPage - 1) * bookingLimit;
-  const visibleBookings = filteredBookings.slice(startIndex, startIndex + bookingLimit);
-
-  // Financial Stats & Booking totals based on the filtered selection
-  const totalBookingsCount = filteredBookings.length;
-  const totalTicketsQty = filteredBookings.reduce((sum, b) => sum + b.qty, 0);
-  
-  // Total Subtotal (Ticket gross cost paid by customers)
-  const totalAmountCollected = filteredBookings.reduce((sum, b) => sum + b.amount, 0);
+  const visibleBookings = bookings;
 
   // Ticpin Platform Calculations (6% Booking Fee standard, plus 18% GST on that booking fee)
   const ticpinFee = Math.round(totalAmountCollected * 0.06);
@@ -418,6 +225,23 @@ export default function EventDetailsTab() {
 
   // Grand Total paid by customers (Base amount + Ticpin booking fee)
   const grandTotalPaidByCustomers = totalAmountCollected + ticpinFee;
+
+  if (loadingEvents) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <RefreshCw className="animate-spin text-[#5331EA] mb-2" size={28} />
+        <p className="text-zinc-600 font-semibold text-xs animate-pulse">Loading Organized Events...</p>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] border border-dashed border-zinc-200 rounded-[15px] bg-white p-6 text-center text-zinc-500 font-medium">
+        <p>No events found. Create your first event to get started!</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-black pb-6 p-6 rounded-[15px] bg-[#D3CBF5]/10" style={{ fontFamily: 'var(--font-anek-latin), var(--font-inter), sans-serif' }}>
@@ -575,21 +399,11 @@ export default function EventDetailsTab() {
                               </span>
                             </td>
                             <td className="py-3 px-3">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button 
-                                  onClick={() => handleToggleStatus(selectedEvent.id, idx)}
-                                  className="p-1 text-slate-500 hover:text-[#5331EA] hover:bg-slate-100 rounded border border-[#AEAEAE] transition-colors"
-                                  title="Swap / Toggle status"
-                                >
-                                  <ArrowRightLeft size={11} />
-                                </button>
-                                <button 
-                                  onClick={() => handlePauseTier(selectedEvent.id, idx)}
-                                  className="p-1 text-slate-500 hover:text-amber-500 hover:bg-slate-100 rounded border border-[#AEAEAE] transition-colors"
-                                  title="Pause Tier Sales"
-                                >
+                              <div className="flex items-center justify-center">
+                                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-[#AEAEAE] bg-slate-50 text-[9.5px] font-bold text-slate-500">
                                   <Pause size={11} />
-                                </button>
+                                  Analytics only
+                                </span>
                               </div>
                             </td>
                           </tr>
@@ -666,7 +480,7 @@ export default function EventDetailsTab() {
                   Guest Directory & Booking Breakdown: {selectedEvent.name}
                 </h3>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider">
-                  List of users who purchased tickets for this event (Total Records: {filteredBookings.length})
+                  List of users who purchased tickets for this event (Total Records: {totalBookingsCount})
                 </p>
               </div>
               <div className="text-[10px] text-slate-500 font-black uppercase bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
@@ -733,7 +547,7 @@ export default function EventDetailsTab() {
                   className="w-full h-8 px-2 bg-white border border-[#AEAEAE] rounded-lg text-xs outline-none focus:border-[#5331EA] font-semibold text-slate-700"
                 >
                   <option value="All">All Time</option>
-                  <option value="Yesterday">Yesterday (Jun 20)</option>
+                  <option value="Yesterday">Yesterday ({yesterdayLabel})</option>
                   <option value="Prev3Days">Previous 3 Days</option>
                   <option value="LastWeek">Last Week</option>
                   <option value="Custom">Custom Range</option>

@@ -74,7 +74,7 @@ interface EventData {
     layout_json?: string;
 }
 
-import { getMinPrice } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTCWithDay } from '@/lib/utils';
 
 export default function EventDetailClient({ event, id }: { event: EventData, id: string }) {
     const router = useRouter();
@@ -159,9 +159,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
             const avail = await bookingApi.getEventAvailability(event.id);
             const bookedMap = avail.booked ?? {};
 
-            const categories = event.ticket_categories && event.ticket_categories.length > 0
-                ? event.ticket_categories
-                : [{ name: 'General Admission', capacity: 0 }];
+            const categories = event.ticket_categories || [];
 
             let totalAvailable = 0;
             let hasInfinite = false;
@@ -178,7 +176,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                 }
             }
 
-            if (!hasInfinite && totalAvailable <= 0) {
+            if (categories.length > 0 && !hasInfinite && totalAvailable <= 0) {
                 toast.error('All tickets for this event are currently sold out or locked by others!');
                 return;
             }
@@ -194,22 +192,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
     };
 
     const formattedDate = useMemo(() => {
-        if (!event?.date) return '';
-        try {
-            const d = new Date(event.date);
-            if (isNaN(d.getTime())) return '';
-            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-            const weekday = days[d.getDay()];
-            const day = d.getDate();
-            const month = months[d.getMonth()];
-            const year = d.getFullYear();
-
-            return `${weekday}, ${day} ${month} ${year}`;
-        } catch (e) {
-            return '';
-        }
+        return formatEventDateUTCWithDay(event?.date);
     }, [event?.date]);
 
     const processedDesc = useMemo(() => {

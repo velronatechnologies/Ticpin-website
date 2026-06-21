@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Search,
     User,
@@ -25,6 +25,7 @@ interface AttendeesTabProps {
     searchQuery: string;
     setSearchQuery: (val: string) => void;
     handleExportCSV: () => void;
+    listingName?: string;
 }
 
 interface VerificationLog {
@@ -35,90 +36,45 @@ interface VerificationLog {
     booking_category: string;
     gate_entered: string;
     verified_by: string;
-    status: 'Checked-in';
+    status: string;
     booked_at: string;
+    check_in_time_str?: string;
+    check_out_time_str?: string;
 }
 
-// Programmatic generator to produce 300 fallback mock logs spanning different dates and times
-const generateMockLogs = (): VerificationLog[] => {
-    const categories = ['General Admission', 'VIP Pass', 'Early Bird', 'TechNova Special'];
-    const gates = ['Main Gate', 'Gate 2', 'VIP Gate'];
-    const verifiers = ['Verifier 1 (Bouncer)', 'Verifier 2 (Staff)', 'Admin Staff', 'Verifier 3'];
-    const names = [
-        'Aravv G', 'Aniksha Senthil', 'Dharun Balaji', 'Ramji Balasubramaniyan', 'Dharun Balaji 2', 'Dharun S',
-        'John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Brown', 'Charlie Davis', 'Eva Elks',
-        'Frank Miller', 'Grace Wilson', 'Henry Taylor', 'Ivy Thomas', 'Jack Jackson', 'Kate White',
-        'Liam Harris', 'Mia Martin', 'Noah Thompson', 'Olivia Garcia', 'Peter Martinez', 'Quinn Robinson',
-        'Ryan Clark', 'Sophia Rodriguez', 'Thomas Lewis', 'Ursula Lee', 'Victor Walker', 'Wendy Hall',
-        'Xavier Allen', 'Yasmine Young', 'Zachary King'
-    ];
-    const emails = ['aravinthrajan7708@gmail.com', 'anikshasenthilkumar@gmail.com', 'dharunbalaji@velrona.com', 'ramjlb231f@gmail.com', 'kannandharun1615@gmail.com'];
-
-    const logs: VerificationLog[] = [];
-    const fixedLogs: VerificationLog[] = [
-        { id: 'B-1001', booking_id: 'TIC-7401-VI', user_name: 'Aravv G', user_email: 'aravinthrajan7708@gmail.com', booking_category: 'VIP Pass', gate_entered: 'Main Gate', verified_by: 'Verifier 1 (Bouncer)', status: 'Checked-in', booked_at: '2026-06-21T06:15:00Z' },
-        { id: 'B-1002', booking_id: 'TIC-7402-GA', user_name: 'Aniksha Senthil', user_email: 'anikshasenthilkumar@gmail.com', booking_category: 'General Admission', gate_entered: 'Gate 2', verified_by: 'Verifier 2 (Staff)', status: 'Checked-in', booked_at: '2026-06-21T14:18:00Z' },
-        { id: 'B-1003', booking_id: 'TIC-7403-EB', user_name: 'Dharun Balaji', user_email: 'dharunbalaji@velrona.com', booking_category: 'Early Bird', gate_entered: 'Main Gate', verified_by: 'Verifier 1 (Bouncer)', status: 'Checked-in', booked_at: '2026-06-20T10:20:00Z' },
-        { id: 'B-1004', booking_id: 'TIC-7404-GA', user_name: 'Ramji Balasubramaniyan', user_email: 'ramjib2311@gmail.com', booking_category: 'General Admission', gate_entered: 'VIP Gate', verified_by: 'Admin Staff', status: 'Checked-in', booked_at: '2026-06-20T21:22:00Z' },
-        { id: 'B-1005', booking_id: 'TIC-7405-GA', user_name: 'Dharun Balaji 2', user_email: 'kannandharun1615@gmail.com', booking_category: 'General Admission', gate_entered: 'Gate 1', verified_by: 'Verifier 3', status: 'Checked-in', booked_at: '2026-06-18T11:25:00Z' },
-        { id: 'B-1006', booking_id: 'TIC-7406-EB', user_name: 'Dharun S', user_email: 'kannandharun1615@gmail.com', booking_category: 'Early Bird', gate_entered: 'Main Gate', verified_by: 'Verifier 1 (Bouncer)', status: 'Checked-in', booked_at: '2026-06-11T16:28:00Z' }
-    ];
-
-    logs.push(...fixedLogs);
-
-    // Generate up to 1314 items
-    for (let i = 7; i <= 1314; i++) {
-        const name = names[i % names.length] + ' ' + String.fromCharCode(65 + (i % 26));
-        const email = `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
-        const category = categories[i % categories.length];
-        const gate = gates[i % gates.length];
-        const verifier = verifiers[i % verifiers.length];
-        
-        let bookedDate = new Date();
-        if (i % 4 === 1) {
-            bookedDate.setDate(bookedDate.getDate() - 1);
-        } else if (i % 4 === 2) {
-            bookedDate.setDate(bookedDate.getDate() - 5);
-        } else if (i % 4 === 3) {
-            bookedDate.setDate(bookedDate.getDate() - 15);
-        }
-        
-        bookedDate.setHours(6 + (i % 16), (i * 7) % 60, 0);
-
-        logs.push({
-            id: `B-${1000 + i}`,
-            booking_id: `TIC-${7400 + i}-${category.slice(0,2).toUpperCase()}`,
-            user_name: name,
-            user_email: email,
-            booking_category: category,
-            gate_entered: gate,
-            verified_by: verifier,
-            status: 'Checked-in',
-            booked_at: bookedDate.toISOString()
-        });
-    }
-    return logs;
-};
-
-const initialFallbackLogs = generateMockLogs();
-
-const initialUnverifiedBookings = [
-    { booking_id: 'TIC-9901-GA', user_name: 'Suresh Kumar', user_email: 'suresh@gmail.com', booking_category: 'General Admission', status: 'Booked' },
-    { booking_id: 'TIC-9902-VI', user_name: 'Vijay Raghavan', user_email: 'vijay@gmail.com', booking_category: 'VIP Pass', status: 'Booked' },
-    { booking_id: 'TIC-9903-EB', user_name: 'Karthik Raja', user_email: 'karthik@gmail.com', booking_category: 'Early Bird', status: 'Booked' }
-];
+interface UnverifiedBooking {
+    booking_id: string;
+    user_name: string;
+    user_email: string;
+    booking_category: string;
+    status: string;
+}
 
 export default function AttendeesTab({
-    bookings,
-    loadingBookings,
-    searchQuery: externalSearchQuery,
-    setSearchQuery: setExternalSearchQuery,
-    handleExportCSV
+    bookings: propBookings,
+    loadingBookings: propLoadingBookings,
+    searchQuery: propSearchQuery,
+    setSearchQuery: propSetSearchQuery,
+    handleExportCSV: propHandleExportCSV,
+    listingName
 }: AttendeesTabProps) {
-    // Search & Load Limit States
+    // URL Context
+    const [eventId, setEventId] = useState<string>('');
+
+    // Fetch States
+    const [checkedInLogs, setCheckedInLogs] = useState<VerificationLog[]>([]);
+    const [unverifiedList, setUnverifiedList] = useState<UnverifiedBooking[]>([]);
+    const [totalCheckedIn, setTotalCheckedIn] = useState(0);
+    const [mainGateCount, setMainGateCount] = useState(0);
+    const [gate2Count, setGate2Count] = useState(0);
+    const [vipGateCount, setVipGateCount] = useState(0);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loading, setLoading] = useState(true);
+
+    // Search & Filter States
     const [searchVal, setSearchVal] = useState('');
     const [itemsPerPage, setItemsPerPage] = useState(100);
-    const [baseLimit, setBaseLimit] = useState(100);
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedBookingDetails, setSelectedBookingDetails] = useState<VerificationLog | null>(null);
 
@@ -153,31 +109,6 @@ export default function AttendeesTab({
     const [customEndMin, setCustomEndMin] = useState('00');
     const [customEndAmPm, setCustomEndAmPm] = useState('PM');
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [itemsPerPage, selectedCategory, selectedGate, selectedVerifier, selectedTime, selectedAmPm, searchVal, customStartDate, customEndDate, customStartHour, customStartMin, customStartAmPm, customEndHour, customEndMin, customEndAmPm]);
-
-    // Primary data states
-    const [localCheckedInLogs, setLocalCheckedInLogs] = useState<VerificationLog[]>(() => {
-        const backendCheckedIn = bookings
-            .filter(b => b.status === 'Checked-in' || b.status === 'verified')
-            .map((b, idx) => ({
-                id: b.id,
-                booking_id: b.booking_id,
-                user_name: b.user_name,
-                user_email: b.user_email,
-                booking_category: (b.booking_category && b.booking_category !== 'event') ? b.booking_category : (b.tickets?.[0]?.category || 'General Admission'),
-                gate_entered: idx % 3 === 0 ? 'Main Gate' : idx % 3 === 1 ? 'Gate 2' : 'VIP Gate',
-                verified_by: idx % 3 === 0 ? 'Verifier 1 (Bouncer)' : idx % 3 === 1 ? 'Verifier 2 (Staff)' : 'Admin Staff',
-                status: 'Checked-in' as const,
-                booked_at: b.booked_at
-            }));
-
-        return backendCheckedIn.length > 0 ? backendCheckedIn : initialFallbackLogs;
-    });
-
-    const [localUnverified, setLocalUnverified] = useState(initialUnverifiedBookings);
-
     // Helper to compute minutes from midnight for 12-hour AM/PM inputs
     const getMinutesFromMidnight = (hourStr: string, minStr: string, ampm: string): number => {
         let hour = parseInt(hourStr, 10);
@@ -192,8 +123,82 @@ export default function AttendeesTab({
         return hour * 60 + minutes;
     };
 
-    // Action: Verify attendee via modal
-    const handleVerifyAttendee = () => {
+    // Load active event ID from window location search
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            setEventId(params.get('id') || '');
+        }
+    }, []);
+
+    // Main Fetch Function
+    const fetchAttendees = useCallback(async () => {
+        if (!eventId) return;
+        setLoading(true);
+        try {
+            const startMinutes = getMinutesFromMidnight(customStartHour, customStartMin, customStartAmPm);
+            const endMinutes = getMinutesFromMidnight(customEndHour, customEndMin, customEndAmPm);
+
+            const isAllCategories = !selectedCategory || selectedCategory.toLowerCase().trim() === 'all' || selectedCategory.toLowerCase().trim() === 'all categories';
+            const isAllGates = !selectedGate || selectedGate.toLowerCase().trim() === 'all' || selectedGate.toLowerCase().trim() === 'all gates';
+            const isAllVerifiers = !selectedVerifier || selectedVerifier.toLowerCase().trim() === 'all' || selectedVerifier.toLowerCase().trim() === 'all verifiers';
+
+            const queryParams = new URLSearchParams({
+                eventId: eventId,
+                query: searchVal,
+                category: isAllCategories ? '' : selectedCategory,
+                gate: isAllGates ? '' : selectedGate,
+                verifier: isAllVerifiers ? '' : selectedVerifier,
+                datePeriod: selectedTime,
+                fromDate: customStartDate,
+                toDate: customEndDate,
+                timePeriod: selectedAmPm,
+                startMinutes: String(startMinutes),
+                endMinutes: String(endMinutes),
+                page: String(currentPage),
+                limit: String(itemsPerPage)
+            });
+
+            const res = await fetch(`/backend/api/organizer/overview/attendees?${queryParams.toString()}`);
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success && result.data) {
+                    const d = result.data;
+                    setCheckedInLogs(d.checkedIn || []);
+                    setUnverifiedList(d.unverified || []);
+                    setTotalCheckedIn(d.totalCheckedIn || 0);
+                    setMainGateCount(d.mainGateCount || 0);
+                    setGate2Count(d.gate2Count || 0);
+                    setVipGateCount(d.vipGateCount || 0);
+                    setTotalRecords(d.totalRecords || 0);
+                    setTotalPages(d.totalPages || 1);
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching attendees list:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [
+        eventId, searchVal, selectedCategory, selectedGate, selectedVerifier,
+        selectedTime, customStartDate, customEndDate, selectedAmPm,
+        customStartHour, customStartMin, customStartAmPm,
+        customEndHour, customEndMin, customEndAmPm,
+        itemsPerPage, currentPage
+    ]);
+
+    // Triggers when page filters or search criteria change
+    useEffect(() => {
+        fetchAttendees();
+    }, [fetchAttendees]);
+
+    // Reset pagination to page 1 on search or filter change
+    const resetPaginationAndFilters = () => {
+        setCurrentPage(1);
+    };
+
+    // Action: Verify attendee online using the new API
+    const handleVerifyAttendee = async () => {
         setVerificationFeedback(null);
         if (!inputBookingId.trim()) {
             setVerificationFeedback({ type: 'error', message: 'Please enter a valid Booking ID.' });
@@ -202,140 +207,71 @@ export default function AttendeesTab({
 
         const cleanId = inputBookingId.trim().toUpperCase();
 
-        // Check if already checked in
-        const alreadyCheckedIn = localCheckedInLogs.find(log => log.booking_id.toUpperCase() === cleanId);
-        if (alreadyCheckedIn) {
-            setVerificationFeedback({
-                type: 'warning',
-                message: `Already verified! Checked in at ${alreadyCheckedIn.gate_entered} by ${alreadyCheckedIn.verified_by}. No need to verify again.`
+        try {
+            const res = await fetch('/backend/api/organizer/overview/attendees/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bookingId: cleanId,
+                    gate: 'Main Gate'
+                })
             });
-            return;
-        }
 
-        // Check if unverified
-        const matchingUnverified = localUnverified.find(b => b.booking_id.toUpperCase() === cleanId);
-        if (matchingUnverified) {
-            const newLog: VerificationLog = {
-                id: `B-${Date.now()}`,
-                booking_id: matchingUnverified.booking_id,
-                user_name: matchingUnverified.user_name,
-                user_email: matchingUnverified.user_email,
-                booking_category: matchingUnverified.booking_category,
-                gate_entered: 'Main Gate',
-                verified_by: 'Verifier 1 (Bouncer)',
-                status: 'Checked-in',
-                booked_at: new Date().toISOString()
-            };
-
-            setLocalCheckedInLogs(prev => [newLog, ...prev]);
-            setLocalUnverified(prev => prev.filter(b => b.booking_id.toUpperCase() !== cleanId));
-
-            setVerificationFeedback({
-                type: 'success',
-                message: `Successfully verified and checked in! Name: ${matchingUnverified.user_name}, Category: ${matchingUnverified.booking_category}.`
-            });
-            setInputBookingId('');
-        } else {
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setVerificationFeedback({
+                    type: 'success',
+                    message: `Successfully verified and checked in! Booking ID: ${cleanId}.`
+                });
+                setInputBookingId('');
+                fetchAttendees();
+            } else {
+                setVerificationFeedback({
+                    type: 'error',
+                    message: data.error || 'Failed to verify booking ID.'
+                });
+            }
+        } catch (err) {
             setVerificationFeedback({
                 type: 'error',
-                message: 'Invalid Booking ID. No booking record found.'
+                message: 'Error communicating with backend check-in services.'
             });
         }
     };
 
-    // Perform dynamic filtering based on all criteria
-    const filteredLogs = localCheckedInLogs.filter(b => {
-        const searchLower = searchVal.toLowerCase();
-        const matchesSearch =
-            b.user_name.toLowerCase().includes(searchLower) ||
-            b.booking_id.toLowerCase().includes(searchLower) ||
-            b.user_email.toLowerCase().includes(searchLower) ||
-            b.booking_category.toLowerCase().includes(searchLower) ||
-            b.gate_entered.toLowerCase().includes(searchLower) ||
-            b.verified_by.toLowerCase().includes(searchLower) ||
-            b.status.toLowerCase().includes(searchLower) ||
-            new Date(b.booked_at).toLocaleString().toLowerCase().includes(searchLower);
-
-        // 2. Ticket Category filter
-        const matchesCategory =
-            selectedCategory === 'All Categories' ? true : b.booking_category === selectedCategory;
-
-        // 3. Gate filter
-        const matchesGate =
-            selectedGate === 'All Gates' ? true : b.gate_entered === selectedGate;
-
-        // 4. Verifier filter
-        const matchesVerifier =
-            selectedVerifier === 'All Verifiers' ? true : b.verified_by === selectedVerifier;
-
-        // 5. Time range filter (Date based)
-        let matchesTime = true;
-        if (selectedTime !== 'All Time') {
-            const logDate = new Date(b.booked_at);
-            const now = new Date();
-
-            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const startOfYesterday = new Date(startOfToday);
-            startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-            const startOfLastWeek = new Date(startOfToday);
-            startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-
-            if (selectedTime === 'Today') {
-                matchesTime = logDate >= startOfToday;
-            } else if (selectedTime === 'Yesterday') {
-                matchesTime = logDate >= startOfYesterday && logDate < startOfToday;
-            } else if (selectedTime === 'Last Week') {
-                matchesTime = logDate >= startOfLastWeek;
-            } else if (selectedTime === 'Custom Range') {
-                if (customStartDate && customEndDate) {
-                    const customStart = new Date(customStartDate);
-                    customStart.setHours(0, 0, 0, 0);
-                    const customEnd = new Date(customEndDate);
-                    customEnd.setHours(23, 59, 59, 999);
-                    matchesTime = logDate >= customStart && logDate <= customEnd;
-                }
-            }
-        }
-
-        // 6. AM/PM or Custom Hours range filter
-        if (matchesTime && selectedAmPm !== 'Full Day') {
-            const logDate = new Date(b.booked_at);
-            const hour = logDate.getHours();
-            const minutes = logDate.getMinutes();
-            const totalMinutes = hour * 60 + minutes;
-
-            if (selectedAmPm === 'AM (Before 12 PM)') {
-                matchesTime = hour < 12;
-            } else if (selectedAmPm === 'PM (After 12 PM)') {
-                matchesTime = hour >= 12;
-            } else if (selectedAmPm === 'Custom Time Range') {
-                const startTotal = getMinutesFromMidnight(customStartHour, customStartMin, customStartAmPm);
-                const endTotal = getMinutesFromMidnight(customEndHour, customEndMin, customEndAmPm);
-                matchesTime = totalMinutes >= startTotal && totalMinutes <= endTotal;
-            }
-        }
-
-        return matchesSearch && matchesCategory && matchesGate && matchesVerifier && matchesTime;
-    });
-
-    // Capped by load limit (100 or 500), then paged by 20 rows
-    const loadedLogs = filteredLogs.slice(0, itemsPerPage);
-    const PAGE_SIZE = 20;
-    const totalPages = Math.ceil(loadedLogs.length / PAGE_SIZE) || 1;
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const visibleLogs = loadedLogs.slice(startIndex, startIndex + PAGE_SIZE);
-
-    const remainingMatchedCount = filteredLogs.length - loadedLogs.length;
-
-    // Statistics counters
-    const totalCheckedIn = filteredLogs.length;
-    const mainGateCount = filteredLogs.filter(b => b.gate_entered === 'Main Gate').length;
-    const gate2Count = filteredLogs.filter(b => b.gate_entered === 'Gate 2').length;
-    const vipGateCount = filteredLogs.filter(b => b.gate_entered === 'VIP Gate').length;
+    // Export Filtered Checked-In Attendees to CSV
+    const localExportCSV = () => {
+        if (checkedInLogs.length === 0) return;
+        const headers = ['Booking ID', 'Attendee Name', 'Email Address', 'Category', 'Gate Entered', 'Verified By', 'Status', 'Check-In Date/Time'];
+        const rows = checkedInLogs.map(b => [
+            b.booking_id,
+            b.user_name,
+            b.user_email,
+            b.booking_category,
+            b.gate_entered,
+            b.verified_by,
+            b.status,
+            new Date(b.booked_at).toLocaleString()
+        ]);
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + [headers.join(','), ...rows.map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `event_check_in_logs.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const toggleDropdown = (dropdown: string) => {
         setActiveDropdown(prev => (prev === dropdown ? null : dropdown));
     };
+
+    const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages || 1));
+    const visibleLogs = checkedInLogs;
 
     return (
         <div className="space-y-6 text-[#1c1525] font-sans pb-6">
@@ -359,7 +295,7 @@ export default function AttendeesTab({
                                 value={searchVal}
                                 onChange={(e) => {
                                     setSearchVal(e.target.value);
-                                    setCurrentPage(1);
+                                    resetPaginationAndFilters();
                                 }}
                                 className="w-full h-10 pl-9 pr-3 text-xs bg-white border border-[#AEAEAE] rounded-lg focus:outline-none focus:border-[#5331EA] text-slate-800 placeholder-slate-400 font-semibold"
                             />
@@ -396,13 +332,22 @@ export default function AttendeesTab({
                         </button>
                         {activeDropdown === 'category' && (
                             <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#AEAEAE] rounded-lg overflow-hidden z-40 text-xs text-slate-800 shadow-lg">
-                                {['All Categories', 'VIP Pass', 'General Admission', 'Early Bird'].map(cat => (
+                                {(() => {
+                                    const cats = new Set<string>();
+                                    checkedInLogs.forEach(log => {
+                                        if (log.booking_category) cats.add(log.booking_category);
+                                    });
+                                    unverifiedList.forEach(item => {
+                                        if (item.booking_category) cats.add(item.booking_category);
+                                    });
+                                    return ['All Categories', ...Array.from(cats)];
+                                })().map(cat => (
                                     <div
                                         key={cat}
                                         onClick={() => {
                                             setSelectedCategory(cat);
                                             setActiveDropdown(null);
-                                            setCurrentPage(1);
+                                            resetPaginationAndFilters();
                                         }}
                                         className="px-3 py-2.5 hover:bg-slate-50 cursor-pointer font-semibold"
                                     >
@@ -431,7 +376,7 @@ export default function AttendeesTab({
                                         onClick={() => {
                                             setSelectedGate(gate);
                                             setActiveDropdown(null);
-                                            setCurrentPage(1);
+                                            resetPaginationAndFilters();
                                         }}
                                         className="px-3 py-2.5 hover:bg-slate-50 cursor-pointer font-semibold"
                                     >
@@ -460,7 +405,7 @@ export default function AttendeesTab({
                                         onClick={() => {
                                             setSelectedVerifier(v);
                                             setActiveDropdown(null);
-                                            setCurrentPage(1);
+                                            resetPaginationAndFilters();
                                         }}
                                         className="px-3 py-2.5 hover:bg-slate-50 cursor-pointer font-semibold"
                                     >
@@ -489,7 +434,7 @@ export default function AttendeesTab({
                                         onClick={() => {
                                             setSelectedTime(t);
                                             setActiveDropdown(null);
-                                            setCurrentPage(1);
+                                            resetPaginationAndFilters();
                                         }}
                                         className="px-3 py-2.5 hover:bg-slate-50 cursor-pointer font-semibold"
                                     >
@@ -518,7 +463,7 @@ export default function AttendeesTab({
                                         onClick={() => {
                                             setSelectedAmPm(ampmOpt);
                                             setActiveDropdown(null);
-                                            setCurrentPage(1);
+                                            resetPaginationAndFilters();
                                         }}
                                         className="px-3 py-2.5 hover:bg-slate-50 cursor-pointer font-semibold"
                                     >
@@ -542,7 +487,7 @@ export default function AttendeesTab({
                                     value={customStartDate}
                                     onChange={(e) => {
                                         setCustomStartDate(e.target.value);
-                                        setCurrentPage(1);
+                                        resetPaginationAndFilters();
                                     }}
                                     className="h-9 px-3 text-xs border border-[#AEAEAE] bg-white rounded-lg focus:outline-none text-slate-800 font-bold"
                                 />
@@ -552,7 +497,7 @@ export default function AttendeesTab({
                                     value={customEndDate}
                                     onChange={(e) => {
                                         setCustomEndDate(e.target.value);
-                                        setCurrentPage(1);
+                                        resetPaginationAndFilters();
                                     }}
                                     className="h-9 px-3 text-xs border border-[#AEAEAE] bg-white rounded-lg focus:outline-none text-slate-800 font-bold"
                                 />
@@ -567,7 +512,7 @@ export default function AttendeesTab({
                                 <div className="flex items-center gap-1 border border-[#AEAEAE] rounded-lg px-2 py-1 bg-white">
                                     <select
                                         value={customStartHour}
-                                        onChange={(e) => { setCustomStartHour(e.target.value); setCurrentPage(1); }}
+                                        onChange={(e) => { setCustomStartHour(e.target.value); resetPaginationAndFilters(); }}
                                         className="text-xs bg-transparent font-bold focus:outline-none text-slate-800 cursor-pointer"
                                     >
                                         {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(h => (
@@ -577,7 +522,7 @@ export default function AttendeesTab({
                                     <span className="text-xs text-slate-400 font-bold">:</span>
                                     <select
                                         value={customStartMin}
-                                        onChange={(e) => { setCustomStartMin(e.target.value); setCurrentPage(1); }}
+                                        onChange={(e) => { setCustomStartMin(e.target.value); resetPaginationAndFilters(); }}
                                         className="text-xs bg-transparent font-bold focus:outline-none text-slate-800 cursor-pointer"
                                     >
                                         {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
@@ -586,7 +531,7 @@ export default function AttendeesTab({
                                     </select>
                                     <select
                                         value={customStartAmPm}
-                                        onChange={(e) => { setCustomStartAmPm(e.target.value); setCurrentPage(1); }}
+                                        onChange={(e) => { setCustomStartAmPm(e.target.value); resetPaginationAndFilters(); }}
                                         className="text-xs bg-transparent font-bold focus:outline-none text-[#5331EA] cursor-pointer ml-1"
                                     >
                                         <option value="AM">AM</option>
@@ -600,7 +545,7 @@ export default function AttendeesTab({
                                 <div className="flex items-center gap-1 border border-[#AEAEAE] rounded-lg px-2 py-1 bg-white">
                                     <select
                                         value={customEndHour}
-                                        onChange={(e) => { setCustomEndHour(e.target.value); setCurrentPage(1); }}
+                                        onChange={(e) => { setCustomEndHour(e.target.value); resetPaginationAndFilters(); }}
                                         className="text-xs bg-transparent font-bold focus:outline-none text-slate-800 cursor-pointer"
                                     >
                                         {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(h => (
@@ -610,7 +555,7 @@ export default function AttendeesTab({
                                     <span className="text-xs text-slate-400 font-bold">:</span>
                                     <select
                                         value={customEndMin}
-                                        onChange={(e) => { setCustomEndMin(e.target.value); setCurrentPage(1); }}
+                                        onChange={(e) => { setCustomEndMin(e.target.value); resetPaginationAndFilters(); }}
                                         className="text-xs bg-transparent font-bold focus:outline-none text-slate-800 cursor-pointer"
                                     >
                                         {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
@@ -619,7 +564,7 @@ export default function AttendeesTab({
                                     </select>
                                     <select
                                         value={customEndAmPm}
-                                        onChange={(e) => { setCustomEndAmPm(e.target.value); setCurrentPage(1); }}
+                                        onChange={(e) => { setCustomEndAmPm(e.target.value); resetPaginationAndFilters(); }}
                                         className="text-xs bg-transparent font-bold focus:outline-none text-[#5331EA] cursor-pointer ml-1"
                                     >
                                         <option value="AM">AM</option>
@@ -701,6 +646,7 @@ export default function AttendeesTab({
                                     setCustomEndHour('11');
                                     setCustomEndMin('00');
                                     setCustomEndAmPm('PM');
+                                    resetPaginationAndFilters();
                                 }}
                                 className="text-[10px] text-[#5331EA] font-bold hover:underline"
                             >
@@ -718,7 +664,7 @@ export default function AttendeesTab({
                                 value={searchVal}
                                 onChange={(e) => {
                                     setSearchVal(e.target.value);
-                                    setCurrentPage(1);
+                                    resetPaginationAndFilters();
                                 }}
                                 className="w-full h-8 pl-8 pr-2.5 text-[11px] bg-slate-50 border border-[#AEAEAE] rounded-lg focus:outline-none focus:border-[#5331EA] text-slate-800 placeholder-slate-400 font-semibold"
                             />
@@ -729,35 +675,32 @@ export default function AttendeesTab({
                         {/* Load Limit Selectors */}
                         <div className="flex items-center gap-1.5">
                             <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Load Limit:</span>
-                            {[100, 500].map(size => (
+                            <button
+                                onClick={() => {
+                                    setItemsPerPage(100);
+                                    resetPaginationAndFilters();
+                                }}
+                                className={`px-2.5 py-1 text-[10px] font-bold rounded border ${
+                                    itemsPerPage === 100
+                                        ? 'bg-[#5331EA] text-white border-[#5331EA]'
+                                        : 'bg-white hover:bg-slate-50 text-slate-600 border-[#AEAEAE]'
+                                }`}
+                            >
+                                100
+                            </button>
+                            {totalRecords > 500 && (
                                 <button
-                                    key={size}
                                     onClick={() => {
-                                        setBaseLimit(size);
-                                        setItemsPerPage(size);
-                                        setCurrentPage(1);
+                                        setItemsPerPage(500);
+                                        resetPaginationAndFilters();
                                     }}
                                     className={`px-2.5 py-1 text-[10px] font-bold rounded border ${
-                                        baseLimit === size
+                                        itemsPerPage === 500
                                             ? 'bg-[#5331EA] text-white border-[#5331EA]'
                                             : 'bg-white hover:bg-slate-50 text-slate-600 border-[#AEAEAE]'
                                     }`}
                                 >
-                                    {size}
-                                </button>
-                            ))}
-
-                            {/* Load Next Chunks Button */}
-                            {remainingMatchedCount > 0 && (
-                                <button
-                                    onClick={() => {
-                                        const amountToLoad = Math.min(baseLimit, remainingMatchedCount);
-                                        setItemsPerPage(prev => prev + amountToLoad);
-                                    }}
-                                    className="px-2.5 py-1 text-[10px] font-black rounded border border-[#5331EA] bg-[#5331EA]/10 hover:bg-[#5331EA]/20 text-[#5331EA] transition-all flex items-center gap-1"
-                                    title={`Load Next ${Math.min(baseLimit, remainingMatchedCount)} matching attendees`}
-                                >
-                                    <span>Load Next {Math.min(baseLimit, remainingMatchedCount)}</span>
+                                    500
                                 </button>
                             )}
                         </div>
@@ -766,17 +709,17 @@ export default function AttendeesTab({
                         <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
+                                disabled={safeCurrentPage === 1 || loading}
                                 className="h-8 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:hover:bg-white"
                             >
                                 Previous
                             </button>
                             <span className="px-1 text-slate-600 font-semibold">
-                                Page <strong className="text-slate-900">{currentPage}</strong> of <strong className="text-slate-900">{totalPages}</strong> (<strong className="text-slate-900">{loadedLogs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, loadedLogs.length)}</strong> of <strong className="text-slate-900">{loadedLogs.length}</strong> loaded)
+                                Page <strong className="text-slate-900">{safeCurrentPage}</strong> of <strong className="text-slate-900">{Math.max(totalPages, 1)}</strong> (<strong className="text-slate-900">{visibleLogs.length}</strong> shown, <strong className="text-slate-900">{totalRecords}</strong> total matches)
                             </span>
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(totalPages, 1)))}
+                                disabled={safeCurrentPage >= Math.max(totalPages, 1) || loading}
                                 className="h-8 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:hover:bg-white"
                             >
                                 Next
@@ -784,7 +727,7 @@ export default function AttendeesTab({
                         </div>
 
                         <button
-                            onClick={handleExportCSV}
+                            onClick={localExportCSV}
                             className="h-8 px-3 border border-emerald-200 hover:bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
                         >
                             <FileSpreadsheet size={13} />
@@ -803,20 +746,22 @@ export default function AttendeesTab({
                                 <th className="py-3 px-3">Ticket Category</th>
                                 <th className="py-3 px-3">Gate Entered</th>
                                 <th className="py-3 px-3">Verified By</th>
+                                <th className="py-3 px-3">Check-In Time</th>
+                                <th className="py-3 px-3">Check-Out Time</th>
                                 <th className="py-3 px-3 text-center">Check-In Status</th>
                                 <th className="py-3 px-3 text-center rounded-r-md w-[90px]">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#AEAEAE] text-slate-800">
-                            {loadingBookings ? (
+                            {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="py-8 text-center text-slate-400 italic">
+                                    <td colSpan={10} className="py-8 text-center text-slate-400 italic">
                                         Loading check-in list...
                                     </td>
                                 </tr>
                             ) : visibleLogs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="py-8 text-center text-slate-400 italic">
+                                    <td colSpan={10} className="py-8 text-center text-slate-400 italic">
                                         No verified check-ins match the search criteria.
                                     </td>
                                 </tr>
@@ -840,7 +785,7 @@ export default function AttendeesTab({
                                                 <div className="w-5 h-5 rounded bg-slate-900 flex items-center justify-center text-[7px] text-white font-black shrink-0 border border-[#AEAEAE]">
                                                     TIC
                                                 </div>
-                                                <span className="text-[12px] font-bold text-slate-800">TechNova</span>
+                                                <span className="text-[12px] font-bold text-slate-800">{listingName || 'Event'}</span>
                                             </div>
                                         </td>
                                         <td className="py-3 px-3 font-bold text-slate-700">{row.booking_category}</td>
@@ -851,6 +796,12 @@ export default function AttendeesTab({
                                             </span>
                                         </td>
                                         <td className="py-3 px-3 text-slate-500 font-semibold">{row.verified_by}</td>
+                                        <td className="py-3 px-3 font-bold text-slate-600">
+                                            {row.check_in_time_str || '—'}
+                                        </td>
+                                        <td className="py-3 px-3 font-bold text-slate-600">
+                                            {row.check_out_time_str || '—'}
+                                        </td>
                                         <td className="py-3 px-3 text-center">
                                             <span className="inline-block px-2.5 py-0.5 rounded-md text-[9.5px] font-bold bg-[#0AC655]/10 text-[#0AC655] border border-[#0AC655]/30">
                                                 {row.status}
@@ -948,14 +899,15 @@ export default function AttendeesTab({
                             <div className="bg-slate-50 border border-[#AEAEAE] rounded-xl p-3 text-[10px] text-slate-600 font-semibold space-y-1">
                                 <span className="font-bold text-slate-800 uppercase block tracking-wider">Testable Booking IDs for verification:</span>
                                 <ul className="list-disc pl-4 space-y-0.5">
-                                    {localUnverified.map(b => (
-                                        <li key={b.booking_id} className="font-mono">
-                                            {b.booking_id} ({b.user_name} - {b.booking_category})
-                                        </li>
-                                    ))}
-                                    <li className="font-mono text-slate-400">
-                                        TIC-7401-VI (Already Checked-in example)
-                                    </li>
+                                    {unverifiedList.length > 0 ? (
+                                        unverifiedList.slice(0, 5).map(b => (
+                                            <li key={b.booking_id} className="font-mono">
+                                                {b.booking_id} ({b.user_name} - {b.booking_category})
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="text-slate-400 italic">No remaining unverified bookings.</li>
+                                    )}
                                 </ul>
                             </div>
                         </div>
@@ -1010,7 +962,7 @@ export default function AttendeesTab({
                                 </div>
                                 <div>
                                     <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Event Name</span>
-                                    <span className="text-slate-900 font-bold">TechNova</span>
+                                    <span className="text-slate-900 font-bold">{listingName || 'Event'}</span>
                                 </div>
                                 <div>
                                     <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Ticket Category</span>
@@ -1030,22 +982,13 @@ export default function AttendeesTab({
                                     <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Verified By</span>
                                     <span className="text-slate-700 font-bold">{selectedBookingDetails.verified_by}</span>
                                 </div>
-                                <div className="col-span-2">
+                                <div>
                                     <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Check-in Time</span>
-                                    <span className="text-slate-700 font-bold">
-                                        {new Date(selectedBookingDetails.booked_at).toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            year: 'numeric'
-                                        })}
-                                        {' @ '}
-                                        {new Date(selectedBookingDetails.booked_at).toLocaleTimeString('en-US', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            second: '2-digit',
-                                            hour12: true
-                                        })}
-                                    </span>
+                                    <span className="text-slate-700 font-bold">{selectedBookingDetails.check_in_time_str || '—'}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Check-out Time</span>
+                                    <span className="text-slate-700 font-bold">{selectedBookingDetails.check_out_time_str || '—'}</span>
                                 </div>
                             </div>
                         </div>

@@ -98,7 +98,7 @@ export default function SuccessView({
                         <div className="flex flex-col gap-0.5 py-0.5">
                             <span className="text-[13px] font-medium text-[#686868]  tracking-normal" style={{ fontFamily: 'var(--font-anek-latin)' }}>Date & Time</span>
                             <span className="text-[15px] font-medium text-black " style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {cart?.timeSlot || cart?.slot || 'N/A'}
+                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }) : new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {cart?.timeSlot || cart?.slot || 'N/A'}
                             </span>
                         </div>
 

@@ -8,7 +8,7 @@ import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
 import { toast } from '@/components/ui/Toast';
 import { bookingApi } from '@/lib/api/booking';
-import { getMinPrice } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTC, formatEventDateUTCWithDay } from '@/lib/utils';
 
 interface OfferRecord {
     id: string;
@@ -239,28 +239,13 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     // Format date nicely
     const formattedDate = useMemo(() => {
         if (!event.date) return 'Date TBA';
-        try {
-            const d = new Date(event.date);
-            if (isNaN(d.getTime())) return event.date;
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-        } catch {
-            return event.date;
-        }
+        return formatEventDateUTC(event.date);
     }, [event.date]);
 
     // Format date nicely with day of week
     const fullFormattedDate = useMemo(() => {
         if (!event.date) return 'Date TBA';
-        try {
-            const d = new Date(event.date);
-            if (isNaN(d.getTime())) return event.date;
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-        } catch {
-            return event.date;
-        }
+        return formatEventDateUTCWithDay(event.date, true);
     }, [event.date]);
 
     const [bookedMap, setBookedMap] = useState<Record<string, number>>({});

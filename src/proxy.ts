@@ -18,17 +18,6 @@ const ADMIN_ROUTES = [
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     
-    // Redirect list-your-* onboarding pages to the restored dark gradient coming soon pages
-    if (pathname === '/list-your-dining') {
-        return NextResponse.redirect(new URL('/dining', request.url));
-    }
-    if (pathname === '/list-your-events') {
-        return NextResponse.redirect(new URL('/pass', request.url));
-    }
-    if (pathname === '/list-your-play') {
-        return NextResponse.redirect(new URL('/my-pass', request.url));
-    }
-    
     // User-agent mobile vs desktop routing redirection
     const userAgent = request.headers.get('user-agent') || '';
     const deviceCookie = request.cookies.get('device_view')?.value;
@@ -181,8 +170,5 @@ export const config = {
         '/organizer/:path*',
         '/ticlists/:path*',
         '/myboooking/:path*',
-        '/list-your-dining',
-        '/list-your-events',
-        '/list-your-play'
     ],
 };

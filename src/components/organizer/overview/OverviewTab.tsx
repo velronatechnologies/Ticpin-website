@@ -15,12 +15,10 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Ticket, BarChart2, Eye, Gem, RefreshCw } from 'lucide-react';
-import { OverviewData } from './types';
+import { Ticket, BarChart2, Eye, Gem, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface OverviewTabProps {
-  stats: OverviewData;
-  fetchBookings: () => void;
+  eventId: string;
   listingName?: string;
 }
 
@@ -41,76 +39,125 @@ const COLORS = {
   border: '#AEAEAE'
 };
 
-// 1. Exact Line Chart data matching HTML (Ticket Sales and Revenue)
-const lineChartData = [
-  { date: '09 Jan', sales: 120, revenue: 100 },
-  { date: '12 Jan', sales: 160, revenue: 140 },
-  { date: '14 Jan', sales: 180, revenue: 160 },
-  { date: '18 Jan', sales: 150, revenue: 130 },
-  { date: '21 Jan', sales: 200, revenue: 180 },
-  { date: '19 Oct', sales: 260, revenue: 230 },
-  { date: '21 Oct', sales: 520, revenue: 470 },
-  { date: '23 Oct', sales: 480, revenue: 430 },
-  { date: '16 Dec', sales: 300, revenue: 270 },
-  { date: '16 Dec', sales: 260, revenue: 230 },
-  { date: '17 Dec', sales: 240, revenue: 210 },
-  { date: '22 Dec', sales: 300, revenue: 270 },
-  { date: '26 Dec', sales: 260, revenue: 230 },
-  { date: '27 Dec', sales: 180, revenue: 160 },
-  { date: '29 Dec', sales: 160, revenue: 140 }
-];
+interface DashboardData {
+  eventName: string;
+  stats: {
+    totalTicketsSold: number;
+    overallCapacity: number;
+    pageViews: number;
+    totalRevenue: number;
+  };
+  dailySales: Array<{ date: string; sales: number; revenue: number }>;
+  details: {
+    duration: string;
+    location: string;
+    approvalStatus: string;
+    verifierStaff: number;
+    platformFeeRate: string;
+    payoutAction: string;
+  };
+  demographics: Array<{ category: string; booked: number; checkedIn: number }>;
+  conversion: {
+    bookedTickets: number;
+    onlyViewed: number;
+  };
+  locations: Array<{ city: string; count: number }>;
+  earnings: Array<{
+    category: string;
+    price: number;
+    basePrice: number;
+    ticketGst: number;
+    qty: number;
+    gross: number;
+    platformFee: number;
+    platformGst: number;
+    orgRevenue: number;
+  }>;
+}
 
-// 2. Top Booking Locations horizontal bar chart (now rendered as vertical columns)
-const locationData = [
-  { city: 'Balmoria', count: 240 },
-  { city: 'Hanchester', count: 150 },
-  { city: 'Palsand', count: 90 },
-  { city: 'Michbarra', count: 60 }
-];
+export default function OverviewTab({ eventId, listingName }: OverviewTabProps) {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-// 3. Flat Attendees Demographic data list
-const demographicsDataList = [
-  { category: 'VIP Pass', booked: 300, checkedIn: 285 },
-  { category: 'General Admission', booked: 2800, checkedIn: 2464 },
-  { category: 'Early Bird', booked: 1000, checkedIn: 910 },
-  { category: 'Student Access', booked: 185, checkedIn: 152 },
-];
-
-// 4. Visitors Conversion Pie Chart data
-const conversionPieData = [
-  { name: 'Booked Tickets', value: 4285, color: '#5331EA' },
-  { name: 'Only Viewed', value: 10712, color: '#D3CBF5' }
-];
-
-// 5. Detailed Earnings breakdown mapping for ticket tiers
-const earningsDataList = [
-  { category: 'VIP Pass', price: 1000, basePrice: 847.46, ticketGst: 152.54, qty: 300, gross: 300000, platformFee: 15254.28, platformGst: 2745.72, orgRevenue: 238983.72 },
-  { category: 'General Admission', price: 150, basePrice: 127.12, ticketGst: 22.88, qty: 2800, gross: 420000, platformFee: 21356.16, platformGst: 3844.08, orgRevenue: 334572.76 },
-  { category: 'Early Bird', price: 100, basePrice: 84.75, ticketGst: 15.25, qty: 1000, gross: 100000, platformFee: 5085.00, platformGst: 915.00, orgRevenue: 79660.00 },
-  { category: 'Student Access', price: 50, basePrice: 42.37, ticketGst: 7.63, qty: 185, gross: 9250, platformFee: 470.31, platformGst: 84.66, orgRevenue: 7368.03 }
-];
-
-export default function OverviewTab({ stats, fetchBookings, listingName }: OverviewTabProps) {
-  const [mounted, setMounted] = useState(false);
+  const fetchDashboardData = async (bypassCache = false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = `/backend/api/organizer/overview/dashboard?eventId=${encodeURIComponent(eventId)}${bypassCache ? '&bypassCache=true' : ''}`;
+      const res = await fetch(url, {
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        throw new Error('Failed to fetch dashboard statistics from server');
+      }
+      const json = await res.json();
+      if (json && json.success) {
+        setData(json.data);
+      } else {
+        throw new Error(json?.error || 'Failed to retrieve overview statistics');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong while connecting to backend');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (eventId) {
+      fetchDashboardData();
+    }
+  }, [eventId]);
 
-  if (!mounted) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[250px]">
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
         <RefreshCw className="animate-spin text-zinc-400 mb-2" size={28} />
-        <p className="text-zinc-600 font-semibold text-xs">Loading Dashboard...</p>
+        <p className="text-zinc-600 font-semibold text-xs animate-pulse">Loading Live Event Metrics...</p>
       </div>
     );
   }
 
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] border border-dashed border-red-200 rounded-[15px] bg-red-50/20 p-6 text-center">
+        <AlertCircle className="text-red-500 mb-2" size={32} />
+        <h3 className="font-bold text-sm text-red-800">Connection Failed</h3>
+        <p className="text-red-600/80 text-xs max-w-sm mt-1 mb-4">{error || 'Unable to fetch dynamic event stats'}</p>
+        <button
+          onClick={() => fetchDashboardData(true)}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+        >
+          <RefreshCw size={12} />
+          Retry Connection
+        </button>
+      </div>
+    );
+  }
+
+  const { stats, details, conversion } = data;
+  const earnings = data.earnings || [];
+  const demographics = data.demographics || [];
+  const locations = data.locations || [];
+  const dailySales = data.dailySales || [];
+
   // Calculate dynamic totals for the earnings table
-  const totalGross = earningsDataList.reduce((sum, item) => sum + item.gross, 0);
-  const totalPlatformFee = earningsDataList.reduce((sum, item) => sum + item.platformFee, 0);
-  const totalPlatformGst = earningsDataList.reduce((sum, item) => sum + item.platformGst, 0);
-  const totalOrgRevenue = earningsDataList.reduce((sum, item) => sum + item.orgRevenue, 0);
+  const totalGross = earnings.reduce((sum, item) => sum + item.gross, 0);
+  const totalPlatformFee = earnings.reduce((sum, item) => sum + item.platformFee, 0);
+  const totalPlatformGst = earnings.reduce((sum, item) => sum + item.platformGst, 0);
+  const totalOrgRevenue = earnings.reduce((sum, item) => sum + item.orgRevenue, 0);
+  const totalQtySold = earnings.reduce((sum, item) => sum + item.qty, 0);
+
+  // Conversion chart format
+  const conversionPieData = [
+    { name: 'Booked Tickets', value: conversion.bookedTickets, color: '#5331EA' },
+    { name: 'Only Viewed', value: conversion.onlyViewed, color: '#D3CBF5' }
+  ];
+
+  const totalInteractions = conversion.bookedTickets + conversion.onlyViewed;
+  const bookedPercent = totalInteractions > 0 ? ((conversion.bookedTickets / totalInteractions) * 100).toFixed(1) : '0.0';
+  const onlyViewedPercent = totalInteractions > 0 ? ((conversion.onlyViewed / totalInteractions) * 100).toFixed(1) : '0.0';
 
   return (
     <div className="space-y-[12px] animate-fadeIn text-[#1c1525] font-sans pb-2">
@@ -118,10 +165,10 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
       <div className="relative">
         <h1 className="text-[18px] font-bold text-[#1c1525] text-center">Overview</h1>
         <p className="text-center text-[#8a8a9a] text-[12px] mt-[1px] mb-[12px]">
-          {listingName || 'TechNova Summit 2026'}
+          {data.eventName || listingName || 'Active Listing'}
         </p>
         <button
-          onClick={fetchBookings}
+          onClick={() => fetchDashboardData(true)}
           className="absolute right-0 top-0 p-1 border border-[#AEAEAE] bg-white rounded-md hover:bg-zinc-50 transition-colors"
           title="Refresh statistics"
         >
@@ -138,7 +185,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
           </div>
           <div>
             <div className="text-[11px] text-[#8a8a9a] mb-[1px]">Total Tickets Sold</div>
-            <div className="text-[17px] font-bold text-[#1c1525] leading-none">4,285</div>
+            <div className="text-[17px] font-bold text-[#1c1525] leading-none">{stats.totalTicketsSold.toLocaleString()}</div>
           </div>
         </div>
 
@@ -149,7 +196,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
           </div>
           <div>
             <div className="text-[11px] text-[#8a8a9a] mb-[1px]">Overall Capacity</div>
-            <div className="text-[17px] font-bold text-[#D97706] leading-none">85.7%</div>
+            <div className="text-[17px] font-bold text-[#D97706] leading-none">{stats.overallCapacity}%</div>
           </div>
         </div>
 
@@ -160,7 +207,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
           </div>
           <div>
             <div className="text-[11px] text-[#8a8a9a] mb-[1px]">Page Views</div>
-            <div className="text-[17px] font-bold text-[#1c1525] leading-none">14,997</div>
+            <div className="text-[17px] font-bold text-[#1c1525] leading-none">{stats.pageViews.toLocaleString()}</div>
           </div>
         </div>
 
@@ -171,7 +218,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
           </div>
           <div>
             <div className="text-[11px] text-[#8a8a9a] mb-[1px]">Total Revenue</div>
-            <div className="text-[17px] font-bold text-[#1c1525] leading-none">₹8,54,000</div>
+            <div className="text-[17px] font-bold text-[#1c1525] leading-none">₹{stats.totalRevenue.toLocaleString()}</div>
           </div>
         </div>
       </div>
@@ -195,7 +242,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
           </div>
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lineChartData} margin={{ left: -25, right: 10, top: 10, bottom: 5 }}>
+              <LineChart data={dailySales} margin={{ left: -25, right: 10, top: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f0effa" />
                 <XAxis dataKey="date" stroke="#8a8a9a" fontSize={10} tickLine={false} />
                 <YAxis stroke="#8a8a9a" fontSize={10} tickLine={false} />
@@ -214,30 +261,30 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
             <div className="space-y-3.5 text-xs text-slate-800">
               <div className="flex justify-between items-center pb-2 border-b border-[#AEAEAE]/20">
                 <span className="text-[#8a8a9a]">Event Duration</span>
-                <span className="font-semibold">3h 30m</span>
+                <span className="font-semibold">{details.duration}</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-[#AEAEAE]/20">
                 <span className="text-[#8a8a9a]">Location</span>
-                <span className="font-semibold">Auditorium, Block B</span>
+                <span className="font-semibold truncate max-w-[140px] text-right">{details.location}</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-[#AEAEAE]/20">
                 <span className="text-[#8a8a9a]">Approval Status</span>
                 <span className="inline-block px-2 py-0.5 rounded-[5px] bg-[#0AC655]/10 text-[#0AC655] font-bold text-[10px]">
-                  Verified & Live
+                  {details.approvalStatus}
                 </span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-[#AEAEAE]/20">
                 <span className="text-[#8a8a9a]">Verifier Staff</span>
-                <span className="font-semibold">2 Scanners Active</span>
+                <span className="font-semibold">{details.verifierStaff} Scanners Active</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-[#AEAEAE]/20">
                 <span className="text-[#8a8a9a]">Platform Fee Rate</span>
-                <span className="font-semibold text-[#5331EA]">6% Base Fee</span>
+                <span className="font-semibold text-[#5331EA]">{details.platformFeeRate}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[#8a8a9a]">Payout Action</span>
                 <span className="inline-block px-2 py-0.5 rounded-[5px] bg-[#5331EA]/10 text-[#5331EA] font-bold text-[10px]">
-                  Direct Payout
+                  {details.payoutAction}
                 </span>
               </div>
             </div>
@@ -263,7 +310,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#AEAEAE] text-slate-800">
-                  {demographicsDataList.map((row, idx) => {
+                  {demographics.map((row, idx) => {
                     const remaining = row.booked - row.checkedIn;
                     const rate = row.booked > 0 ? ((row.checkedIn / row.booked) * 100).toFixed(1) : '0.0';
                     return (
@@ -315,14 +362,14 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
                 <span className="inline-block w-[8px] h-[8px] rounded-full mr-[6px]" style={{ background: '#5331EA' }}></span>
                 Booked Tickets
               </span>
-              <span className="font-bold text-[#5331EA]">4,285 (28.6%)</span>
+              <span className="font-bold text-[#5331EA]">{conversion.bookedTickets.toLocaleString()} ({bookedPercent}%)</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="flex items-center">
                 <span className="inline-block w-[8px] h-[8px] rounded-full mr-[6px]" style={{ background: '#D3CBF5' }}></span>
                 Only Viewed
               </span>
-              <span className="font-bold text-slate-500">10,712 (71.4%)</span>
+              <span className="font-bold text-slate-500">{conversion.onlyViewed.toLocaleString()} ({onlyViewedPercent}%)</span>
             </div>
           </div>
         </div>
@@ -332,7 +379,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
           <div className="text-[13px] font-bold mb-[10px]">Top Booking Locations</div>
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={locationData} margin={{ left: -25, right: 10, top: 10, bottom: 5 }}>
+              <BarChart data={locations} margin={{ left: -25, right: 10, top: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f0effa" />
                 <XAxis dataKey="city" stroke="#8a8a9a" fontSize={10} tickLine={false} />
                 <YAxis stroke="#8a8a9a" fontSize={10} tickLine={false} />
@@ -363,7 +410,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
               </tr>
             </thead>
             <tbody className="divide-y divide-[#AEAEAE] text-slate-800">
-              {earningsDataList.map((row, idx) => (
+              {earnings.map((row, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3 px-3 font-semibold">{row.category}</td>
                   <td className="py-3 px-2 text-right">₹{row.price.toLocaleString()}</td>
@@ -380,7 +427,7 @@ export default function OverviewTab({ stats, fetchBookings, listingName }: Overv
               ))}
               <tr className="font-bold bg-[#f8f9fb] border-t border-[#AEAEAE]">
                 <td className="py-3 px-3 rounded-l-md" colSpan={4}>Total Earnings Summary</td>
-                <td className="py-3 px-2 text-center">4,285</td>
+                <td className="py-3 px-2 text-center">{totalQtySold.toLocaleString()}</td>
                 <td className="py-3 px-2 text-right text-slate-900">₹{totalGross.toLocaleString()}</td>
                 <td className="py-3 px-2 text-right text-slate-700">₹{totalPlatformFee.toFixed(2)}</td>
                 <td className="py-3 px-2 text-right text-slate-700">₹{totalPlatformGst.toFixed(2)}</td>

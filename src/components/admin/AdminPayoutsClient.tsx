@@ -58,10 +58,11 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
     const router = useRouter();
     
     // Step management
-    const [step, setStep] = useState<Step>('categories');
+    const [step, setStep] = useState<Step>('organizers');
     const [selectedCategory, setSelectedCategory] = useState<'play' | 'event' | 'dining'>('play');
     const [selectedOrg, setSelectedOrg] = useState<Organizer | null>(null);
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
 
     // Data states
     const [organizers, setOrganizers] = useState<Organizer[]>(initialOrganizers);
@@ -161,6 +162,13 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
                     booking_count: (data.bookings || []).length,
                     requested_at: ''
                 });
+                
+                // Pre-select all pending bookings
+                const pendingBookings = (data.bookings || [])
+                    .filter((b: any) => b.payout_status === 'pending_approval' || !b.payout_status)
+                    .map((b: any) => b.id);
+                setSelectedBookings(pendingBookings);
+                
                 setStep('detail');
             }
         } catch (err) {
@@ -178,7 +186,7 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
         if (step === 'detail') fetchBookings(selectedItem);
     }, [dateFilter, startDate, endDate]);
 
-    const handleProcessPayout = async (action: 'approve' | 'reject', reason?: string) => {
+    const handleProcessPayout = async (action: 'approve' | 'reject', reason?: string, utr?: string) => {
         if (!selectedOrg) return;
         setProcessing(getID(selectedOrg.id));
         try {
@@ -188,8 +196,12 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
                 credentials: 'include',
                 body: JSON.stringify({
                     organizer_id: getID(selectedOrg.id),
+                    item_id: selectedItem?.id || '',
+                    category: selectedCategory,
+                    selected_booking_ids: selectedBookings,
                     action,
-                    reason
+                    reason,
+                    utr_number: utr || ''
                 })
             });
 
@@ -221,111 +233,134 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
         o.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    return (
-        <div className="min-h-screen bg-[#f8f9fa] p-8">
-            <div className="max-w-6xl mx-auto">
-                {/* Header Section */}
-                <div className="flex items-center gap-6 mb-12">
-                    <button 
-                        onClick={goBack}
-                        className="p-4 bg-white rounded-2xl border border-zinc-200 hover:border-black transition-all shadow-sm group"
-                    >
-                        <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            {selectedCategory === 'play' && <Gamepad2 className="text-emerald-500" size={24} />}
-                            {selectedCategory === 'event' && <Ticket className="text-blue-500" size={24} />}
-                            {selectedCategory === 'dining' && <Utensils className="text-orange-500" size={24} />}
-                            <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                                {step === 'categories' ? 'System' : selectedCategory} Payouts
-                            </span>
-                        </div>
-                        <h1 className="text-4xl font-black text-black leading-none">
-                            {step === 'categories' ? 'Select Category' : 
-                             step === 'organizers' ? 'Choose Organizer' :
-                             step === 'items' ? 'Select Activity' :
-                             'Payout Settlement'}
-                        </h1>
-                    </div>
-                </div>
+    const isApprovedOrRejected = orgPayoutSummary?.status === 'approved' || orgPayoutSummary?.status === 'rejected';
 
-                {/* Step 1: Categories */}
-                {step === 'categories' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    const selectedAmount = orgBookings
+        .filter(b => selectedBookings.includes(b.id))
+        .reduce((sum, b) => sum + (b.net_payout || 0), 0);
+
+    const toggleBookingSelection = (id: string) => {
+        if (selectedBookings.includes(id)) {
+            setSelectedBookings(selectedBookings.filter(bId => bId !== id));
+        } else {
+            setSelectedBookings([...selectedBookings, id]);
+        }
+    };
+
+    const toggleAllBookings = () => {
+        const pendingBookings = orgBookings.filter(b => b.payout_status === 'pending_approval' || !b.payout_status);
+        if (selectedBookings.length === pendingBookings.length && pendingBookings.length > 0) {
+            setSelectedBookings([]);
+        } else {
+            setSelectedBookings(pendingBookings.map(b => b.id));
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-[#F5F5F5] font-[family-name:var(--font-anek-latin)]">
+            {/* Header */}
+            <header className="w-full h-[75px] bg-white border-b border-[#D9D9D9] flex items-center justify-between px-4 sticky top-0 z-50">
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => {
+                            if (step === 'detail') setStep('items');
+                            else if (step === 'items') setStep('organizers');
+                            else router.push('/admin');
+                        }} 
+                        className="p-2"
+                    >
+                        <ChevronLeft size={24} className="text-black" />
+                    </button>
+                    <h1 className="text-[20px] font-semibold text-black">
+                        Admin Payouts
+                    </h1>
+                </div>
+                <div className="relative w-[120px] h-[30px]">
+                    <img src="/ticpin-logo-black.png" alt="TICPIN" className="object-contain w-full h-full" />
+                </div>
+            </header>
+
+            {/* Category Tabs */}
+            {(step === 'organizers' || step === 'items') && (
+                <div className="bg-white border-b border-[#E5E5E5]">
+                    <div className="max-w-[1440px] mx-auto flex">
                         {[
-                            { id: 'play', name: 'Play', icon: <Gamepad2 size={44} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                            { id: 'event', name: 'Events', icon: <Ticket size={44} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-                            { id: 'dining', name: 'Dining', icon: <Utensils size={44} />, color: 'text-orange-600', bg: 'bg-orange-50' },
+                            { id: 'dining', title: 'Dining Payouts', icon: <Utensils size={20} /> },
+                            { id: 'event', title: 'Event Payouts', icon: <Ticket size={20} /> },
+                            { id: 'play', title: 'Play Payouts', icon: <Gamepad2 size={20} /> },
                         ].map((cat) => (
                             <button
                                 key={cat.id}
                                 onClick={() => {
                                     setSelectedCategory(cat.id as any);
+                                    setSelectedOrg(null);
                                     setStep('organizers');
                                 }}
-                                className="group p-10 rounded-[48px] bg-white border-2 border-transparent hover:border-black transition-all shadow-sm hover:shadow-2xl hover:-translate-y-2 flex flex-col items-center gap-8"
+                                className={`flex-1 flex items-center justify-center gap-2 py-4 border-b-2 transition-colors ${
+                                    selectedCategory === cat.id
+                                        ? "border-[#5331EA] text-[#5331EA] bg-[#5331EA]/5"
+                                        : "border-transparent text-[#686868] hover:bg-[#F5F5F5]"
+                                }`}
                             >
-                                <div className={`w-28 h-28 rounded-[36px] flex items-center justify-center ${cat.bg} ${cat.color} group-hover:scale-110 transition-transform`}>
-                                    {cat.icon}
-                                </div>
-                                <div className="text-center">
-                                    <h3 className="text-3xl font-black text-black mb-2">{cat.name}</h3>
-                                    <p className="text-zinc-400 font-bold">Review and settle {cat.id} earnings</p>
-                                </div>
-                                <div className="p-4 bg-zinc-50 rounded-full group-hover:bg-black group-hover:text-white transition-colors">
-                                    <ArrowRight size={24} />
-                                </div>
+                                {cat.icon}
+                                <span className="text-[14px] font-medium">{cat.title}</span>
                             </button>
                         ))}
                     </div>
-                )}
+                </div>
+            )}
 
+            <div className="max-w-[1440px] mx-auto p-4 pb-20 mt-4">
                 {/* Step 2: Organizers */}
                 {step === 'organizers' && (
                     <div className="space-y-6">
-                        <div className="relative">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
-                            <input 
-                                type="text"
-                                placeholder="Search organizers by name or email..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-16 pr-8 py-5 bg-white rounded-3xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-black font-bold text-lg shadow-sm"
-                            />
+                        <div className="bg-white border-b border-[#E5E5E5] px-4 py-3 rounded-[16px] flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 w-full max-w-md">
+                                <Search className="text-[#686868]" size={18} />
+                                <input 
+                                    type="text"
+                                    placeholder="Search organizers by name or email..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full text-[14px] bg-transparent focus:outline-none"
+                                />
+                            </div>
+                            <div className="text-[12px] text-[#999]">
+                                {filteredOrganizers.length} organizer{filteredOrganizers.length !== 1 ? 's' : ''} found
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid gap-3">
                             {loading ? (
                                 Array(6).fill(0).map((_, i) => (
-                                    <div key={i} className="h-40 bg-zinc-100 rounded-[40px] animate-pulse" />
+                                    <div key={i} className="h-20 bg-white rounded-[16px] border border-[#E5E5E5] animate-pulse" />
                                 ))
                             ) : filteredOrganizers.length === 0 ? (
-                                <div className="col-span-full py-32 bg-white rounded-[48px] border border-zinc-100 flex flex-col items-center justify-center gap-4">
-                                    <div className="p-6 bg-zinc-50 rounded-full text-zinc-300">
-                                        <Inbox size={64} />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-black">No Organizers Found</h3>
-                                    <p className="text-zinc-400 font-bold">Try searching for a different name or email</p>
+                                <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                                    <Inbox size={48} className="text-[#D9D9D9] mb-4" />
+                                    <h3 className="text-[18px] text-[#686868]">No Organizers Found</h3>
+                                    <p className="text-[14px] text-[#999] mt-2">Try searching for a different name or email</p>
                                 </div>
                             ) : (
                                 filteredOrganizers.map((org) => (
-                                    <button
+                                    <div
                                         key={getID(org.id)}
                                         onClick={() => fetchItems(org)}
-                                        className="p-8 bg-white rounded-[40px] border border-zinc-200 hover:border-black transition-all shadow-sm flex flex-col gap-6 text-left group"
+                                        className="bg-white rounded-[16px] p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow border border-[#E5E5E5]"
                                     >
-                                        <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-black group-hover:bg-black group-hover:text-white transition-colors">
-                                            <Building2 size={28} />
+                                        <div className="w-[50px] h-[50px] bg-[#5331EA]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <Building2 size={24} className="text-[#5331EA]" />
                                         </div>
-                                        <div>
-                                            <h3 className="text-xl font-black text-black truncate">{org.name}</h3>
-                                            <p className="text-zinc-400 font-bold text-sm truncate">{org.email}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-[16px] font-semibold text-black truncate">{org.name}</h3>
+                                            <p className="text-[12px] text-[#686868] truncate">{org.email}</p>
                                         </div>
-                                        <div className="flex items-center gap-2 text-black font-black text-sm">
-                                            View Activities <ArrowRight size={16} />
+                                        <div className="text-right flex-shrink-0">
+                                            <div className="flex items-center gap-1 text-[13px] font-medium text-[#5331EA]">
+                                                View Activities <ArrowRight size={14} />
+                                            </div>
                                         </div>
-                                    </button>
+                                    </div>
                                 ))
                             )}
                         </div>
@@ -334,59 +369,54 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
 
                 {/* Step 3: Items (Venues/Events) */}
                 {step === 'items' && (
-                    <div className="space-y-8">
-                        <div className="bg-white p-8 rounded-[40px] border border-zinc-200 shadow-sm flex items-center gap-6">
-                            <div className="w-14 h-14 bg-zinc-50 rounded-2xl flex items-center justify-center">
-                                <Building2 size={24} />
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-[16px] p-6 border border-[#E5E5E5] flex items-center gap-4 mb-6">
+                            <div className="w-[50px] h-[50px] bg-[#5331EA]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Building2 size={24} className="text-[#5331EA]" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black text-black">{selectedOrg?.name}</h2>
-                                <p className="text-zinc-400 font-bold">{selectedOrg?.email}</p>
+                                <h2 className="text-[20px] font-semibold text-black">{selectedOrg?.name}</h2>
+                                <p className="text-[14px] text-[#686868]">{selectedOrg?.email}</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {/* All Items Option */}
-                            <button
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div
                                 onClick={() => fetchBookings(null)}
-                                className="p-8 bg-black text-white rounded-[40px] border-2 border-black hover:shadow-2xl transition-all flex flex-col gap-6 text-left"
+                                className="bg-[#5331EA] text-white rounded-[16px] p-6 border border-[#5331EA] cursor-pointer hover:shadow-lg transition-shadow"
                             >
-                                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                                    <Filter size={28} />
+                                <div className="w-[40px] h-[40px] bg-white/20 rounded-full flex items-center justify-center mb-4">
+                                    <Filter size={20} />
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black truncate">All Activities</h3>
-                                    <p className="text-white/60 font-bold text-sm">View all bookings for this organizer</p>
+                                <h3 className="text-[18px] font-semibold mb-1">All Activities</h3>
+                                <p className="text-white/80 text-[13px] mb-4">View all bookings for this organizer</p>
+                                <div className="flex items-center gap-1 text-[13px] font-medium">
+                                    Continue <ArrowRight size={14} />
                                 </div>
-                                <div className="flex items-center gap-2 font-black text-sm">
-                                    Continue <ArrowRight size={16} />
-                                </div>
-                            </button>
+                            </div>
 
                             {items.length === 0 && !loading && (
-                                <div className="col-span-1 md:col-span-2 p-8 bg-zinc-50 rounded-[40px] border border-zinc-200 border-dashed flex flex-col items-center justify-center gap-3">
-                                    <p className="text-zinc-400 font-black">No specific venues found</p>
-                                    <p className="text-zinc-400 text-xs font-bold">Use "All Activities" above</p>
+                                <div className="col-span-1 md:col-span-2 p-6 bg-white rounded-[16px] border border-[#E5E5E5] border-dashed flex flex-col items-center justify-center text-center">
+                                    <p className="text-[#686868] font-medium">No specific venues found</p>
+                                    <p className="text-[#999] text-[12px] mt-1">Use "All Activities" above</p>
                                 </div>
                             )}
 
                             {items.map((item) => (
-                                <button
+                                <div
                                     key={item.id}
                                     onClick={() => fetchBookings(item)}
-                                    className="p-8 bg-white rounded-[40px] border border-zinc-200 hover:border-black transition-all shadow-sm flex flex-col gap-6 text-left group"
+                                    className="bg-white rounded-[16px] p-6 border border-[#E5E5E5] cursor-pointer hover:border-[#5331EA] hover:shadow-md transition-all"
                                 >
-                                    <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-black group-hover:bg-black group-hover:text-white transition-colors">
-                                        <MapPin size={28} />
+                                    <div className="w-[40px] h-[40px] bg-[#5331EA]/10 rounded-full flex items-center justify-center mb-4 text-[#5331EA]">
+                                        <MapPin size={20} />
                                     </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-black truncate">{item.name}</h3>
-                                        <p className="text-zinc-400 font-bold text-sm">Specific {selectedCategory} item</p>
+                                    <h3 className="text-[16px] font-semibold text-black mb-1 truncate">{item.name}</h3>
+                                    <p className="text-[#686868] text-[12px] mb-4">Specific {selectedCategory} item</p>
+                                    <div className="flex items-center gap-1 text-[13px] font-medium text-[#5331EA]">
+                                        View Payouts <ArrowRight size={14} />
                                     </div>
-                                    <div className="flex items-center gap-2 text-black font-black text-sm">
-                                        View Payouts <ArrowRight size={16} />
-                                    </div>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -394,141 +424,171 @@ export default function AdminPayoutsClient({ initialPayouts, initialTotal, initi
 
                 {/* Step 4: Final Payout Detail */}
                 {step === 'detail' && orgPayoutSummary && (
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         {/* Summary Header */}
-                        <div className="bg-white p-10 rounded-[48px] border border-zinc-200 shadow-sm space-y-10">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-10">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center text-black">
-                                        {selectedItem ? <MapPin size={32} /> : <Building2 size={32} />}
+                        <div className="bg-white p-8 rounded-[16px] border border-[#E5E5E5]">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-[60px] h-[60px] bg-[#5331EA]/10 rounded-full flex items-center justify-center text-[#5331EA]">
+                                        {selectedItem ? <MapPin size={28} /> : <Building2 size={28} />}
                                     </div>
                                     <div>
-                                        <h3 className="text-3xl font-black text-black">{selectedItem?.name || selectedOrg?.name}</h3>
-                                        <p className="text-zinc-400 font-bold text-lg">{selectedItem ? `Venue of ${selectedOrg?.name}` : 'All Activities'}</p>
+                                        <h3 className="text-[24px] font-semibold text-black">{selectedItem?.name || selectedOrg?.name}</h3>
+                                        <p className="text-[14px] text-[#686868]">{selectedItem ? `Venue of ${selectedOrg?.name}` : 'All Activities'}</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-12">
+                                <div className="flex items-center gap-8">
                                     <div className="text-center md:text-right">
-                                        <p className="text-zinc-400 text-xs font-black uppercase tracking-widest mb-1">Bookings</p>
-                                        <p className="text-4xl font-black text-black">{orgPayoutSummary.booking_count}</p>
+                                        <p className="text-[12px] text-[#999] font-medium uppercase mb-1">Selected</p>
+                                        <p className="text-[28px] font-bold text-black">{selectedBookings.length} <span className="text-[16px] text-[#999] font-medium">/ {orgBookings.length}</span></p>
                                     </div>
-                                    <div className="h-16 w-[1px] bg-zinc-100" />
+                                    <div className="h-10 w-[1px] bg-[#E5E5E5]" />
                                     <div className="text-center md:text-right">
-                                        <p className="text-zinc-400 text-xs font-black uppercase tracking-widest mb-1">Settlement</p>
-                                        <p className="text-4xl font-black text-[#5331EA]">₹{(orgPayoutSummary.netPayout || 0).toLocaleString()}</p>
+                                        <p className="text-[12px] text-[#999] font-medium uppercase mb-1">Settlement</p>
+                                        <p className="text-[28px] font-bold text-[#5331EA]">₹{selectedAmount.toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="h-[1px] bg-zinc-100 w-full" />
+                            <div className="h-[1px] bg-[#E5E5E5] w-full mb-8" />
 
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                                 {/* Time Filters */}
-                                <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-2xl">
-                                    {['all', 'today', 'week', 'month', 'custom'].map((f) => (
-                                        <button
-                                            key={f}
-                                            onClick={() => setDateFilter(f)}
-                                            className={`px-6 py-3 rounded-xl font-black text-sm capitalize transition-all
-                                                ${dateFilter === f ? 'bg-black text-white shadow-lg' : 'text-zinc-500 hover:text-black'}`}
-                                        >
-                                            {f}
-                                        </button>
-                                    ))}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[12px] text-[#686868] font-medium">Filter by date:</span>
+                                    <select
+                                        value={dateFilter}
+                                        onChange={(e) => setDateFilter(e.target.value)}
+                                        className="px-3 py-1.5 border border-[#E5E5E5] rounded-lg text-[13px] bg-white focus:outline-none focus:border-[#5331EA]"
+                                    >
+                                        {['all', 'today', 'week', 'month', 'custom'].map((f) => (
+                                            <option key={f} value={f}>
+                                                {f.charAt(0).toUpperCase() + f.slice(1)}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {dateFilter === 'custom' && (
-                                    <div className="flex items-center gap-4 bg-zinc-50 p-2 rounded-2xl">
+                                    <div className="flex items-center gap-2">
                                         <input 
                                             type="date" 
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
-                                            className="bg-transparent font-black text-sm px-3 focus:outline-none"
+                                            className="border border-[#E5E5E5] rounded-lg text-[13px] px-3 py-1.5 focus:outline-none focus:border-[#5331EA]"
                                         />
-                                        <span className="text-zinc-300 font-black">→</span>
+                                        <span className="text-[#999]">→</span>
                                         <input 
                                             type="date" 
                                             value={endDate}
                                             onChange={(e) => setEndDate(e.target.value)}
-                                            className="bg-transparent font-black text-sm px-3 focus:outline-none"
+                                            className="border border-[#E5E5E5] rounded-lg text-[13px] px-3 py-1.5 focus:outline-none focus:border-[#5331EA]"
                                         />
                                     </div>
                                 )}
 
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     <button
-                                        onClick={() => handleProcessPayout('approve')}
-                                        disabled={!!processing || orgBookings.length === 0}
-                                        className="px-12 py-5 bg-black text-white rounded-full font-black text-xl hover:shadow-2xl active:scale-95 transition-all disabled:opacity-50"
+                                        onClick={() => {
+                                            if (selectedBookings.length === 0) return toast.error('Please select at least one booking to settle');
+                                            const utr = prompt(`You are about to settle ${selectedBookings.length} bookings. Please enter the Bank UTR ID:`);
+                                            if (utr) handleProcessPayout('approve', '', utr);
+                                        }}
+                                        disabled={!!processing || selectedBookings.length === 0 || orgBookings.length === 0}
+                                        className={`px-6 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
+                                            (orgPayoutSummary.status === 'approved' && selectedBookings.length === 0)
+                                                ? 'bg-[#10B981] text-white' 
+                                                : 'bg-[#5331EA] text-white hover:bg-[#4529c9]'
+                                        } disabled:opacity-50`}
                                     >
-                                        {processing ? 'Processing...' : 'Confirm Payout'}
+                                        {processing ? 'Processing...' : (orgPayoutSummary.status === 'approved' && selectedBookings.length === 0) ? 'Confirmed' : 'Confirm Payout'}
                                     </button>
                                     <button
                                         onClick={() => {
-                                            const r = prompt('Reason for rejection?');
+                                            if (selectedBookings.length === 0) return toast.error('Please select at least one booking to reject');
+                                            const r = prompt(`Reason for rejecting ${selectedBookings.length} bookings?`);
                                             if (r) handleProcessPayout('reject', r);
                                         }}
-                                        disabled={!!processing || orgBookings.length === 0}
-                                        className="px-8 py-5 bg-white text-red-600 border-2 border-red-100 rounded-full font-black text-xl hover:bg-red-50 active:scale-95 transition-all disabled:opacity-50"
+                                        disabled={!!processing || selectedBookings.length === 0 || orgBookings.length === 0}
+                                        className={`px-6 py-2.5 rounded-lg text-[14px] font-medium transition-colors border ${
+                                            orgPayoutSummary.status === 'rejected'
+                                                ? 'bg-[#FEF2F2] text-[#DC2626] border-[#DC2626]'
+                                                : 'bg-white text-[#DC2626] border-[#DC2626] hover:bg-[#FEF2F2]'
+                                        } disabled:opacity-50`}
                                     >
-                                        Reject
+                                        {orgPayoutSummary.status === 'rejected' ? 'Rejected' : 'Reject'}
                                     </button>
                                 </div>
                             </div>
                         </div>
 
                         {/* Booking List */}
-                        <div className="bg-white rounded-[48px] border border-zinc-200 shadow-sm overflow-hidden">
-                            <div className="px-10 py-8 border-b border-zinc-100 flex justify-between items-center">
-                                <h3 className="font-black text-black uppercase tracking-widest text-sm flex items-center gap-2">
-                                    <Calendar size={18} /> Detailed Bookings
-                                </h3>
-                                <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider border border-blue-100">
+                        <div className="bg-white rounded-[16px] border border-[#E5E5E5] overflow-hidden">
+                            <div className="px-6 py-4 border-b border-[#E5E5E5] flex justify-between items-center bg-white">
+                                <h3 className="font-semibold text-black text-[16px]">Detailed Bookings</h3>
+                                <span className="px-3 py-1 bg-[#5331EA]/10 text-[#5331EA] rounded-full text-[12px] font-medium">
                                     {orgBookings.length} results
                                 </span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
-                                    <thead className="bg-zinc-50/50">
+                                    <thead className="bg-[#F9FAFB]">
                                         <tr>
-                                            <th className="px-10 py-6 text-xs font-black text-zinc-400 uppercase tracking-[0.2em]">Booking ID</th>
-                                            <th className="px-10 py-6 text-xs font-black text-zinc-400 uppercase tracking-[0.2em]">User</th>
-                                            <th className="px-10 py-6 text-xs font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Grand Total</th>
-                                            <th className="px-10 py-6 text-xs font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Net Payout</th>
-                                            <th className="px-10 py-6 text-xs font-black text-zinc-400 uppercase tracking-[0.2em]">Status</th>
+                                            <th className="px-6 py-4">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedBookings.length > 0 && selectedBookings.length === orgBookings.filter(b => b.payout_status === 'pending_approval' || !b.payout_status).length}
+                                                    onChange={toggleAllBookings}
+                                                    className="w-4 h-4 rounded border-[#D9D9D9] text-[#5331EA] focus:ring-[#5331EA] cursor-pointer"
+                                                />
+                                            </th>
+                                            <th className="px-6 py-4 text-[12px] font-medium text-[#686868] uppercase">Booking ID</th>
+                                            <th className="px-6 py-4 text-[12px] font-medium text-[#686868] uppercase">User</th>
+                                            <th className="px-6 py-4 text-[12px] font-medium text-[#686868] uppercase text-right">Grand Total</th>
+                                            <th className="px-6 py-4 text-[12px] font-medium text-[#686868] uppercase text-right">Net Payout</th>
+                                            <th className="px-6 py-4 text-[12px] font-medium text-[#686868] uppercase">Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-zinc-50">
+                                    <tbody className="divide-y divide-[#E5E5E5]">
                                         {orgBookings.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-10 py-32 text-center">
-                                                    <div className="flex flex-col items-center justify-center gap-4 text-zinc-400">
-                                                        <Inbox size={48} className="text-zinc-200" />
-                                                        <p className="text-xl font-black">No Payouts Found</p>
-                                                        <p className="text-sm font-bold">There are no bookings pending settlement for this selection.</p>
+                                                <td colSpan={5} className="px-6 py-20 text-center">
+                                                    <div className="flex flex-col items-center justify-center gap-2 text-[#999]">
+                                                        <Inbox size={32} className="text-[#D9D9D9]" />
+                                                        <p className="text-[16px] font-medium text-[#686868]">No Payouts Found</p>
+                                                        <p className="text-[13px]">There are no bookings pending settlement for this selection.</p>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ) : (
                                             orgBookings.map((b) => (
-                                                <tr key={b._id} className="hover:bg-zinc-50/50 transition-colors">
-                                                    <td className="px-10 py-8 font-black text-black">
-                                                        {(b.booking_id || b._id).toString().slice(-8).toUpperCase()}
+                                                <tr key={b.id} className={`hover:bg-[#F9FAFB] transition-colors ${selectedBookings.includes(b.id) ? 'bg-[#5331EA]/5' : ''}`}>
+                                                    <td className="px-6 py-4">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedBookings.includes(b.id)}
+                                                            onChange={() => toggleBookingSelection(b.id)}
+                                                            disabled={b.payout_status === 'approved' || b.payout_status === 'rejected'}
+                                                            className="w-4 h-4 rounded border-[#D9D9D9] text-[#5331EA] focus:ring-[#5331EA] cursor-pointer disabled:opacity-50"
+                                                        />
                                                     </td>
-                                                    <td className="px-10 py-8">
-                                                        <div className="font-bold text-zinc-900">{b.user_name || 'Guest User'}</div>
-                                                        <div className="text-xs font-bold text-zinc-400">{new Date(b.booked_at).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})}</div>
+                                                    <td className="px-6 py-4 font-medium text-black text-[14px]">
+                                                        {(b.booking_id || b.id).toString().slice(-8).toUpperCase()}
                                                     </td>
-                                                    <td className="px-10 py-8 text-right font-bold text-zinc-900">₹{b.grand_total.toLocaleString()}</td>
-                                                    <td className="px-10 py-8 text-right font-black text-[#5331EA] text-lg">₹{b.net_payout?.toFixed(2) || '0.00'}</td>
-                                                    <td className="px-10 py-8">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                                            b.payout_status === 'approved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                            b.payout_status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                            'bg-amber-50 text-amber-600 border-amber-100'
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-black text-[14px]">{b.user_name || 'Guest User'}</div>
+                                                        <div className="text-[12px] text-[#999]">{new Date(b.booked_at).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-medium text-black text-[14px]">₹{b.grand_total.toLocaleString()}</td>
+                                                    <td className="px-6 py-4 text-right font-semibold text-[#5331EA] text-[14px]">₹{b.net_payout?.toFixed(2) || '0.00'}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${
+                                                            b.payout_status === 'approved' ? 'bg-[#D1FAE5] text-[#065F46]' :
+                                                            b.payout_status === 'rejected' ? 'bg-[#FEE2E2] text-[#991B1B]' :
+                                                            'bg-[#FEF3C7] text-[#92400E]'
                                                         }`}>
-                                                            {b.payout_status === 'pending_approval' ? 'Pending' : b.payout_status}
+                                                            {b.payout_status === 'pending_approval' ? 'Pending' : (b.payout_status ? b.payout_status.charAt(0).toUpperCase() + b.payout_status.slice(1) : 'Pending')}
                                                         </span>
                                                     </td>
                                                 </tr>

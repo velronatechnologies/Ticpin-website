@@ -482,9 +482,7 @@ export default function TicketSelectionPage() {
         console.error("Error parsing layout_json for categories:", e);
       }
     }
-    return event.ticket_categories && event.ticket_categories.length > 0
-      ? event.ticket_categories
-      : [{ name: "General Admission", price: event.price_starts_from ?? 0 }];
+    return event.ticket_categories || [];
   }, [event]);
 
   const layoutPrices = useMemo(() => {
@@ -584,6 +582,7 @@ export default function TicketSelectionPage() {
     return [
       event?.date
         ? new Date(event.date).toLocaleDateString("en-IN", {
+          timeZone: "UTC",
           weekday: "short",
           day: "numeric",
           month: "short",

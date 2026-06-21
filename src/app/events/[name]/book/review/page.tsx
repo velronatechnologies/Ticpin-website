@@ -1503,6 +1503,7 @@ export default function ReviewBookingPage() {
   if (showInProgressLoader) {
     const eventDateStr = eventData?.date
       ? new Date(eventData.date).toLocaleDateString("en-IN", {
+          timeZone: "UTC",
           weekday: "short",
           day: "numeric",
           month: "short",
@@ -1791,6 +1792,7 @@ export default function ReviewBookingPage() {
               >
                 {cart?.date
                   ? new Date(cart.date).toLocaleDateString("en-IN", {
+                      timeZone: "UTC",
                       weekday: "short",
                       day: "numeric",
                       month: "short",

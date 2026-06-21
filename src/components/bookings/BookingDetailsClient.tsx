@@ -386,7 +386,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                                     <div style={{ fontSize: '12px', color: '#686868' }}>BOOKING ID</div>
                                     <div style={{ fontSize: '16px', fontWeight: 700 }}>{booking.booking_id || booking.bookingId || booking.id?.slice(-8).toUpperCase()}</div>
                                 </div>
-                                <QRCodeCanvas value={booking.booking_id || booking.bookingId || booking.id} size={80} />
+                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || booking.bookingId || booking.id} size={80} />
                             </div>
                         </div>
                     </div>

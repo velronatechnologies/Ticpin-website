@@ -68,3 +68,44 @@ export function formatPrice(price: number): string {
     maximumFractionDigits: 2
   });
 }
+
+export function formatEventDateUTC(iso?: string): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const day = d.getUTCDate();
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = months[d.getUTCMonth()];
+    const year = d.getUTCFullYear();
+    return `${day} ${month} ${year}`;
+  } catch (e) {
+    return iso;
+  }
+}
+
+export function formatEventDateUTCWithDay(iso?: string, short = false): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const day = d.getUTCDate();
+    const year = d.getUTCFullYear();
+    
+    if (short) {
+      const daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const weekday = daysShort[d.getUTCDay()];
+      const month = monthsShort[d.getUTCMonth()];
+      return `${weekday}, ${day} ${month} ${year}`;
+    } else {
+      const daysLong = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const monthsLong = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const weekday = daysLong[d.getUTCDay()];
+      const month = monthsLong[d.getUTCMonth()];
+      return `${weekday}, ${day} ${month} ${year}`;
+    }
+  } catch (e) {
+    return iso;
+  }
+}

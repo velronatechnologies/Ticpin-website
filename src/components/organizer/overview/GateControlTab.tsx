@@ -20,11 +20,13 @@ import {
   X,
   CheckCircle
 } from 'lucide-react';
-import { BookingData, Verifier } from './types';
+import { BookingData, Verifier, Gate } from './types';
 
 interface GateControlTabProps {
   bookings: BookingData[];
   liveStats: { totalBooked: number; totalCheckedIn: number; cancelledTickets: number };
+  newVerifierName: string;
+  setNewVerifierName: (val: string) => void;
   newVerifierPhone: string;
   setNewVerifierPhone: (val: string) => void;
   newVerifierGate: string;
@@ -35,6 +37,13 @@ interface GateControlTabProps {
   loadingVerifiers: boolean;
   verifiers: Verifier[];
   handleDeleteVerifier: (phone: string) => Promise<void>;
+  handleUpdateVerifier: (originalPhone: string, newPhone: string, name: string, gate: string) => Promise<void>;
+  gates: Gate[];
+  newGateName: string;
+  setNewGateName: (val: string) => void;
+  handleCreateGate: (e: React.FormEvent) => Promise<void>;
+  handleDeleteGate: (id: string) => Promise<void>;
+  loadingGates: boolean;
 }
 
 interface GateLog {
@@ -49,63 +58,9 @@ interface GateLog {
   status: string;
   detail: string;
   imageBg: string;
+  check_in_time_str?: string;
+  check_out_time_str?: string;
 }
-
-const generateGateLogs = (): GateLog[] => {
-  const names = [
-    'John Doe', 'Anthom David', 'Patier Martin', 'Kamela Verqulan', 'Suresh Kumar', 'Vijay Raghavan', 
-    'Karthik Raja', 'Aravv G', 'Aniksha Senthil', 'Dharun Balaji', 'Ramji Balasubramaniyan', 'Dharun S'
-  ];
-  const staffMembers = [
-    'Illustrative Arian ID / Illustrative Gate 1',
-    'Illustrative Arian IDs / Illustrative Gate 2',
-    'Illustrative Artan IDs / Illustrative Nem Person',
-    'Illustrative Arian IDs / Illustrative Gates'
-  ];
-  const gates = ['Gate 1', 'Main Entrance', 'VIP Gate'];
-  const statuses = ['Verified', 'Blocked: Duplicate', 'Blocked: Canceled', 'Manual Verification'];
-  const details = ['OK', 'Flagged', 'Wrong Category', 'OK'];
-  const imageBgs = ['bg-[#a78bfa]', 'bg-[#f472b6]', 'bg-[#fb7185]', 'bg-[#60a5fa]'];
-
-  const logs: GateLog[] = [
-    { id: '1', time: '08:03:31 PM', subtext: 'Jun 21, 2026', user: 'John Doe', userId: 'ATN7456', event: 'TechNova', staff: 'Illustrative Arian ID / Illustrative Gate 1', gate: 'Gate 1', status: 'Verified', detail: 'OK', imageBg: 'bg-[#a78bfa]' },
-    { id: '2', time: '08:05:39 PM', subtext: 'Jun 21, 2026', user: 'Anthom David', userId: 'email@unsysdigital.com', event: 'TechNova', staff: 'Illustrative Arian IDs / Illustrative Gate 2', gate: 'Main Entrance', status: 'Blocked: Duplicate', detail: 'Flagged', imageBg: 'bg-[#f472b6]' },
-    { id: '3', time: '08:08:12 PM', subtext: 'Jun 21, 2026', user: 'Patier Martin', userId: 'ATN7583', event: 'TechNova', staff: 'Illustrative Artan IDs / Illustrative Nem Person', gate: 'Gate 1', status: 'Blocked: Canceled', detail: 'Wrong Category', imageBg: 'bg-[#fb7185]' },
-    { id: '4', time: '08:11:45 PM', subtext: 'Jun 21, 2026', user: 'Kamela Verqulan', userId: 'ATN7479', event: 'TechNova', staff: 'Illustrative Arian IDs / Illustrative Gates', gate: 'VIP Gate', status: 'Manual Verification', detail: 'OK', imageBg: 'bg-[#60a5fa]' }
-  ];
-
-  for (let i = 5; i <= 124; i++) {
-    const name = names[i % names.length] + ' ' + String.fromCharCode(65 + (i % 26));
-    const staff = staffMembers[i % staffMembers.length];
-    const gate = gates[i % gates.length];
-    const status = statuses[i % statuses.length];
-    const detail = details[i % details.length];
-    const imageBg = imageBgs[i % imageBgs.length];
-
-    let hour = 8 + Math.floor(i / 60) % 12;
-    let min = i % 60;
-    let sec = (i * 17) % 60;
-    const timeStr = `${String(hour === 0 ? 12 : hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')} PM`;
-
-    logs.push({
-      id: String(i),
-      time: timeStr,
-      subtext: 'Jun 21, 2026',
-      user: name,
-      userId: `ATN${7400 + i}`,
-      event: 'TechNova',
-      staff: staff,
-      gate: gate,
-      status: status,
-      detail: detail,
-      imageBg: imageBg
-    });
-  }
-
-  return logs;
-};
-
-const initialGateLogs = generateGateLogs();
 
 interface FlowIssue {
   id: string;
@@ -113,50 +68,15 @@ interface FlowIssue {
   event: string;
   reason: string;
   assignedVerifier: string;
-  action: 'Recheck' | 'Admin';
+  action: string;
   imageBg: string;
 }
-
-const generateFlowIssues = (): FlowIssue[] => {
-  const names = [
-    'John Doe', 'Farior Parton', 'Patier Martin', 'Kamela Verqulan', 'Suresh Kumar', 'Vijay Raghavan', 
-    'Karthik Raja', 'Aravv G', 'Aniksha Senthil', 'Dharun Balaji', 'Ramji Balasubramaniyan', 'Dharun S'
-  ];
-  const reasons = ['ID Mismatch', 'Duplicate Ticket', 'Canceled Ticket', 'Wrong Gate'];
-  const verifiers = ['Illustrative VIR', 'Verifier 1', 'Verifier 2', 'Admin Staff'];
-  const imageBgs = ['bg-[#a78bfa]', 'bg-[#f472b6]', 'bg-[#fb7185]', 'bg-[#60a5fa]'];
-
-  const issues: FlowIssue[] = [
-    { id: '1', user: 'John Doe', event: 'TechNova', reason: 'ID Mismatch', assignedVerifier: 'Illustrative VIR', action: 'Recheck', imageBg: 'bg-[#a78bfa]' },
-    { id: '2', user: 'Farior Parton', event: 'TechNova', reason: 'Duplicate Ticket', assignedVerifier: 'Illustrative VIR', action: 'Admin', imageBg: 'bg-[#f472b6]' }
-  ];
-
-  for (let i = 3; i <= 124; i++) {
-    const name = names[i % names.length] + ' ' + String.fromCharCode(65 + (i % 26));
-    const reason = reasons[i % reasons.length];
-    const verifier = verifiers[i % verifiers.length];
-    const action = i % 2 === 0 ? 'Recheck' : 'Admin';
-    const imageBg = imageBgs[i % imageBgs.length];
-
-    issues.push({
-      id: String(i),
-      user: name,
-      event: 'TechNova',
-      reason: reason,
-      assignedVerifier: verifier,
-      action: action,
-      imageBg: imageBg
-    });
-  }
-
-  return issues;
-};
-
-const initialFlowIssues = generateFlowIssues();
 
 export default function GateControlTab({
   bookings,
   liveStats,
+  newVerifierName,
+  setNewVerifierName,
   newVerifierPhone,
   setNewVerifierPhone,
   newVerifierGate,
@@ -166,7 +86,14 @@ export default function GateControlTab({
   handleAddVerifier,
   loadingVerifiers,
   verifiers,
-  handleDeleteVerifier
+  handleDeleteVerifier,
+  handleUpdateVerifier,
+  gates,
+  newGateName,
+  setNewGateName,
+  handleCreateGate,
+  handleDeleteGate,
+  loadingGates
 }: GateControlTabProps) {
   const [isGateDropdownOpen, setIsGateDropdownOpen] = useState(false);
   const [selectedGate, setSelectedGate] = useState('All Gates');
@@ -175,12 +102,67 @@ export default function GateControlTab({
   const [selectedStatus, setSelectedStatus] = useState('All Statuses');
   
   const [searchVal, setSearchVal] = useState('');
-  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [verifyBookingId, setVerifyBookingId] = useState('');
+  const [verifyingStatus, setVerifyingStatus] = useState<'idle'|'loading'|'success'|'error'>('idle');
+  const [verifyMessage, setVerifyMessage] = useState('');
+
+  // Edit Verifier State
+  const [editingVerifierPhone, setEditingVerifierPhone] = useState<string | null>(null);
+  const [editVerifierName, setEditVerifierName] = useState('');
+  const [editVerifierPhoneInput, setEditVerifierPhoneInput] = useState('');
+  const [editVerifierGate, setEditVerifierGate] = useState('');
 
   // Items load limits & page states
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [baseLimit, setBaseLimit] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  const [flowItemsPerPage, setFlowItemsPerPage] = useState(10);
+  const [flowBaseLimit, setFlowBaseLimit] = useState(10);
+  const [flowCurrentPage, setFlowCurrentPage] = useState(1);
+
+  const updateLogGate = async (logId: string, currentGate: string) => {
+    const nextGate = window.prompt('Enter a new gate name for this log:', currentGate)?.trim();
+    if (!nextGate || nextGate === currentGate) return;
+
+    try {
+      const res = await fetch(`/backend/api/organizer/overview/gatecontrol/logs/${encodeURIComponent(logId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, gate: nextGate })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        window.alert(data.error || 'Failed to update gate log.');
+        return;
+      }
+      fetchGateData();
+    } catch (err) {
+      window.alert('Network error updating gate log.');
+    }
+  };
+
+  const deleteLog = async (logId: string) => {
+    if (!window.confirm('Delete this gate log entry?')) return;
+
+    try {
+      const res = await fetch(`/backend/api/organizer/overview/gatecontrol/logs/${encodeURIComponent(logId)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        window.alert(data.error || 'Failed to delete gate log.');
+        return;
+      }
+      fetchGateData();
+    } catch (err) {
+      window.alert('Network error deleting gate log.');
+    }
+  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,44 +174,83 @@ export default function GateControlTab({
     setCurrentPage(1);
   }, [searchVal, selectedGate, selectedStatus, itemsPerPage]);
 
-  const [localLogs, setLocalLogs] = useState<GateLog[]>(initialGateLogs);
-
-  const filteredLogs = localLogs.filter(log => {
-    const matchesSearch = log.user.toLowerCase().includes(searchVal.toLowerCase()) ||
-                          log.userId.toLowerCase().includes(searchVal.toLowerCase()) ||
-                          log.gate.toLowerCase().includes(searchVal.toLowerCase());
-    const matchesGate = selectedGate === 'All Gates' ? true : log.gate === selectedGate;
-    const matchesStatus = selectedStatus === 'All Statuses' ? true : log.status === selectedStatus;
-    
-    return matchesSearch && matchesGate && matchesStatus;
+  const [localLogs, setLocalLogs] = useState<GateLog[]>([]);
+  const [localIssues, setLocalIssues] = useState<FlowIssue[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalIssues, setTotalIssues] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [eventId, setEventId] = useState<string>('');
+  
+  const [stats, setStats] = useState({
+      totalGates: 0,
+      activeStaff: 0,
+      peakVelocity: '0/hr',
+      totalEntries: 0,
+      issuesCount: 0
   });
 
-  // Cap by loaded limit, then page by 10 rows
-  const loadedLogs = filteredLogs.slice(0, itemsPerPage);
-  const PAGE_SIZE = 10;
-  const totalPages = Math.ceil(loadedLogs.length / PAGE_SIZE) || 1;
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const visibleLogs = loadedLogs.slice(startIndex, startIndex + PAGE_SIZE);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        setEventId(params.get('id') || '');
+    }
+  }, []);
 
-  const remainingMatchedCount = filteredLogs.length - loadedLogs.length;
+  const fetchGateData = React.useCallback(async () => {
+      if (!eventId) return;
+      setLoading(true);
+      try {
+          const isAllGates = !selectedGate || selectedGate.toLowerCase().trim() === 'all' || selectedGate.toLowerCase().trim() === 'all gates';
+          const isAllStatuses = !selectedStatus || selectedStatus.toLowerCase().trim() === 'all' || selectedStatus.toLowerCase().trim() === 'all statuses';
 
-  // Flow Issues states & calculations
-  const [localIssues, setLocalIssues] = useState<FlowIssue[]>(initialFlowIssues);
-  const [flowItemsPerPage, setFlowItemsPerPage] = useState(10);
-  const [flowBaseLimit, setFlowBaseLimit] = useState(10);
-  const [flowCurrentPage, setFlowCurrentPage] = useState(1);
+          const queryParams = new URLSearchParams({
+              eventId,
+              query: searchVal,
+              gate: isAllGates ? '' : selectedGate,
+              status: isAllStatuses ? '' : selectedStatus,
+              page: String(currentPage),
+              limit: String(Math.max(itemsPerPage, flowItemsPerPage))
+          });
+          const res = await fetch(`/backend/api/organizer/overview/gatecontrol?${queryParams.toString()}`);
+          if (res.ok) {
+              const result = await res.json();
+              if (result.success && result.data) {
+                  const d = result.data;
+                  setLocalLogs(d.logs || []);
+                  setLocalIssues(d.issues || []);
+                  setTotalRecords(d.totalRecords || 0);
+                  setTotalIssues(d.totalIssues || 0);
+                  setStats({
+                      totalGates: d.totalGates || 0,
+                      activeStaff: d.activeStaff || 0,
+                      peakVelocity: d.peakVelocity || '0/hr',
+                      totalEntries: d.totalEntries || 0,
+                      issuesCount: d.issuesCount || 0
+                  });
+              }
+          }
+      } catch (err) {
+          console.error("Failed to fetch gate control data", err);
+      } finally {
+          setLoading(false);
+      }
+  }, [eventId, searchVal, selectedGate, selectedStatus, itemsPerPage, flowItemsPerPage, currentPage]);
 
   React.useEffect(() => {
-    setFlowCurrentPage(1);
-  }, [flowItemsPerPage]);
+      fetchGateData();
+  }, [fetchGateData]);
 
-  const cappedIssues = localIssues.slice(0, flowItemsPerPage);
+  const safeCurrentPage = Math.max(1, currentPage);
+  const visibleLogs = localLogs;
+
+  // Flow Issues states & calculations (unchanged)
   const FLOW_PAGE_SIZE = 10;
-  const flowTotalPages = Math.ceil(cappedIssues.length / FLOW_PAGE_SIZE) || 1;
-  const flowStartIndex = (flowCurrentPage - 1) * FLOW_PAGE_SIZE;
-  const visibleIssues = cappedIssues.slice(flowStartIndex, flowStartIndex + FLOW_PAGE_SIZE);
+  const flowTotalPages = Math.ceil(localIssues.length / FLOW_PAGE_SIZE) || 1;
+  const safeFlowCurrentPage = Math.max(1, Math.min(flowCurrentPage, flowTotalPages));
+  const flowStartIndex = (safeFlowCurrentPage - 1) * FLOW_PAGE_SIZE;
+  const visibleIssues = localIssues.slice(flowStartIndex, flowStartIndex + FLOW_PAGE_SIZE);
 
-  const flowRemainingMatchedCount = localIssues.length - cappedIssues.length;
+  const flowRemainingMatchedCount = totalIssues - localIssues.length;
 
   return (
     <div className="space-y-6 text-[#1c1525] font-sans pb-6">
@@ -259,7 +280,7 @@ export default function GateControlTab({
               </button>
               {isGateDropdownOpen && (
                 <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#AEAEAE] rounded-lg overflow-hidden z-40 text-xs text-slate-800 shadow-lg">
-                  {['All Gates', 'Gate 1', 'Main Entrance', 'VIP Gate'].map((g, idx) => (
+                  {['All Gates', ...gates.map(gate => gate.name)].map((g, idx) => (
                     <div
                       key={idx}
                       onClick={() => {
@@ -290,7 +311,7 @@ export default function GateControlTab({
               </button>
               {isStatusDropdownOpen && (
                 <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#AEAEAE] rounded-lg overflow-hidden z-40 text-xs text-slate-800 shadow-lg">
-                  {['All Statuses', 'Verified', 'Blocked: Duplicate', 'Blocked: Canceled', 'Manual Verification'].map((s, idx) => (
+                  {['All Statuses', 'Checked In', 'Checked Out', 'Blocked: Duplicate', 'Blocked: Canceled', 'Manual Verification'].map((s, idx) => (
                     <div
                       key={idx}
                       onClick={() => {
@@ -322,14 +343,14 @@ export default function GateControlTab({
             </div>
           </div>
 
-          {/* Action Button: Create Gate Verifier */}
+          {/* Action Button: Manual Verify User */}
           <div className="w-full lg:w-auto flex shrink-0 justify-end">
             <button
-              onClick={() => setIsStaffModalOpen(true)}
-              className="h-10 px-5 bg-[#5331EA] hover:bg-[#4223ca] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm w-full sm:w-auto"
+              onClick={() => setIsVerifyModalOpen(true)}
+              className="h-10 px-5 bg-[#0AC655] hover:bg-[#08a647] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm w-full sm:w-auto"
             >
-              <Plus size={14} />
-              <span>Create Gate Verifier</span>
+              <Check size={14} />
+              <span>Manual Check-in</span>
             </button>
           </div>
         </div>
@@ -344,7 +365,7 @@ export default function GateControlTab({
           </div>
           <div>
             <span className="block text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Total Gates</span>
-            <span className="text-xl font-black text-slate-900 font-sans">6</span>
+            <span className="text-xl font-black text-slate-900 font-sans">{stats.totalGates}</span>
           </div>
         </div>
 
@@ -355,7 +376,7 @@ export default function GateControlTab({
           </div>
           <div>
             <span className="block text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Active Staff</span>
-            <span className="text-xl font-black text-[#0AC655]">20</span>
+            <span className="text-xl font-black text-[#0AC655]">{stats.activeStaff}</span>
           </div>
         </div>
 
@@ -366,7 +387,7 @@ export default function GateControlTab({
           </div>
           <div>
             <span className="block text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Peak Velocity</span>
-            <span className="text-xl font-black text-[#D97706]">400/hr</span>
+            <span className="text-xl font-black text-[#D97706]">{stats.peakVelocity}</span>
           </div>
         </div>
 
@@ -377,7 +398,7 @@ export default function GateControlTab({
           </div>
           <div>
             <span className="block text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Total Entries</span>
-            <span className="text-xl font-black text-slate-900">2,500</span>
+            <span className="text-xl font-black text-slate-900">{stats.totalEntries.toLocaleString()}</span>
           </div>
         </div>
 
@@ -388,10 +409,403 @@ export default function GateControlTab({
           </div>
           <div>
             <span className="block text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Issues</span>
-            <span className="text-xl font-black text-[#ED4D1B]">45</span>
+            <span className="text-xl font-black text-[#ED4D1B]">{stats.issuesCount}</span>
           </div>
         </div>
       </div>
+
+      {/* Section 2.4: Gates Management CRUD */}
+      <div className="bg-white rounded-[15px] p-8 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-[22px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+            Event Gates <span style={{ color: '#5331EA' }}>*</span>
+          </h2>
+        </div>
+        <p className="text-[14px] font-medium text-[#686868] mb-5" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+          Create entry points first — verifiers will be assigned to these gates.
+        </p>
+        <div className="w-full h-[1px] bg-[#AEAEAE] mb-6" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Create Gate Form */}
+          <div className="lg:col-span-1 space-y-4">
+            <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+              Gate Name <span style={{ color: '#5331EA' }}>*</span>
+            </label>
+            <form onSubmit={handleCreateGate} className="space-y-4">
+              <input
+                type="text"
+                value={newGateName}
+                onChange={(e) => setNewGateName(e.target.value)}
+                placeholder="e.g. Main Entry, VIP Gate 1"
+                className="w-full h-[56px] px-5 bg-transparent border border-[#686868] rounded-[10px] outline-none focus:border-[#5331EA] text-[16px] font-medium text-black placeholder-[#AEAEAE]"
+                style={{ fontFamily: 'var(--font-anek-latin)' }}
+                required
+              />
+              <button
+                type="submit"
+                disabled={loadingGates || !newGateName.trim()}
+                className="w-full h-[52px] bg-black hover:bg-zinc-800 disabled:bg-[#AEAEAE] text-white text-[15px] font-medium rounded-[10px] flex items-center justify-center gap-2 transition-all"
+                style={{ fontFamily: 'var(--font-anek-latin)' }}
+              >
+                {loadingGates ? <RefreshCw className="animate-spin" size={16} /> : <Plus size={18} />}
+                Create Gate
+              </button>
+            </form>
+          </div>
+
+          {/* Registered Gates */}
+          <div className="lg:col-span-2 space-y-3">
+            <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+              Registered Gates
+            </label>
+            {gates.length === 0 ? (
+              <div className="border border-[#AEAEAE] border-dashed rounded-[10px] p-8 flex flex-col items-center justify-center text-[#AEAEAE] bg-white mt-1">
+                <DoorOpen size={36} className="mb-3 opacity-40" />
+                <p className="text-[14px] font-medium italic text-center" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                  No gates created yet. Add your first gate.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 mt-1">
+                {gates.map((g) => (
+                  <div key={g.id} className="flex items-center gap-2 bg-white border border-[#686868] pl-4 pr-2 py-2 rounded-[10px] text-[14px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                    <DoorOpen size={14} className="text-[#5331EA]" />
+                    <span>{g.name}</span>
+                    <button
+                      onClick={() => handleDeleteGate(g.id)}
+                      className="w-6 h-6 flex items-center justify-center text-[#AEAEAE] hover:text-red-500 hover:bg-red-50 rounded-full transition-colors ml-1"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2.5: Verifiers Management CRUD */}
+      <div className="bg-white rounded-[15px] p-8">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-[22px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+            Gate Verifiers <span style={{ color: '#5331EA' }}>*</span>
+          </h2>
+        </div>
+        <p className="text-[14px] font-medium text-[#686868] mb-5" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+          Register staff who will scan and validate tickets at each gate entry point.
+        </p>
+        <div className="w-full h-[1px] bg-[#AEAEAE] mb-6" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Register Verifier Form */}
+          <div className="lg:col-span-1 space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              {/* Verifier Name */}
+              <div className="space-y-2">
+                <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                  Verifier Name <span style={{ color: '#5331EA' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newVerifierName}
+                  onChange={(e) => setNewVerifierName(e.target.value)}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full h-[56px] px-5 bg-transparent border border-[#686868] rounded-[10px] outline-none focus:border-[#5331EA] text-[16px] font-medium text-black placeholder-[#AEAEAE]"
+                  style={{ fontFamily: 'var(--font-anek-latin)' }}
+                  required
+                />
+              </div>
+
+              {/* Verifier Mobile with India Flag */}
+              <div className="space-y-2">
+                <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                  Mobile Number <span style={{ color: '#5331EA' }}>*</span>
+                </label>
+                <div className="flex items-stretch border border-[#686868] rounded-[10px] overflow-hidden focus-within:border-[#5331EA] transition-colors h-[56px]">
+                  <div className="flex items-center gap-2 px-4 bg-[#F7F7F7] border-r border-[#686868] shrink-0">
+                    <span className="text-[20px]">🇮🇳</span>
+                    <span className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    value={newVerifierPhone}
+                    onChange={(e) => setNewVerifierPhone(e.target.value)}
+                    placeholder="9876543210"
+                    className="flex-1 px-4 bg-transparent outline-none text-[16px] font-medium text-black placeholder-[#AEAEAE]"
+                    style={{ fontFamily: 'var(--font-anek-latin)' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Gate Dropdown */}
+              <div className="space-y-2">
+                <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                  Assign to Gate <span style={{ color: '#5331EA' }}>*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={newVerifierGate}
+                    onChange={(e) => setNewVerifierGate(e.target.value)}
+                    className="w-full h-[56px] px-5 bg-transparent border border-[#686868] rounded-[10px] outline-none focus:border-[#5331EA] text-[16px] font-medium text-black appearance-none cursor-pointer"
+                    style={{ fontFamily: 'var(--font-anek-latin)' }}
+                    required
+                  >
+                    <option value="" disabled>Select a gate</option>
+                    {gates.map((g) => (
+                      <option key={g.id} value={g.name}>{g.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-[#686868] pointer-events-none" size={20} />
+                </div>
+                {gates.length === 0 && (
+                  <p className="text-[11px] text-[#ED4D1B]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                    ⚠ Create a gate above before registering verifiers.
+                  </p>
+                )}
+              </div>
+
+              {/* Feedback Messages */}
+              {verifierError && (
+                <p className="text-[12px] font-medium text-[#ED4D1B] bg-red-50 border border-red-200 p-3 rounded-[10px] flex items-center gap-2">
+                  <AlertTriangle size={14} />
+                  {verifierError}
+                </p>
+              )}
+              {verifierSuccess && (
+                <p className="text-[12px] font-medium text-[#0AC655] bg-emerald-50 border border-emerald-200 p-3 rounded-[10px] flex items-center gap-2">
+                  <Check size={14} />
+                  {verifierSuccess}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loadingVerifiers || gates.length === 0}
+                className="w-full h-[52px] bg-black hover:bg-zinc-800 disabled:bg-[#AEAEAE] text-white text-[15px] font-medium rounded-[10px] flex items-center justify-center gap-2 transition-all"
+                style={{ fontFamily: 'var(--font-anek-latin)' }}
+              >
+                {loadingVerifiers ? <RefreshCw className="animate-spin" size={16} /> : <UserPlus size={18} />}
+                Register &amp; Send Passcode
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 space-y-3">
+            <label className="text-[14px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+              Registered Active Verifiers
+            </label>
+            {verifiers.length === 0 ? (
+              <div className="border border-[#AEAEAE] border-dashed rounded-[10px] p-10 flex flex-col items-center justify-center text-[#AEAEAE] bg-white mt-1">
+                <Users size={36} className="mb-3 opacity-40" />
+                <p className="text-[14px] font-medium italic text-center" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                  No gate verifiers currently registered.
+                </p>
+              </div>
+            ) : (
+              <div className="border border-[#686868] rounded-[10px] overflow-hidden bg-white mt-1">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-[#686868]" style={{ backgroundColor: '#F7F7F7' }}>
+                      <th className="py-3 px-4 text-[12px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Name</th>
+                      <th className="py-3 px-4 text-[12px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Mobile</th>
+                      <th className="py-3 px-4 text-[12px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Assigned Gate</th>
+                      <th className="py-3 px-4 text-[12px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>Security Key</th>
+                      <th className="py-3 px-4 text-[12px] font-medium text-[#686868] text-center" style={{ fontFamily: 'var(--font-anek-latin)' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {verifiers.map((v, idx) => {
+                      const isEditing = editingVerifierPhone === v.phone;
+                      return (
+                        <tr key={idx} className="border-b border-[#AEAEAE] last:border-0 hover:bg-[#F7F7F7]/50 transition-colors">
+                          <td className="py-3.5 px-4 text-[14px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                            {isEditing ? (
+                              <input 
+                                type="text" 
+                                value={editVerifierName}
+                                onChange={(e) => setEditVerifierName(e.target.value)}
+                                className="w-full h-8 px-2 border border-[#686868] rounded-[6px] outline-none text-[13px]"
+                              />
+                            ) : (
+                              v.name || '—'
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-[13px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                            {isEditing ? (
+                              <div className="flex items-center gap-1 border border-[#686868] rounded-[6px] overflow-hidden h-8">
+                                <span className="bg-[#F7F7F7] px-2 border-r border-[#686868] h-full flex items-center">🇮🇳</span>
+                                <input 
+                                  type="tel" 
+                                  value={editVerifierPhoneInput}
+                                  onChange={(e) => setEditVerifierPhoneInput(e.target.value)}
+                                  className="w-full px-2 outline-none text-[13px] text-black"
+                                />
+                              </div>
+                            ) : (
+                              <span className="flex items-center gap-1.5">🇮🇳 {v.phone}</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {isEditing ? (
+                              <select
+                                value={editVerifierGate}
+                                onChange={(e) => setEditVerifierGate(e.target.value)}
+                                className="w-full h-8 px-2 border border-[#686868] rounded-[6px] outline-none text-[13px] text-black"
+                              >
+                                {gates.map((g) => (
+                                  <option key={g.id} value={g.name}>{g.name}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 border border-[#686868] rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                <DoorOpen size={12} className="text-[#5331EA]" />
+                                {v.gate || 'Unassigned'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[13px] font-semibold text-[#5331EA] tracking-widest">
+                            {isEditing ? '—' : (v.password || '—')}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex justify-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <button
+                                    onClick={async () => {
+                                      await handleUpdateVerifier(v.phone, editVerifierPhoneInput, editVerifierName, editVerifierGate);
+                                      setEditingVerifierPhone(null);
+                                    }}
+                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-[6px] border border-emerald-200 transition-colors"
+                                    title="Save"
+                                  >
+                                    <Check size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingVerifierPhone(null)}
+                                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-[6px] border border-slate-200 transition-colors"
+                                    title="Cancel"
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setEditingVerifierPhone(v.phone);
+                                      setEditVerifierName(v.name || '');
+                                      setEditVerifierPhoneInput(v.phone.replace('+91', '').trim() || v.phone);
+                                      setEditVerifierGate(v.gate || '');
+                                    }}
+                                    className="p-1.5 text-[#5331EA] hover:bg-indigo-50 rounded-[6px] border border-[#5331EA]/30 transition-colors"
+                                    title="Edit Verifier"
+                                  >
+                                    <Edit size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteVerifier(v.phone)}
+                                    className="p-1.5 text-[#AEAEAE] hover:text-red-600 hover:bg-red-50 rounded-[6px] border border-[#AEAEAE] transition-colors"
+                                    title="Delete Verifier"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Manual Check-in Modal Overlay */}
+      {isVerifyModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center animate-fadeIn p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden flex flex-col shadow-2xl">
+            <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
+              <h3 className="text-sm font-black flex items-center gap-2">
+                <ShieldAlert size={16} />
+                <span>Admin Override: Manual Check-in</span>
+              </h3>
+              <button onClick={() => setIsVerifyModalOpen(false)} className="text-white/60 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Manually verify a user who cannot scan their QR code. This action is logged permanently under Admin records.
+              </p>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Booking ID / Ticket Reference</label>
+                <input
+                  type="text"
+                  value={verifyBookingId}
+                  onChange={(e) => setVerifyBookingId(e.target.value)}
+                  placeholder="e.g. BK-7bed979a"
+                  className="w-full h-10 px-3 bg-white border border-[#AEAEAE] rounded-lg outline-none focus:border-[#0AC655] text-xs font-bold uppercase"
+                />
+              </div>
+              {verifyMessage && (
+                <div className={`p-3 rounded-lg text-xs font-bold ${
+                  verifyingStatus === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'
+                }`}>
+                  {verifyMessage}
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setIsVerifyModalOpen(false)}
+                  className="flex-1 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if(!verifyBookingId) return;
+                    setVerifyingStatus('loading');
+                    try {
+                      // We will implement this endpoint in the backend next
+                      const res = await fetch('/backend/api/organizer/overview/gatecontrol/manual-verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ eventId, bookingId: verifyBookingId })
+                      });
+                      const data = await res.json();
+                      if(res.ok && data.success) {
+                        setVerifyingStatus('success');
+                        setVerifyMessage('Ticket verified successfully!');
+                        fetchGateData();
+                        setTimeout(() => { setIsVerifyModalOpen(false); setVerifyMessage(''); setVerifyBookingId(''); }, 1500);
+                      } else {
+                        setVerifyingStatus('error');
+                        setVerifyMessage(data.error || 'Verification failed. Invalid or already verified.');
+                      }
+                    } catch (err) {
+                      setVerifyingStatus('error');
+                      setVerifyMessage('Network error occurred.');
+                    }
+                  }}
+                  disabled={!verifyBookingId || verifyingStatus === 'loading'}
+                  className="flex-1 h-10 bg-[#0AC655] hover:bg-[#08a647] disabled:bg-slate-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {verifyingStatus === 'loading' ? <RefreshCw className="animate-spin" size={14} /> : <Check size={14} />}
+                  <span>Force Verify</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Section 3: Main Data Table */}
       <div className="bg-white rounded-[15px] p-5 border border-[#AEAEAE]">
@@ -419,37 +833,23 @@ export default function GateControlTab({
                   {size}
                 </button>
               ))}
-
-              {/* Load Next Chunks Button */}
-              {remainingMatchedCount > 0 && (
-                <button
-                  onClick={() => {
-                    const amountToLoad = Math.min(baseLimit, remainingMatchedCount);
-                    setItemsPerPage(prev => prev + amountToLoad);
-                  }}
-                  className="px-2.5 py-1 text-[10px] font-black rounded border border-[#5331EA] bg-[#5331EA]/10 hover:bg-[#5331EA]/20 text-[#5331EA] transition-all flex items-center gap-1"
-                  title={`Load Next ${Math.min(baseLimit, remainingMatchedCount)} matching logs`}
-                >
-                  <span>Load Next {Math.min(baseLimit, remainingMatchedCount)}</span>
-                </button>
-              )}
             </div>
 
             {/* Page-by-page Pagination Controls */}
             <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500 font-sans">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
+                disabled={safeCurrentPage === 1}
                 className="h-8 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:hover:bg-white"
               >
                 Previous
               </button>
               <span className="px-1 text-slate-600 font-semibold">
-                Page <strong className="text-slate-900">{currentPage}</strong> of <strong className="text-slate-900">{totalPages}</strong> (<strong className="text-slate-900">{loadedLogs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, loadedLogs.length)}</strong> of <strong className="text-slate-900">{loadedLogs.length}</strong> loaded)
+                Page <strong className="text-slate-900">{safeCurrentPage}</strong> of <strong className="text-slate-900">{Math.max(1, Math.ceil(totalRecords / Math.max(itemsPerPage, 1)))}</strong> (<strong className="text-slate-900">{visibleLogs.length}</strong> shown, <strong className="text-slate-900">{totalRecords}</strong> total matches)
               </span>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(totalRecords / Math.max(itemsPerPage, 1))))) }
+                disabled={safeCurrentPage >= Math.max(1, Math.ceil(totalRecords / Math.max(itemsPerPage, 1)))}
                 className="h-8 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:hover:bg-white"
               >
                 Next
@@ -466,23 +866,30 @@ export default function GateControlTab({
                 <th className="py-3 px-3">Event Name</th>
                 <th className="py-3 px-3">Gate Staff / Scanner ID</th>
                 <th className="py-3 px-3">Gate Name</th>
+                <th className="py-3 px-3">Check-In Time</th>
+                <th className="py-3 px-3">Check-Out Time</th>
                 <th className="py-3 px-3 text-center">Entry Status</th>
                 <th className="py-3 px-3">Verification Detail</th>
-                <th className="py-3 px-3 text-center rounded-r-md w-[100px]">Actions</th>
+                <th className="py-3 px-3 rounded-r-md text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#AEAEAE] text-slate-800">
-              {filteredLogs.length === 0 ? (
+              {visibleLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 italic">
+                  <td colSpan={10} className="py-8 text-center text-slate-400 italic">
                     No gate entry logs match the search or status criteria.
                   </td>
                 </tr>
               ) : (
                 visibleLogs.map((row, idx) => {
                   let statusBg = 'text-slate-800 font-bold';
+                  let displayStatus = row.status;
                   if (row.status === 'Verified') {
+                    displayStatus = 'Checked In';
                     statusBg = 'bg-[#0AC655]/10 text-[#0AC655] border border-[#0AC655]/30 font-bold px-2 py-0.5 rounded-md';
+                  } else if (row.status === 'Checked Out') {
+                    displayStatus = 'Checked Out';
+                    statusBg = 'bg-blue-100 text-blue-700 border border-blue-300 font-bold px-2 py-0.5 rounded-md';
                   } else if (row.status.startsWith('Blocked')) {
                     statusBg = 'bg-[#ED4D1B]/10 text-[#ED4D1B] border border-[#ED4D1B]/30 font-bold px-2 py-0.5 rounded-md';
                   } else if (row.status === 'Manual Verification') {
@@ -514,11 +921,22 @@ export default function GateControlTab({
                           <span className="text-[12px] font-bold text-slate-800">{row.event}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-slate-500 font-medium">{row.staff}</td>
-                      <td className="py-3 px-3 font-bold text-slate-800">{row.gate}</td>
+                      <td className="py-3 px-3 text-slate-500 font-semibold">{row.staff}</td>
+                      <td className="py-3 px-3 font-bold text-slate-600">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#5331EA]"></span>
+                          {row.gate}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-700">
+                        {row.check_in_time_str || '—'}
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-700">
+                        {row.check_out_time_str || '—'}
+                      </td>
                       <td className="py-3 px-3 text-center">
                         <span className={`inline-block text-[9.5px] ${statusBg}`}>
-                          {row.status}
+                          {displayStatus}
                         </span>
                       </td>
                       <td className="py-3 px-3">
@@ -527,29 +945,18 @@ export default function GateControlTab({
                         </span>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => {
-                              const newGate = prompt(`Edit Assigned Gate for ${row.user}:`, row.gate);
-                              if (newGate !== null) {
-                                setLocalLogs(prev => prev.map(log => log.id === row.id ? { ...log, gate: newGate } : log));
-                              }
-                            }}
-                            className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded border border-[#AEAEAE]"
-                            title="Edit Log"
+                            onClick={() => updateLogGate(row.id, row.gate)}
+                            className="h-7 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-lg transition-colors"
                           >
-                            <Edit size={11.5} />
+                            Edit Gate
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete log for ${row.user}?`)) {
-                                setLocalLogs(prev => prev.filter(log => log.id !== row.id));
-                              }
-                            }}
-                            className="p-1 text-slate-400 hover:text-[#ED4D1B] hover:bg-red-50 rounded border border-[#AEAEAE]"
-                            title="Delete Log"
+                            onClick={() => deleteLog(row.id)}
+                            className="h-7 px-2.5 border border-red-200 bg-white hover:bg-red-50 text-red-600 text-[10px] font-bold rounded-lg transition-colors"
                           >
-                            <Trash2 size={11.5} />
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -607,17 +1014,17 @@ export default function GateControlTab({
             <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500 font-sans">
               <button
                 onClick={() => setFlowCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={flowCurrentPage === 1}
+                disabled={safeFlowCurrentPage === 1}
                 className="h-8 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:hover:bg-white"
               >
                 Previous
               </button>
               <span className="px-1 text-slate-600 font-semibold">
-                Page <strong className="text-slate-900">{flowCurrentPage}</strong> of <strong className="text-slate-900">{flowTotalPages}</strong> (<strong className="text-slate-900">{cappedIssues.length === 0 ? 0 : flowStartIndex + 1}–{Math.min(flowStartIndex + FLOW_PAGE_SIZE, cappedIssues.length)}</strong> of <strong className="text-slate-900">{cappedIssues.length}</strong> loaded)
+                Page <strong className="text-slate-900">{safeFlowCurrentPage}</strong> of <strong className="text-slate-900">{flowTotalPages}</strong> (<strong className="text-slate-900">{localIssues.length === 0 ? 0 : flowStartIndex + 1}–{Math.min(flowStartIndex + FLOW_PAGE_SIZE, localIssues.length)}</strong> of <strong className="text-slate-900">{localIssues.length}</strong> loaded)
               </span>
               <button
                 onClick={() => setFlowCurrentPage(prev => Math.min(prev + 1, flowTotalPages))}
-                disabled={flowCurrentPage === flowTotalPages}
+                disabled={safeFlowCurrentPage === flowTotalPages}
                 className="h-8 px-2.5 border border-[#AEAEAE] bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:hover:bg-white"
               >
                 Next
@@ -659,25 +1066,15 @@ export default function GateControlTab({
                     <td className="py-2.5 px-3 text-slate-500">{row.assignedVerifier}</td>
                     <td className="py-2.5 px-3">
                       <div className="flex justify-center">
-                        {row.action === 'Recheck' ? (
-                          <button
-                            onClick={() => {
-                              alert(`Triggering Recheck flow for attendee: ${row.user}`);
-                            }}
-                            className="h-7 px-3 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 font-bold rounded-md flex items-center gap-1 text-[10px] transition-colors"
-                          >
-                            <span>Recheck</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              alert(`Opening Admin intervention dashboard for attendee: ${row.user}`);
-                            }}
-                            className="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-md flex items-center gap-1 text-[10px] transition-colors"
-                          >
-                            <span>Admin</span>
-                          </button>
-                        )}
+                        <span
+                          className={`h-7 px-3 inline-flex items-center border font-bold rounded-md text-[10px] ${
+                            row.action === 'Recheck'
+                              ? 'bg-amber-50 border-amber-200 text-amber-700'
+                              : 'bg-slate-100 border-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {row.action === 'Recheck' ? 'Needs re-scan' : 'Admin follow-up'}
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -688,121 +1085,6 @@ export default function GateControlTab({
         </div>
       </div>
 
-      {/* Staff Management Slide-out Modal Overlay */}
-      {isStaffModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center animate-fadeIn p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 bg-slate-950 text-white flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-black flex items-center gap-2">
-                <UserPlus size={16} />
-                <span>Active Gate Verifier Management</span>
-              </h3>
-              <button onClick={() => setIsStaffModalOpen(false)} className="text-white/60 hover:text-white transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              <div className="bg-slate-50 rounded-xl p-5 border border-[#AEAEAE] space-y-4">
-                <h4 className="font-extrabold text-xs text-slate-700 uppercase tracking-wider">Register Gate Verifier</h4>
-                <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Verifier Mobile</label>
-                    <input
-                      type="tel"
-                      value={newVerifierPhone}
-                      onChange={(e) => setNewVerifierPhone(e.target.value)}
-                      placeholder="+919876543210"
-                      className="w-full h-10 px-3 bg-white border border-[#AEAEAE] rounded-lg outline-none focus:border-[#5331EA] text-xs font-semibold"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Gate Assignment Point</label>
-                    <input
-                      type="text"
-                      value={newVerifierGate}
-                      onChange={(e) => setNewVerifierGate(e.target.value)}
-                      placeholder="e.g. Gate 1, VIP Entry"
-                      className="w-full h-10 px-3 bg-white border border-[#AEAEAE] rounded-lg outline-none focus:border-[#5331EA] text-xs font-semibold"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    {verifierError && (
-                      <p className="text-xs font-bold text-[#ED4D1B] bg-red-50 border border-red-200 p-2.5 rounded-lg flex items-center gap-1.5">
-                        <AlertTriangle size={13} />
-                        {verifierError}
-                      </p>
-                    )}
-                    {verifierSuccess && (
-                      <p className="text-xs font-bold text-[#0AC655] bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg flex items-center gap-1.5">
-                        <Check size={13} />
-                        {verifierSuccess}
-                      </p>
-                    )}
-                  </div>
-                  <div className="md:col-span-2 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={loadingVerifiers}
-                      className="h-10 px-5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
-                    >
-                      {loadingVerifiers ? <RefreshCw className="animate-spin" size={12} /> : null}
-                      <span>Generate Verifier Key</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-extrabold text-xs text-slate-700 uppercase tracking-wider">Registered Active Verifiers Register</h4>
-                {verifiers.length === 0 ? (
-                  <p className="text-xs text-slate-400 font-medium italic text-center py-6">No gate verifiers currently registered.</p>
-                ) : (
-                  <div className="border border-[#AEAEAE] rounded-xl overflow-hidden bg-white">
-                    <table className="w-full text-xs text-left">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-[#AEAEAE] text-slate-500 font-bold">
-                          <th className="py-2.5 px-3">Mobile</th>
-                          <th className="py-2.5 px-3">Assigned Gate</th>
-                          <th className="py-2.5 px-3">Security Key</th>
-                          <th className="py-2.5 px-3 text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {verifiers.map((v, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50">
-                            <td className="py-2.5 px-3 font-semibold text-slate-950">{v.phone}</td>
-                            <td className="py-2.5 px-3 font-bold text-slate-700">{v.gate || 'Unassigned'}</td>
-                            <td className="py-2.5 px-3 font-mono text-xs font-semibold text-slate-500">{v.password || '-'}</td>
-                            <td className="py-2.5 px-3">
-                              <div className="flex justify-center">
-                                <button
-                                  onClick={() => handleDeleteVerifier(v.phone)}
-                                  className="p-1 text-slate-400 hover:text-red-600 rounded border border-[#AEAEAE] transition-colors"
-                                  title="Delete Verifier"
-                                >
-                                  <Trash2 size={11} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-[#AEAEAE] flex justify-end shrink-0">
-              <button onClick={() => setIsStaffModalOpen(false)} className="h-9 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

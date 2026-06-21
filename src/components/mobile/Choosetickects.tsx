@@ -152,9 +152,7 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
 
     const categories = useMemo(() => {
         if (!eventDetails) return [];
-        return eventDetails.ticket_categories && eventDetails.ticket_categories.length > 0
-            ? eventDetails.ticket_categories
-            : [{ name: 'General Admission', price: eventDetails.price_starts_from ?? 0 }];
+        return eventDetails.ticket_categories || [];
     }, [eventDetails]);
 
     const getAvailable = (cat: TicketCategory) => {

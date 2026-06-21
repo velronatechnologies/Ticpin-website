@@ -39,8 +39,12 @@ export default function ListingCard({ listing, vertical, onDelete }: ListingCard
     const status = listing.status ?? 'pending';
     const statusCfg = STATUS_CONFIG[status] ?? { label: status, bg: 'bg-zinc-100', text: 'text-zinc-600', icon: AlertCircle };
 
-    const handleEdit = () => {
+    const handleDashboard = () => {
         router.push(`/organizer/overview?id=${listing.id}&vertical=${vertical}`);
+    };
+
+    const handleEdit = () => {
+        router.push(`/${vertical}/edit/${listing.id}`);
     };
 
     const handleDelete = async (e: React.MouseEvent) => {
@@ -93,6 +97,14 @@ export default function ListingCard({ listing, vertical, onDelete }: ListingCard
                     >
                         <Settings size={18} className="text-white" />
                         <span style={{ fontFamily: 'Anek Latin' }}>Manage {vertical}</span>
+                    </button>
+
+                    <button
+                        onClick={handleDashboard}
+                        className="bg-black text-white px-6 h-[44px] md:h-[48px] rounded-[15px] flex items-center gap-2 text-[16px] font-medium transition-all"
+                    >
+                        <Settings size={18} className="text-white" />
+                        <span style={{ fontFamily: 'Anek Latin' }}>View  {vertical} Analytics</span>
                     </button>
 
                     {confirmDelete ? (

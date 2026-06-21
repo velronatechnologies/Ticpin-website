@@ -3,7 +3,7 @@
 import React from 'react';
 import EventCard from '@/components/events/EventCard';
 
-import { getMinPrice } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTC } from '@/lib/utils';
 
 interface RealEvent {
     id: string;
@@ -26,8 +26,7 @@ interface EventsGridProps {
 
 const EventsGrid = React.memo(function EventsGrid({ events }: EventsGridProps) {
     const formatDate = (iso?: string) => {
-        if (!iso) return '';
-        return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return formatEventDateUTC(iso);
     };
 
     if (events.length === 0) {
