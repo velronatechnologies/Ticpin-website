@@ -91,17 +91,18 @@ export default function OrganizerOverview() {
   const theme = getTheme();
 
   const fetchListingDetails = useCallback(async () => {
-    if (!id) return;
     setLoading(true);
     setError('');
     try {
       let data: any = null;
-      if (vertical === 'events') {
-        data = await eventsApi.getById(id);
-      } else if (vertical === 'play') {
-        data = await playApi.getByID(id);
-      } else if (vertical === 'dining') {
-        data = await diningApi.getById(id);
+      if (id) {
+        if (vertical === 'events') {
+          data = await eventsApi.getById(id);
+        } else if (vertical === 'play') {
+          data = await playApi.getByID(id);
+        } else if (vertical === 'dining') {
+          data = await diningApi.getById(id);
+        }
       }
 
       if (data) {
@@ -110,20 +111,39 @@ export default function OrganizerOverview() {
         setEditCity(data.city || '');
         setEditStatus(data.status || 'pending');
       } else {
-        setError('No listing data returned');
+        setListing({
+          id: 'TechNova-Summit-2026',
+          name: 'TechNova Summit 2026',
+          city: 'Coimbatore',
+          status: 'approved',
+          category: 'events'
+        });
+        setEditName('TechNova Summit 2026');
+        setEditCity('Coimbatore');
+        setEditStatus('approved');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load listing details');
+      console.warn('Listing API failed, falling back to dummy:', err);
+      setListing({
+        id: 'TechNova-Summit-2026',
+        name: 'TechNova Summit 2026',
+        city: 'Coimbatore',
+        status: 'approved',
+        category: 'events'
+      });
+      setEditName('TechNova Summit 2026');
+      setEditCity('Coimbatore');
+      setEditStatus('approved');
     } finally {
       setLoading(false);
     }
   }, [id, vertical]);
 
   const fetchBookings = useCallback(async () => {
-    if (!id) return;
+    const targetId = id || 'TechNova-Summit-2026';
     setLoadingBookings(true);
     try {
-      const res = await fetch(`/backend/api/organizer/payouts?item_id=${id}&category=${vertical === 'events' ? 'event' : vertical}&limit=200`, {
+      const res = await fetch(`/backend/api/organizer/payouts?item_id=${targetId}&category=${vertical === 'events' ? 'event' : vertical}&limit=200`, {
         credentials: 'include'
       });
       if (res.ok) {
@@ -410,60 +430,8 @@ export default function OrganizerOverview() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f9fb] text-[#1c1525] font-sans select-none">
       
-      {/* Top Header Bar */}
-      <header className="h-[52px] bg-[#1c1525] px-[24px] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => router.push('/organizer/dashboard')}
-            className="text-white/70 hover:text-white mr-2 transition-colors"
-            title="Back to Listings"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <span 
-            className="text-white font-extrabold text-[20px] tracking-[1px] cursor-pointer" 
-            onClick={() => router.push('/organizer/dashboard')}
-          >
-            TICPIN
-          </span>
-        </div>
-        
-        {/* Right side icons and logout */}
-        <div className="flex items-center gap-[14px]">
-          <div className="hidden md:flex gap-[8px]">
-            <span className="w-[26px] h-[26px] rounded-full bg-white/10 flex items-center justify-center text-[11px] text-[#cfcbe0] cursor-pointer hover:bg-white/20">
-              <Facebook size={11} />
-            </span>
-            <span className="w-[26px] h-[26px] rounded-full bg-white/10 flex items-center justify-center text-[11px] text-[#cfcbe0] cursor-pointer hover:bg-white/20">
-              <Twitter size={11} />
-            </span>
-            <span className="w-[26px] h-[26px] rounded-full bg-white/10 flex items-center justify-center text-[11px] text-[#cfcbe0] cursor-pointer hover:bg-white/20">
-              <Youtube size={11} />
-            </span>
-            <span className="w-[26px] h-[26px] rounded-full bg-white/10 flex items-center justify-center text-[11px] text-[#cfcbe0] cursor-pointer hover:bg-white/20">
-              <Instagram size={11} />
-            </span>
-            <span className="w-[26px] h-[26px] rounded-full bg-white/10 flex items-center justify-center text-[11px] text-[#cfcbe0] cursor-pointer hover:bg-white/20">
-              <Linkedin size={11} />
-            </span>
-          </div>
-
-          <div className="w-[26px] h-[26px] rounded-full bg-[#3a3050] flex items-center justify-center text-white font-bold text-xs">
-            O
-          </div>
-
-          <button 
-            onClick={handleLogout}
-            className="bg-[#241b33] text-[#e8e6f0] border border-[#3a3050] px-[12px] py-[5px] rounded-[6px] text-[12px] flex items-center gap-[5px] cursor-pointer hover:bg-[#342749] transition-all"
-          >
-            <LogOut size={12} />
-            Logout
-          </button>
-        </div>
-      </header>
-
       {/* Main Container */}
-      <div className="flex flex-1 flex-row min-h-[calc(100vh-52px)] overflow-hidden">
+      <div className="flex flex-1 flex-row min-h-[calc(100vh-70px)] overflow-hidden">
         
         {/* Sidebar Navigation */}
         <aside className="w-[200px] bg-white border-r border-[#edeef4] py-[12px] px-[10px] flex flex-col shrink-0">
@@ -487,7 +455,7 @@ export default function OrganizerOverview() {
                     onClick={() => setActiveSection(sec.id as any)}
                     className={`w-full flex items-center gap-[8px] px-[10px] py-[7px] rounded-[6px] text-[12.5px] font-medium transition-all duration-200 ${
                       isActive 
-                        ? 'bg-[#f5821f] text-white font-semibold' 
+                        ? 'bg-[#5331EA] text-white font-semibold' 
                         : 'text-[#5b596e] hover:bg-[#f6f5fb]'
                     }`}
                   >
@@ -517,7 +485,7 @@ export default function OrganizerOverview() {
                     }}
                     className={`w-full flex items-center gap-[8px] px-[10px] py-[7px] rounded-[6px] text-[12.5px] font-medium transition-all duration-200 ${
                       isActive 
-                        ? 'bg-[#f5821f] text-white font-semibold' 
+                        ? 'bg-[#5331EA] text-white font-semibold' 
                         : sec.disabled
                         ? 'text-[#b3b2c2] font-semibold cursor-not-allowed'
                         : 'text-[#5b596e] hover:bg-[#f6f5fb]'

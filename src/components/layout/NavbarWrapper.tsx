@@ -30,8 +30,7 @@ export default function NavbarWrapper() {
     }
   }, [pathname, userSession, organizerSession, activeRole, switchRole]);
 
-  const shouldHide = pathname?.startsWith('/organizer') || 
-                    pathname?.startsWith('/ticket') || 
+  const shouldHide = pathname?.startsWith('/ticket') || 
                     pathname?.startsWith('/pass') || 
                     pathname?.includes('/book') || 
                     hideOnPaths.some(path => pathname?.startsWith(path));

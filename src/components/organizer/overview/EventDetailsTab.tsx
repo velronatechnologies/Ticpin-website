@@ -1,24 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Search, 
   Plus, 
   Edit, 
   Eye, 
-  Trash2, 
-  Activity, 
-  Ticket, 
-  Layers, 
-  IndianRupee, 
-  TrendingUp, 
-  RefreshCw, 
-  PauseCircle, 
-  PlayCircle,
-  HelpCircle,
-  ArrowRightLeft,
+  ArrowRightLeft, 
+  Pause,
+  ChevronDown,
+  BarChart2,
+  Ticket,
+  Layers,
+  Tag,
+  List,
+  RefreshCw,
+  X,
   Calendar,
-  LayoutDashboard
+  Percent,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 
 interface TicketTier {
@@ -34,7 +36,8 @@ interface TicketTier {
 interface OrganizedEvent {
   id: string;
   name: string;
-  category: 'Tech Summit' | 'Play' | 'Dining';
+  category: string;
+  catType: 'Tech' | 'Sports' | 'Expo' | 'Concert';
   dateTime: string;
   year: string;
   status: 'Approved' | 'Sales Paused' | 'Completed';
@@ -43,15 +46,16 @@ interface OrganizedEvent {
   remaining: number;
   tiersCount: number;
   revenue: number;
-  imageColor: string;
+  imageBg: string;
   tiers: TicketTier[];
 }
 
-const mockEvents: OrganizedEvent[] = [
+const initialEvents: OrganizedEvent[] = [
   {
-    id: 'TechNova Summit 2026',
+    id: 'TechNova-Summit-2026',
     name: 'TechNova Summit 2026',
     category: 'Tech Summit',
+    catType: 'Tech',
     dateTime: '11 May - 3:00 PM',
     year: '2026',
     status: 'Approved',
@@ -60,17 +64,18 @@ const mockEvents: OrganizedEvent[] = [
     remaining: 3900,
     tiersCount: 3,
     revenue: 4200000,
-    imageColor: 'from-[#7c5cf0] to-[#5b3fd4]',
+    imageBg: 'bg-[#1e1b4b]', 
     tiers: [
       { name: 'Early Bird', price: 3000, capacity: 1000, sold: 1000, remaining: 0, salesProgress: 100, status: 'Sold Out' },
       { name: 'General Admission', price: 4000, capacity: 3500, sold: 100, remaining: 3400, salesProgress: 3, status: 'Low Stock' },
-      { name: 'VIP Pass', price: 6000, capacity: 500, sold: 0, remaining: 500, salesProgress: 0, status: 'Low Stock' }
+      { name: 'VIP Pass', price: 6000, capacity: 500, sold: 0, remaining: 500, salesProgress: 0, status: 'Available' }
     ]
   },
   {
-    id: '13303718',
+    id: 'Indoor-Futsal-League',
     name: 'Indoor Futsal League',
-    category: 'Play',
+    category: 'Sports Tournament',
+    catType: 'Sports',
     dateTime: '11 May - 3:30 PM',
     year: '2026',
     status: 'Approved',
@@ -79,16 +84,17 @@ const mockEvents: OrganizedEvent[] = [
     remaining: 250,
     tiersCount: 2,
     revenue: 420000,
-    imageColor: 'from-[#16c995] to-[#0f9f75]',
+    imageBg: 'bg-emerald-950',
     tiers: [
       { name: 'Regular Entry', price: 500, capacity: 800, sold: 700, remaining: 100, salesProgress: 87.5, status: 'Low Stock' },
       { name: 'Premium Seating', price: 1000, capacity: 200, sold: 50, remaining: 150, salesProgress: 25, status: 'Available' }
     ]
   },
   {
-    id: '13303189',
-    name: 'Restaurant Week Special',
-    category: 'Play',
+    id: 'Design-Expo-Workshop',
+    name: 'Design Expo & Workshop',
+    category: 'Design Exhibition',
+    catType: 'Expo',
     dateTime: '20 May - 3:30 PM',
     year: '2026',
     status: 'Sales Paused',
@@ -97,15 +103,16 @@ const mockEvents: OrganizedEvent[] = [
     remaining: 135,
     tiersCount: 1,
     revenue: 3155000,
-    imageColor: 'from-[#f5821f] to-[#d46912]',
+    imageBg: 'bg-amber-950',
     tiers: [
-      { name: 'Standard Reservation', price: 1500, capacity: 200, sold: 65, remaining: 135, salesProgress: 32.5, status: 'Available' }
+      { name: 'Standard Ticket', price: 1500, capacity: 200, sold: 65, remaining: 135, salesProgress: 32.5, status: 'Available' }
     ]
   },
   {
-    id: '13302239',
-    name: 'Restaurant Week Special',
-    category: 'Dining',
+    id: 'Music-Live-Concert',
+    name: 'Music Live Concert',
+    category: 'Concert Show',
+    catType: 'Concert',
     dateTime: '12 May - 3:30 PM',
     year: '2026',
     status: 'Completed',
@@ -114,20 +121,183 @@ const mockEvents: OrganizedEvent[] = [
     remaining: 250,
     tiersCount: 1,
     revenue: 350000,
-    imageColor: 'from-[#22c1d6] to-[#1aa0b2]',
+    imageBg: 'bg-teal-950',
     tiers: [
-      { name: 'Standard Reservation', price: 2000, capacity: 100, sold: 175, remaining: 250, salesProgress: 100, status: 'Sold Out' }
+      { name: 'Standard Entry', price: 2000, capacity: 100, sold: 175, remaining: 250, salesProgress: 100, status: 'Sold Out' }
     ]
   }
 ];
 
-export default function EventDetailsTab() {
-  const [events, setEvents] = useState<OrganizedEvent[]>(mockEvents);
-  const [selectedEventId, setSelectedEventId] = useState<string>('TechNova Summit 2026');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+interface BookingItem {
+  id: string;
+  name: string;
+  email: string;
+  tier: string;
+  qty: number;
+  amount: number;
+  date: string;
+  dateIso: string; 
+  time: string;
+  status: 'Paid' | 'Pending' | 'Refunded' | 'Cancelled' | 'Expired';
+  imageBg: string;
+  cancelReason?: string;
+  refundAmount?: number;
+  refundId?: string;
+}
 
-  const selectedEvent = events.find(e => e.id === selectedEventId) || events[0];
+// Generate 100 deterministic mock bookings for an event
+const generateMockBookings = (eventId: string, count: number): BookingItem[] => {
+  const firstNames = ['John', 'Jane', 'Michael', 'Emily', 'David', 'Sarah', 'James', 'Jessica', 'Robert', 'Karen', 'William', 'Ashley', 'Joseph', 'Amanda', 'Thomas', 'Megan', 'Charles', 'Stephanie', 'Christopher', 'Rachel', 'Oliver', 'Sophia', 'Daniel', 'Isabella', 'Matthew', 'Mia', 'Andrew', 'Evelyn', 'Joshua', 'Harper'];
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson'];
+  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'unsysdigital.com', 'corp.ticpin.in', 'academic.edu'];
+  
+  let tiers: string[] = [];
+  if (eventId === 'TechNova-Summit-2026') {
+    tiers = ['VIP Pass', 'Early Bird', 'General Admission'];
+  } else if (eventId === 'Indoor-Futsal-League') {
+    tiers = ['Regular Entry', 'Premium Seating'];
+  } else if (eventId === 'Design-Expo-Workshop') {
+    tiers = ['Standard Ticket'];
+  } else {
+    tiers = ['Standard Entry'];
+  }
+
+  const list: BookingItem[] = [];
+  const baseDate = new Date('2026-06-21');
+
+  for (let i = 1; i <= count; i++) {
+    const fn = firstNames[i % firstNames.length];
+    const ln = lastNames[(i * 7) % lastNames.length];
+    const name = `${fn} ${ln}`;
+    const email = `${fn.toLowerCase()}.${ln.toLowerCase()}@${domains[i % domains.length]}`;
+    const tier = tiers[i % tiers.length];
+    
+    let price = 1000;
+    if (tier === 'VIP Pass') price = 6000;
+    else if (tier === 'Early Bird') price = 3000;
+    else if (tier === 'General Admission') price = 4000;
+    else if (tier === 'Regular Entry') price = 500;
+    else if (tier === 'Premium Seating') price = 1000;
+    else if (tier === 'Standard Ticket') price = 1500;
+    else if (tier === 'Standard Entry') price = 2000;
+
+    const qty = (i % 7 === 0) ? 2 : 1;
+    const amount = price * qty;
+    
+    // Spread dates: index 1-10 are Yesterday, 11-30 are Previous 3 Days, 31-60 are Last Week, rest older
+    let dateOffset = 0;
+    if (i <= 12) {
+      dateOffset = 1; // Yesterday (Jun 20)
+    } else if (i <= 35) {
+      dateOffset = 2 + (i % 2); // Jun 19 or Jun 18 (Previous 3 days)
+    } else if (i <= 70) {
+      dateOffset = 4 + (i % 3); // Jun 17 - Jun 15 (Last Week)
+    } else {
+      dateOffset = 8 + (i % 7); // Older
+    }
+
+    const itemDate = new Date(baseDate);
+    itemDate.setDate(baseDate.getDate() - dateOffset);
+    itemDate.setHours(9 + (i % 12), (i * 13) % 60, 0);
+    
+    const dateIso = itemDate.toISOString().split('T')[0];
+    const dateStr = itemDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const timeStr = itemDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let status: 'Paid' | 'Pending' | 'Refunded' | 'Cancelled' | 'Expired' = 'Paid';
+    let cancelReason = '';
+    let refundAmount = 0;
+    let refundId = '';
+
+    if (i % 15 === 0) {
+      status = 'Cancelled';
+      cancelReason = 'User requested cancellation due to personal scheduling conflict.';
+      refundAmount = amount;
+      refundId = `RFD${9000 + i}`;
+    } else if (i % 22 === 0) {
+      status = 'Refunded';
+      cancelReason = 'Double booking occurred; duplicate ticket fee was auto-refunded.';
+      refundAmount = amount;
+      refundId = `RFD${9500 + i}`;
+    } else if (i % 28 === 0) {
+      status = 'Expired';
+      cancelReason = 'Payment link session timed out prior to bank confirmation.';
+      refundAmount = 0;
+      refundId = '';
+    } else if (i % 35 === 0) {
+      status = 'Pending';
+    }
+
+    const bgColors = ['bg-[#a78bfa]', 'bg-[#f472b6]', 'bg-[#60a5fa]', 'bg-[#fb7185]', 'bg-emerald-400', 'bg-amber-400', 'bg-teal-400'];
+    const imageBg = bgColors[i % bgColors.length];
+
+    list.push({
+      id: `ATN${7000 + i}`,
+      name,
+      email,
+      tier,
+      qty,
+      amount,
+      date: dateStr,
+      dateIso,
+      time: timeStr,
+      status,
+      imageBg,
+      cancelReason,
+      refundAmount,
+      refundId
+    });
+  }
+  return list;
+};
+
+// Generate dictionary containing 100 data records for each event
+const allMockBookings: Record<string, BookingItem[]> = {
+  'TechNova-Summit-2026': generateMockBookings('TechNova-Summit-2026', 100),
+  'Indoor-Futsal-League': generateMockBookings('Indoor-Futsal-League', 100),
+  'Design-Expo-Workshop': generateMockBookings('Design-Expo-Workshop', 100),
+  'Music-Live-Concert': generateMockBookings('Music-Live-Concert', 100)
+};
+
+export default function EventDetailsTab() {
+  const router = useRouter();
+
+  const [events, setEvents] = useState<OrganizedEvent[]>(initialEvents);
+  const [selectedEventId, setSelectedEventId] = useState<string>('TechNova-Summit-2026');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Details Toggle Accordion State
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(true);
+  
+  // Category Multi-select Filter
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['Tech', 'Sports', 'Expo', 'Concert']);
+  
+  // Guest Directory Filter States
+  const [bookingSearch, setBookingSearch] = useState<string>('');
+  const [selectedTierFilter, setSelectedTierFilter] = useState<string>('All');
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('All');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('All');
+  const [customFromDate, setCustomFromDate] = useState<string>('2026-06-15');
+  const [customToDate, setCustomToDate] = useState<string>('2026-06-21');
+  
+  // Row pagination limits (default 10)
+  const [bookingLimit, setBookingLimit] = useState<number>(10);
+  const [guestPage, setGuestPage] = useState<number>(1);
+
+  // Active ticket modal
+  const [activeTicketBooking, setActiveTicketBooking] = useState<BookingItem | null>(null);
+
+  // Toast state
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const triggerNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => {
+      setNotification(null);
+    }, 3000);
+  };
+
+  const selectedEvent = events.find(e => e.id === selectedEventId) || events[0] || initialEvents[0];
 
   const handleToggleStatus = (eventId: string, tierIndex: number) => {
     setEvents(prev => prev.map(evt => {
@@ -137,357 +307,797 @@ export default function EventDetailsTab() {
       tier.status = tier.status === 'Sold Out' ? 'Available' : 'Sold Out';
       return { ...evt, tiers: updatedTiers };
     }));
+    triggerNotification('Ticket category status toggled.');
   };
 
+  const handlePauseTier = (eventId: string, tierIndex: number) => {
+    setEvents(prev => prev.map(evt => {
+      if (evt.id !== eventId) return evt;
+      const updatedTiers = [...evt.tiers];
+      const tier = updatedTiers[tierIndex];
+      tier.status = tier.status === 'Available' || tier.status === 'Low Stock' ? 'Sold Out' : 'Available';
+      return { ...evt, tiers: updatedTiers };
+    }));
+    triggerNotification('Tier ticket sales paused / resumed.');
+  };
+
+  const handleToggleCategory = (cat: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const handleEyeIconClick = (eventId: string) => {
+    if (selectedEventId === eventId) {
+      setIsDetailsOpen(prev => !prev);
+    } else {
+      setSelectedEventId(eventId);
+      setIsDetailsOpen(true);
+      setSelectedTierFilter('All');
+      setGuestPage(1); // Reset guest page on change
+    }
+  };
+
+  // Reset guest page index whenever any filter selection changes
+  useEffect(() => {
+    setGuestPage(1);
+  }, [bookingSearch, selectedTierFilter, selectedDateFilter, selectedStatusFilter, customFromDate, customToDate, bookingLimit, selectedEventId]);
+
+  // Event list filters
   const filteredEvents = events.filter(evt => {
-    const matchesCategory = selectedCategory === 'all' || evt.category === selectedCategory;
     const matchesSearch = evt.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           evt.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesCategory = selectedCategories.includes(evt.catType);
+    return matchesSearch && matchesCategory;
   });
 
+  // Relative Date Calculations (Reference Date: 2026-06-21)
+  const filterByDate = (b: BookingItem) => {
+    if (selectedDateFilter === 'All') return true;
+    
+    const itemDate = new Date(b.dateIso);
+    const targetDate = new Date('2026-06-21');
+    
+    if (selectedDateFilter === 'Yesterday') {
+      return b.dateIso === '2026-06-20';
+    }
+    
+    if (selectedDateFilter === 'Prev3Days') {
+      const diffTime = targetDate.getTime() - itemDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 1 && diffDays <= 3;
+    }
+    
+    if (selectedDateFilter === 'LastWeek') {
+      const diffTime = targetDate.getTime() - itemDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 1 && diffDays <= 7;
+    }
+
+    if (selectedDateFilter === 'Custom') {
+      const from = new Date(customFromDate);
+      const to = new Date(customToDate);
+      return itemDate >= from && itemDate <= to;
+    }
+
+    return true;
+  };
+
+  // Guest Filtering is processed across the entire 100 record array first
+  const eventBookings = allMockBookings[selectedEvent.id] || [];
+  const filteredBookings = eventBookings
+    .filter(b => {
+      const matchesText = b.name.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+                          b.id.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+                          b.email.toLowerCase().includes(bookingSearch.toLowerCase());
+      const matchesTier = selectedTierFilter === 'All' ? true : b.tier === selectedTierFilter;
+      const matchesDate = filterByDate(b);
+      const matchesStatus = selectedStatusFilter === 'All' ? true : b.status === selectedStatusFilter;
+      return matchesText && matchesTier && matchesDate && matchesStatus;
+    });
+
+  // Guest Directory Page Slices (Dynamic Pagination)
+  const totalPages = Math.ceil(filteredBookings.length / bookingLimit) || 1;
+  const startIndex = (guestPage - 1) * bookingLimit;
+  const visibleBookings = filteredBookings.slice(startIndex, startIndex + bookingLimit);
+
+  // Financial Stats & Booking totals based on the filtered selection
+  const totalBookingsCount = filteredBookings.length;
+  const totalTicketsQty = filteredBookings.reduce((sum, b) => sum + b.qty, 0);
+  
+  // Total Subtotal (Ticket gross cost paid by customers)
+  const totalAmountCollected = filteredBookings.reduce((sum, b) => sum + b.amount, 0);
+
+  // Ticpin Platform Calculations (6% Booking Fee standard, plus 18% GST on that booking fee)
+  const ticpinFee = Math.round(totalAmountCollected * 0.06);
+  const gstOnPlatformFee = Math.round(ticpinFee * 0.18);
+  const totalTicpinRevenueCollected = ticpinFee + gstOnPlatformFee;
+  
+  // Organizer Net Revenue (Base Ticket Revenue)
+  const organizerRevenue = totalAmountCollected;
+
+  // Grand Total paid by customers (Base amount + Ticpin booking fee)
+  const grandTotalPaidByCustomers = totalAmountCollected + ticpinFee;
+
   return (
-    <div className="space-y-[12px] animate-fadeIn text-[#1c1525] font-sans pb-2">
+    <div className="space-y-6 text-black pb-6 p-6 rounded-[15px] bg-[#D3CBF5]/10" style={{ fontFamily: 'var(--font-anek-latin), var(--font-inter), sans-serif' }}>
       
-      {/* 1. Organized Events List Card */}
-      <div className="bg-white rounded-[12px] p-[14px_16px] shadow-[0_1px_5px_rgba(20,20,50,0.03)] border border-gray-100/60">
-        
-        {/* List Header controls */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-3">
-          <div className="flex items-center gap-6">
-            <h2 className="text-[15px] font-bold text-[#1c1525]">Organized Events List</h2>
-            
-            {/* Filter by Category Selector */}
-            <div className="flex items-center gap-1 text-[11.5px] text-[#8a8a9a] font-semibold">
-              <span className="mr-1">Filter by Category:</span>
-              <button 
-                onClick={() => setSelectedCategory('all')}
-                className={`px-[8px] py-[3px] rounded-[4px] border ${selectedCategory === 'all' ? 'bg-[#5b3fd4] border-[#5b3fd4] text-white' : 'bg-[#f8f9fb] border-[#edeef4] text-[#1c1525]'} transition-all`}
-              >
-                All
-              </button>
-              <button 
-                onClick={() => setSelectedCategory('Tech Summit')}
-                className={`px-[8px] py-[3px] rounded-[4px] border ${selectedCategory === 'Tech Summit' ? 'bg-[#5b3fd4] border-[#5b3fd4] text-white' : 'bg-[#f8f9fb] border-[#edeef4] text-[#1c1525]'} transition-all`}
-              >
-                Tech Summit
-              </button>
-              <button 
-                onClick={() => setSelectedCategory('Play')}
-                className={`px-[8px] py-[3px] rounded-[4px] border ${selectedCategory === 'Play' ? 'bg-[#5b3fd4] border-[#5b3fd4] text-white' : 'bg-[#f8f9fb] border-[#edeef4] text-[#1c1525]'} transition-all`}
-              >
-                Play
-              </button>
-              <button 
-                onClick={() => setSelectedCategory('Dining')}
-                className={`px-[8px] py-[3px] rounded-[4px] border ${selectedCategory === 'Dining' ? 'bg-[#5b3fd4] border-[#5b3fd4] text-white' : 'bg-[#f8f9fb] border-[#edeef4] text-[#1c1525]'} transition-all`}
-              >
-                Dining
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-[10px] w-full md:w-auto">
-            {/* Search inputs */}
-            <div className="relative flex-1 md:flex-none">
-              <input
-                type="text"
-                placeholder="Search events by name or ID"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full md:w-[240px] h-[34px] pl-8 pr-3 text-[12px] bg-white border border-[#edeef4] rounded-[8px] focus:outline-none focus:border-[#5b3fd4] text-[#1c1525]"
-              />
-              <Search size={13} className="absolute left-2.5 top-2.5 text-[#8a8a9a]" />
-            </div>
-
-            {/* Create button */}
-            <button className="h-[34px] px-3.5 bg-[#5b3fd4] hover:bg-[#4d32b5] text-white text-[12px] font-semibold rounded-[8px] flex items-center gap-1.5 transition-colors">
-              <Plus size={14} />
-              <span>Create New Event</span>
-            </button>
-          </div>
+      {/* Toast Alert popup */}
+      {notification && (
+        <div className="fixed top-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-lg shadow-2xl z-50 flex items-center gap-2 border border-slate-700 animate-fadeIn">
+          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>{notification}</span>
         </div>
+      )}
 
-        {/* Events Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-[11.5px] border-collapse">
-            <thead>
-              <tr className="bg-[#f8f9fb] border-b border-[#edeef4] text-[#8a8a9a] font-semibold text-[10.5px]">
-                <th className="py-[6px] px-[8px] text-left rounded-l-[4px]">Event Name</th>
-                <th className="py-[6px] px-[8px] text-left">Category</th>
-                <th className="py-[6px] px-[8px] text-left">Date & Time</th>
-                <th className="py-[6px] px-[8px] text-center">Status</th>
-                <th className="py-[6px] px-[8px] text-center">Overall Capacity</th>
-                <th className="py-[6px] px-[8px] text-center">Overall Sold</th>
-                <th className="py-[6px] px-[8px] text-center">Remaining Tickets</th>
-                <th className="py-[6px] px-[8px] text-center">TicketCategories</th>
-                <th className="py-[6px] px-[8px] text-right">Revenue (₹)</th>
-                <th className="py-[6px] px-[8px] text-center rounded-r-[4px] w-[140px]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#edeef4] text-[#1c1525]">
-              {filteredEvents.map((evt) => {
-                const isSelected = evt.id === selectedEventId;
+
+
+      {/* Accordion Panels for Tiers & Guests */}
+      {isDetailsOpen && (
+        <div className="space-y-6 animate-fadeIn">
+          
+          {/* Detailed Ticket Tier Breakdown */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">
+              Detailed Ticket Tier Breakdown & Logistics: {selectedEvent.name}
+            </h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              
+              {/* Left Card: Overall Metrics */}
+              <div className="bg-white rounded-[15px] p-6 border border-[#AEAEAE] shadow-sm flex flex-col justify-between">
+                <div>
+                  <h4 className="text-[13.5px] font-black text-black mb-4">Overall Metrics for {selectedEvent.name.split(' ')[0]}</h4>
+                  
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-[30px] h-[30px] bg-[#D3CBF5]/30 text-[#5331EA] rounded-lg flex items-center justify-center shrink-0 border border-[#AC9BF7]">
+                        <BarChart2 size={14} />
+                      </div>
+                      <div>
+                        <span className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Total Capacity</span>
+                        <span className="text-[13px] font-extrabold text-slate-900">{selectedEvent.capacity}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-[30px] h-[30px] bg-slate-50 rounded-lg flex items-center justify-center shrink-0 border border-slate-200 relative">
+                        <svg className="w-6 h-6 transform -rotate-90">
+                          <circle cx="12" cy="12" r="8" stroke="#e5e7eb" strokeWidth="2" fill="transparent" />
+                          <circle cx="12" cy="12" r="8" stroke="#5331EA" strokeWidth="2" fill="transparent" strokeDasharray={50} strokeDashoffset={11} />
+                        </svg>
+                        <span className="absolute text-[7.5px] font-extrabold text-[#5331EA]">%</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Overall Remaining</span>
+                        <span className="text-[13px] font-extrabold text-slate-900">{selectedEvent.remaining}</span>
+                        <span className="block text-[8.5px] text-slate-500 font-semibold mt-0.5">({Math.round((selectedEvent.remaining / (selectedEvent.capacity || 1)) * 100)}% remaining)</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-[30px] h-[30px] bg-[#D3CBF5]/30 text-[#5331EA] rounded-lg flex items-center justify-center shrink-0 border border-[#AC9BF7]">
+                        <Ticket size={14} />
+                      </div>
+                      <div>
+                        <span className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Overall Sold</span>
+                        <span className="text-[13px] font-extrabold text-slate-900">{selectedEvent.sold}</span>
+                        <span className="block text-[8.5px] text-slate-500 font-semibold mt-0.5">({Math.round((selectedEvent.sold / (selectedEvent.capacity || 1)) * 100)}% sold)</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-[30px] h-[30px] bg-[#D3CBF5]/30 text-[#5331EA] rounded-lg flex items-center justify-center shrink-0 border border-[#AC9BF7]">
+                        <Tag size={14} />
+                      </div>
+                      <div>
+                        <span className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Avg Ticket Price</span>
+                        <span className="text-[13px] font-extrabold text-slate-900">
+                          ₹{Math.round(selectedEvent.revenue / (selectedEvent.sold || 1)).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-[30px] h-[30px] bg-[#D3CBF5]/30 text-[#5331EA] rounded-lg flex items-center justify-center shrink-0 border border-[#AC9BF7]">
+                        <Layers size={14} />
+                      </div>
+                      <div>
+                        <span className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Available Tiers</span>
+                        <span className="text-[13px] font-extrabold text-slate-900">{selectedEvent.tiersCount}</span>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-4 pt-3 border-t border-[#AEAEAE]">
+                  <div className="flex justify-between text-[10px] text-slate-400 mb-1.5 font-bold uppercase tracking-wider">
+                    <span>Overall Sales Pace</span>
+                    <span>{Math.round((selectedEvent.sold / (selectedEvent.capacity || 1)) * 100)}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#5331EA] rounded-full transition-all duration-300"
+                      style={{ width: `${(selectedEvent.sold / (selectedEvent.capacity || 1)) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Card: Event Ticket Tiers detailed breakdown */}
+              <div className="lg:col-span-2 bg-white rounded-[15px] p-6 border border-[#AEAEAE] shadow-sm">
+                <h4 className="text-[13.5px] font-black text-black mb-4">Event Ticket Tiers Detailed Breakdown</h4>
                 
-                // Solid pill colors from design mockup
-                let statusBg = 'bg-[#7c5cf0]';
-                let statusText = 'Approved-Purple';
-                if (evt.status === 'Sales Paused') {
-                  statusBg = 'bg-[#f5821f]';
-                  statusText = 'Sales Paused Orange';
-                } else if (evt.status === 'Completed') {
-                  statusBg = 'bg-[#16c995]';
-                  statusText = 'Completed Green';
-                }
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/60 border-b border-[#AEAEAE] text-slate-500 font-semibold text-[10px] uppercase tracking-wider">
+                        <th className="py-2.5 px-3 rounded-l-md">Tier Name</th>
+                        <th className="py-2.5 px-3">Price (₹)</th>
+                        <th className="py-2.5 px-3 text-center">Capacity</th>
+                        <th className="py-2.5 px-3 text-center">Sold</th>
+                        <th className="py-2.5 px-3 text-center">Remaining</th>
+                        <th className="py-2.5 px-3 text-left">Sales Progress</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3 text-center rounded-r-md w-[80px]">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#AEAEAE] text-slate-800">
+                      {selectedEvent.tiers.map((tier, idx) => {
+                        let statusColor = 'bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30'; 
+                        if (tier.status === 'Sold Out') statusColor = 'bg-[#ED4D1B]/10 text-[#ED4D1B] border border-[#ED4D1B]/30';
+                        else if (tier.status === 'Available') statusColor = 'bg-[#0AC655]/10 text-[#0AC655] border border-[#0AC655]/30';
 
-                // Category pill color
-                let catBg = 'bg-[#ece6fb] text-[#7c5cf0]';
-                if (evt.category === 'Play') catBg = 'bg-[#e3f9f1] text-[#16c995]';
-                if (evt.category === 'Dining') catBg = 'bg-[#fdecd9] text-[#f5821f]';
-
-                return (
-                  <tr 
-                    key={evt.id} 
-                    className={`hover:bg-zinc-50/60 transition-colors cursor-pointer ${isSelected ? 'bg-zinc-50' : ''}`}
-                    onClick={() => setSelectedEventId(evt.id)}
-                  >
-                    <td className="py-[7px] px-[8px] font-semibold text-[#1c1525]">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-[28px] h-[28px] rounded-[6px] bg-gradient-to-tr ${evt.imageColor} shrink-0 flex items-center justify-center text-white text-[10px] font-bold`}>
-                          TIC
-                        </div>
-                        <div>
-                          <div className="line-clamp-1">{evt.name}</div>
-                          <div className="text-[9.5px] text-[#8a8a9a] font-normal mt-[1px]">ID: {evt.id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-[7px] px-[8px]">
-                      <span className={`inline-block px-[6px] py-[2.5px] rounded-[4px] text-[10px] font-semibold ${catBg}`}>
-                        {evt.category}
-                      </span>
-                    </td>
-                    <td className="py-[7px] px-[8px] text-[#5b596e]">
-                      <div>{evt.dateTime}</div>
-                      <div className="text-[10px] text-[#8a8a9a]">Date - {evt.year}</div>
-                    </td>
-                    <td className="py-[7px] px-[8px] text-center">
-                      <span className={`inline-block px-[6px] py-[2.5px] rounded-[4px] text-[9.5px] font-bold text-white ${statusBg}`}>
-                        {statusText}
-                      </span>
-                    </td>
-                    <td className="py-[7px] px-[8px] text-center font-medium">{evt.capacity}</td>
-                    <td className="py-[7px] px-[8px] text-center font-medium">{evt.sold}</td>
-                    <td className="py-[7px] px-[8px] text-center font-medium">{evt.remaining}</td>
-                    <td className="py-[7px] px-[8px] text-center font-medium">{evt.tiersCount}</td>
-                    <td className="py-[7px] px-[8px] text-right font-bold">₹{evt.revenue.toLocaleString()}</td>
-                    <td className="py-[7px] px-[8px]" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button className="p-1 text-zinc-500 hover:text-blue-500 hover:bg-zinc-100 rounded-md border border-[#edeef4] transition-colors" title="Edit Event">
-                          <Edit size={12} />
-                        </button>
-                        <button 
-                          onClick={() => setSelectedEventId(evt.id)}
-                          className={`p-1 rounded-md border border-[#edeef4] transition-colors ${isSelected ? 'text-[#5b3fd4] bg-zinc-100' : 'text-zinc-500 hover:text-[#5b3fd4] hover:bg-zinc-100'}`}
-                          title="View Details"
-                        >
-                          <Eye size={12} />
-                        </button>
-                        <button className="p-1 text-zinc-500 hover:text-red-500 hover:bg-zinc-100 rounded-md border border-[#edeef4] transition-colors" title="Delete Event">
-                          <Trash2 size={12} />
-                        </button>
-                        <button 
-                          onClick={() => setSelectedEventId(evt.id)}
-                          className="h-[22px] px-1.5 bg-[#f8f9fb] border border-[#edeef4] text-[10px] text-zinc-600 font-semibold hover:bg-zinc-100 hover:text-black rounded-md flex items-center gap-1 transition-all"
-                        >
-                          <ArrowRightLeft size={10} />
-                          <span>Details View</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex justify-end items-center gap-1.5 mt-3 pt-2 border-t border-[#edeef4] text-[11px] text-[#8a8a9a]">
-          <button className="px-2.5 py-1 hover:bg-zinc-100 rounded-[4px] border border-[#edeef4] font-semibold text-[#1c1525]">Previous</button>
-          <button className="w-[22px] h-[22px] bg-[#5b3fd4] text-white rounded-[4px] font-bold flex items-center justify-center">1</button>
-          <button className="w-[22px] h-[22px] hover:bg-zinc-100 text-[#1c1525] rounded-[4px] border border-[#edeef4] flex items-center justify-center">2</button>
-          <button className="w-[22px] h-[22px] hover:bg-zinc-100 text-[#1c1525] rounded-[4px] border border-[#edeef4] flex items-center justify-center">3</button>
-          <span className="px-1 text-[#8a8a9a]">...</span>
-          <button className="px-2.5 py-1 hover:bg-zinc-100 rounded-[4px] border border-[#edeef4] font-semibold text-[#1c1525]">Next</button>
-        </div>
-
-      </div>
-
-      {/* 2. Detailed Ticket Tier Breakdown Card */}
-      <div>
-        <h3 className="text-[13px] font-bold text-[#8a8a9a] mb-2 uppercase tracking-wide">
-          Detailed Ticket Tier Breakdown & Logistics: {selectedEvent.name}
-        </h3>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
-          {/* Left card: Overall Metrics for Event */}
-          <div className="bg-white rounded-[12px] p-[14px_16px] shadow-[0_1px_5px_rgba(20,20,50,0.03)] border border-gray-100/60 flex flex-col justify-between">
-            <h4 className="text-[13px] font-bold text-[#1c1525] mb-2.5">Overall Metrics for {selectedEvent.name.split(' ')[0]}</h4>
-            
-            <div className="space-y-[10px] flex-1">
-              {/* Metric 1 */}
-              <div className="flex items-center justify-between py-[4px] border-b border-[#edeef4] last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-[26px] h-[26px] bg-[#eae6fd] text-[#7c5cf0] rounded-[6px] flex items-center justify-center">
-                    <Layers size={13} />
-                  </div>
-                  <span className="text-[11.5px] text-[#8a8a9a]">Total Capacity</span>
-                </div>
-                <span className="text-[13px] font-bold text-[#1c1525]">{selectedEvent.capacity}</span>
-              </div>
-
-              {/* Metric 2 */}
-              <div className="flex items-center justify-between py-[4px] border-b border-[#edeef4] last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-[26px] h-[26px] bg-[#ece6fb] text-[#8a4fe0] rounded-[6px] flex items-center justify-center">
-                    <Ticket size={13} />
-                  </div>
-                  <span className="text-[11.5px] text-[#8a8a9a]">Overall Sold</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[13px] font-bold text-[#1c1525] block">{selectedEvent.sold}</span>
-                  <span className="text-[9.5px] text-[#8a8a9a]">({Math.round((selectedEvent.sold / selectedEvent.capacity) * 100)}% of capacity)</span>
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/40 transition-colors">
+                            <td className="py-3 px-3 font-bold text-slate-900">{tier.name}</td>
+                            <td className="py-3 px-3 font-extrabold text-slate-900">₹{tier.price.toLocaleString()}</td>
+                            <td className="py-3 px-3 text-center font-semibold">{tier.capacity}</td>
+                            <td className="py-3 px-3 text-center font-semibold">{tier.sold}</td>
+                            <td className="py-3 px-3 text-center font-semibold">{tier.remaining}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-1.5 w-[110px]">
+                                <div className="w-[60px] h-1.5 bg-slate-100 rounded-full overflow-hidden shrink-0 border border-slate-200/50">
+                                  <div 
+                                    className="h-full bg-[#5331EA] rounded-full" 
+                                    style={{ width: `${tier.salesProgress}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-[10px] text-slate-500 font-bold">{tier.salesProgress}%</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded-md text-[9.5px] font-bold ${statusColor}`}>
+                                {tier.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button 
+                                  onClick={() => handleToggleStatus(selectedEvent.id, idx)}
+                                  className="p-1 text-slate-500 hover:text-[#5331EA] hover:bg-slate-100 rounded border border-[#AEAEAE] transition-colors"
+                                  title="Swap / Toggle status"
+                                >
+                                  <ArrowRightLeft size={11} />
+                                </button>
+                                <button 
+                                  onClick={() => handlePauseTier(selectedEvent.id, idx)}
+                                  className="p-1 text-slate-500 hover:text-amber-500 hover:bg-slate-100 rounded border border-[#AEAEAE] transition-colors"
+                                  title="Pause Tier Sales"
+                                >
+                                  <Pause size={11} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Metric 3 */}
-              <div className="flex items-center justify-between py-[4px] border-b border-[#edeef4] last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-[26px] h-[26px] bg-[#fdecd9] text-[#f5821f] rounded-[6px] flex items-center justify-center">
-                    <TrendingUp size={13} />
-                  </div>
-                  <span className="text-[11.5px] text-[#8a8a9a]">Overall Remaining</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[13px] font-bold text-[#1c1525] block">{selectedEvent.remaining}</span>
-                  <span className="text-[9.5px] text-[#8a8a9a]">({Math.round((selectedEvent.remaining / selectedEvent.capacity) * 100)}% remaining)</span>
-                </div>
-              </div>
+            </div>
+          </div>
 
-              {/* Metric 4 */}
-              <div className="flex items-center justify-between py-[4px] border-b border-[#edeef4] last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-[26px] h-[26px] bg-[#e3f9f1] text-[#16c995] rounded-[6px] flex items-center justify-center">
-                    <Layers size={13} />
-                  </div>
-                  <span className="text-[11.5px] text-[#8a8a9a]">Available Tiers</span>
-                </div>
-                <span className="text-[13px] font-bold text-[#1c1525]">{selectedEvent.tiersCount}</span>
-              </div>
-
-              {/* Metric 5 */}
-              <div className="flex items-center justify-between py-[4px] border-b border-[#edeef4] last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-[26px] h-[26px] bg-zinc-100 text-zinc-700 rounded-[6px] flex items-center justify-center">
-                    <IndianRupee size={13} />
-                  </div>
-                  <span className="text-[11.5px] text-[#8a8a9a]">Average Ticket Price (Overall)</span>
-                </div>
-                <span className="text-[13px] font-bold text-[#1c1525]">
-                  ₹{Math.round(selectedEvent.revenue / (selectedEvent.sold || 1)).toLocaleString()}
-                </span>
-              </div>
+          {/* Pricing & GST breakdown summary - Light Theme */}
+          <div className="bg-white rounded-[15px] p-6 border border-[#AEAEAE] shadow-sm text-slate-800">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp size={16} className="text-[#5331EA]" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Financial Split & Platform Fee Breakdown (Gated Booking Data)
+              </h3>
             </div>
 
-            {/* Sales Pace Progress bar */}
-            <div className="mt-3 pt-2 border-t border-[#edeef4]">
-              <div className="flex justify-between text-[10.5px] text-[#8a8a9a] mb-1 font-semibold">
-                <span>Overall Sales Pace</span>
-                <span>{Math.round((selectedEvent.sold / selectedEvent.capacity) * 100)}%</span>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {/* Financial Box 1 */}
+              <div className="bg-slate-50/80 p-3 rounded-lg border border-[#AEAEAE]">
+                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base Ticket Sales</span>
+                <span className="text-[17px] font-extrabold block mt-0.5 text-slate-900">₹{totalAmountCollected.toLocaleString()}</span>
+                <span className="text-[8px] text-slate-500 block mt-1">Ticket Subtotal before fees</span>
               </div>
-              <div className="w-full h-[6px] bg-zinc-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#7c5cf0] rounded-full transition-all duration-300"
-                  style={{ width: `${(selectedEvent.sold / selectedEvent.capacity) * 100}%` }}
-                ></div>
+              {/* Financial Box 2 */}
+              <div className="bg-[#D3CBF5]/20 p-3 rounded-lg border border-[#AC9BF7]/60 relative overflow-hidden">
+                <div className="absolute right-1 bottom-1 text-[#5331EA]/10 font-black text-2xl select-none">6%</div>
+                <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ticpin Booking Fee</span>
+                <span className="text-[17px] font-extrabold block mt-0.5 text-[#5331EA]">₹{ticpinFee.toLocaleString()}</span>
+                <span className="text-[8px] text-slate-400 block mt-1">6% Standard commission fee</span>
+              </div>
+              {/* Financial Box 3 */}
+              <div className="bg-[#D3CBF5]/20 p-3 rounded-lg border border-[#AC9BF7]/60 relative overflow-hidden">
+                <div className="absolute right-1 bottom-1 text-[#5331EA]/10 font-black text-2xl select-none">18%</div>
+                <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Platform GST</span>
+                <span className="text-[17px] font-extrabold block mt-0.5 text-[#5331EA]">₹{gstOnPlatformFee.toLocaleString()}</span>
+                <span className="text-[8px] text-slate-400 block mt-1">18% CGST/SGST on platform fee</span>
+              </div>
+              {/* Financial Box 4 */}
+              <div className="bg-[#D3CBF5]/35 p-3 rounded-lg border border-[#AC9BF7] relative overflow-hidden">
+                <span className="block text-[9px] font-bold text-[#5331EA] uppercase tracking-widest">Ticpin Net Revenue</span>
+                <span className="text-[17px] font-extrabold block mt-0.5 text-[#5331EA]">₹{totalTicpinRevenueCollected.toLocaleString()}</span>
+                <span className="text-[8px] text-slate-500 block mt-1">Platform Fee + GST collected</span>
+              </div>
+              {/* Financial Box 5 */}
+              <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
+                <span className="block text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Organizer Net Payout</span>
+                <span className="text-[17px] font-extrabold block mt-0.5 text-emerald-600">₹{organizerRevenue.toLocaleString()}</span>
+                <span className="text-[8px] text-emerald-500 block mt-1">100% Base Ticket Sales to Bank</span>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-3 border-t border-[#AEAEAE] flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] text-slate-400 gap-2">
+              <div>
+                * Total amount charged to customers = Ticket subtotal (₹{totalAmountCollected.toLocaleString()}) + Ticpin booking fee (₹{ticpinFee.toLocaleString()}) = <span className="text-slate-800 font-extrabold">₹{grandTotalPaidByCustomers.toLocaleString()}</span>
+              </div>
+              <div className="text-slate-400 font-bold uppercase tracking-wider">
+                Matches /postgresbackend/controller/booking/event.go:L253
               </div>
             </div>
           </div>
 
-          {/* Right card: Ticket Tiers Detailed Breakdown Table */}
-          <div className="lg:col-span-2 bg-white rounded-[12px] p-[14px_16px] shadow-[0_1px_5px_rgba(20,20,50,0.03)] border border-gray-100/60 flex flex-col justify-between">
-            <h4 className="text-[13px] font-bold text-[#1c1525] mb-2.5">Event Ticket Tiers Detailed Breakdown</h4>
+          {/* Guest Directory & Booking Breakdown */}
+          <div className="bg-white rounded-[15px] p-6 border border-[#AEAEAE] shadow-sm space-y-4">
             
-            <div className="flex-1 overflow-x-auto">
-              <table className="w-full text-[11.5px] border-collapse">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <h3 className="text-[14px] font-black text-black">
+                  Guest Directory & Booking Breakdown: {selectedEvent.name}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider">
+                  List of users who purchased tickets for this event (Total Records: {filteredBookings.length})
+                </p>
+              </div>
+              <div className="text-[10px] text-slate-500 font-black uppercase bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+                Page {guestPage} of {totalPages}
+              </div>
+            </div>
+
+            {/* Filter controls panel */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 p-3 bg-slate-50 border border-[#AEAEAE] rounded-[15px] text-xs">
+              
+              {/* Search input - triggers complete filter scan */}
+              <div className="space-y-1">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Search Guests</span>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search name, ID..."
+                    value={bookingSearch}
+                    onChange={(e) => setBookingSearch(e.target.value)}
+                    className="w-full h-8 pl-8 pr-2 bg-white border border-[#AEAEAE] rounded-lg text-xs outline-none focus:border-[#5331EA] text-slate-800 font-semibold"
+                  />
+                  <Search size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
+                </div>
+              </div>
+
+              {/* Ticket category dropdown filter */}
+              <div className="space-y-1">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ticket Category</span>
+                <select
+                  value={selectedTierFilter}
+                  onChange={(e) => setSelectedTierFilter(e.target.value)}
+                  className="w-full h-8 px-2 bg-white border border-[#AEAEAE] rounded-lg text-xs outline-none focus:border-[#5331EA] font-semibold text-slate-700"
+                >
+                  <option value="All">All Tiers</option>
+                  {selectedEvent.tiers.map((t, idx) => (
+                    <option key={idx} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Booking status dropdown filter */}
+              <div className="space-y-1">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Booking Status</span>
+                <select
+                  value={selectedStatusFilter}
+                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                  className="w-full h-8 px-2 bg-white border border-[#AEAEAE] rounded-lg text-xs outline-none focus:border-[#5331EA] font-semibold text-slate-700"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Refunded">Refunded</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
+
+              {/* Date Filter Selection */}
+              <div className="space-y-1">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date Period</span>
+                <select
+                  value={selectedDateFilter}
+                  onChange={(e) => setSelectedDateFilter(e.target.value)}
+                  className="w-full h-8 px-2 bg-white border border-[#AEAEAE] rounded-lg text-xs outline-none focus:border-[#5331EA] font-semibold text-slate-700"
+                >
+                  <option value="All">All Time</option>
+                  <option value="Yesterday">Yesterday (Jun 20)</option>
+                  <option value="Prev3Days">Previous 3 Days</option>
+                  <option value="LastWeek">Last Week</option>
+                  <option value="Custom">Custom Range</option>
+                </select>
+              </div>
+
+              {/* Max rows page capacity */}
+              <div className="space-y-1">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rows per page</span>
+                <select
+                  value={bookingLimit}
+                  onChange={(e) => setBookingLimit(Number(e.target.value))}
+                  className="w-full h-8 px-2 bg-white border border-[#AEAEAE] rounded-lg text-xs outline-none focus:border-[#5331EA] font-semibold text-slate-700"
+                >
+                  <option value={10}>10 Rows</option>
+                  <option value={20}>20 Rows</option>
+                  <option value={50}>50 Rows</option>
+                  <option value={100}>100 Rows</option>
+                </select>
+              </div>
+
+              {/* Custom Date Picker inputs */}
+              <div className="space-y-1">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  {selectedDateFilter === 'Custom' ? 'Custom Date Range' : 'Ticket Date Span'}
+                </span>
+                {selectedDateFilter === 'Custom' ? (
+                  <div className="flex gap-1 items-center animate-fadeIn">
+                    <input
+                      type="date"
+                      value={customFromDate}
+                      onChange={(e) => setCustomFromDate(e.target.value)}
+                      className="w-1/2 h-8 px-1.5 bg-white border border-[#AEAEAE] rounded-lg text-[10px] font-bold"
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold">to</span>
+                    <input
+                      type="date"
+                      value={customToDate}
+                      onChange={(e) => setCustomToDate(e.target.value)}
+                      className="w-1/2 h-8 px-1.5 bg-white border border-[#AEAEAE] rounded-lg text-[10px] font-bold"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-8 flex items-center gap-1.5 text-slate-400 font-semibold px-2 bg-slate-100 rounded-lg select-none">
+                    <Calendar size={12} />
+                    <span>Jun 01 - Jun 21, 2026</span>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Table guest directory list */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#f8f9fb] border-b border-[#edeef4] text-[#8a8a9a] font-semibold text-[10px]">
-                    <th className="py-[6px] px-[8px] text-left rounded-l-[4px]">Tier Name</th>
-                    <th className="py-[6px] px-[8px] text-left">Price (₹)</th>
-                    <th className="py-[6px] px-[8px] text-center">Capacity</th>
-                    <th className="py-[6px] px-[8px] text-center">Sold</th>
-                    <th className="py-[6px] px-[8px] text-center">Remaining</th>
-                    <th className="py-[6px] px-[8px] text-left">Sales Progress</th>
-                    <th className="py-[6px] px-[8px] text-center">Status</th>
-                    <th className="py-[6px] px-[8px] text-center rounded-r-[4px] w-[80px]">Actions</th>
+                  <tr className="bg-slate-50/60 border-b border-[#AEAEAE] text-slate-500 font-semibold text-[10px] uppercase tracking-wider">
+                    <th className="py-2.5 px-3">Attendee Name / Booking ID</th>
+                    <th className="py-2.5 px-3">Contact Email</th>
+                    <th className="py-2.5 px-3">Booked Tier</th>
+                    <th className="py-2.5 px-3 text-center">Quantity</th>
+                    <th className="py-2.5 px-3 text-right">Amount Paid</th>
+                    <th className="py-2.5 px-3">Booking Date</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-center w-[100px]">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#edeef4] text-[#1c1525]">
-                  {selectedEvent.tiers.map((tier, idx) => {
-                    let statusColor = 'bg-[#fdecd9] text-[#f5821f]'; // Low Stock
-                    if (tier.status === 'Sold Out') statusColor = 'bg-red-50 text-red-500 border border-red-200';
-                    else if (tier.status === 'Available') statusColor = 'bg-[#e3f9f1] text-[#16c995]';
-
-                    return (
-                      <tr key={idx} className="hover:bg-zinc-50/40 transition-colors">
-                        <td className="py-[8px] px-[8px] font-semibold">{tier.name}</td>
-                        <td className="py-[8px] px-[8px] font-semibold">₹{tier.price.toLocaleString()}</td>
-                        <td className="py-[8px] px-[8px] text-center font-medium">{tier.capacity}</td>
-                        <td className="py-[8px] px-[8px] text-center font-medium">{tier.sold}</td>
-                        <td className="py-[8px] px-[8px] text-center font-medium">{tier.remaining}</td>
-                        <td className="py-[8px] px-[8px]">
-                          <div className="flex items-center gap-1.5 w-[110px]">
-                            <div className="w-[60px] h-[5px] bg-[#f0effa] rounded-full overflow-hidden shrink-0">
-                              <div 
-                                className="h-full bg-[#7c5cf0] rounded-full" 
-                                style={{ width: `${tier.salesProgress}%` }}
-                              ></div>
+                <tbody className="divide-y divide-[#AEAEAE] text-slate-800">
+                  {visibleBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-slate-400 italic font-semibold">
+                        No attendee records found matching the active filters (Tier: {selectedTierFilter}, Period: {selectedDateFilter}).
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleBookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-slate-50/30">
+                        <td className="py-3 px-3 font-bold">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full ${b.imageBg} text-white flex items-center justify-center font-bold text-[10px] shrink-0 border border-white/20 shadow-sm`}>
+                              {b.name.charAt(0)}
                             </div>
-                            <span className="text-[10px] text-zinc-500 font-semibold">{tier.salesProgress}%</span>
+                            <div>
+                              <div className="text-[12px] font-bold text-slate-900">{b.name}</div>
+                              <div className="text-[9.5px] text-slate-400 font-normal mt-0.5">ID: {b.id}</div>
+                            </div>
                           </div>
                         </td>
-                        <td className="py-[8px] px-[8px] text-center">
-                          <span className={`inline-block px-[6px] py-[2px] rounded-[4px] text-[9.5px] font-bold ${statusColor}`}>
-                            {tier.status}
+                        <td className="py-3 px-3 font-semibold text-slate-600">{b.email}</td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                            {b.tier}
                           </span>
                         </td>
-                        <td className="py-[8px] px-[8px]">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className="py-3 px-3 text-center font-bold text-slate-900">{b.qty}</td>
+                        <td className="py-3 px-3 text-right font-extrabold text-slate-900">₹{b.amount.toLocaleString()}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-500">{b.date}</td>
+                        <td className="py-3 px-3 text-center">
+                          {(() => {
+                            let badgeStyle = "bg-[#0AC655]/10 text-[#0AC655] border-[#0AC655]/30";
+                            if (b.status === "Pending") badgeStyle = "bg-[#D97706]/10 text-[#D97706] border-[#D97706]/30";
+                            else if (b.status === "Refunded") badgeStyle = "bg-[#ED4D1B]/10 text-[#ED4D1B] border-[#ED4D1B]/30";
+                            else if (b.status === "Cancelled") badgeStyle = "bg-[#ED4D1B]/10 text-[#ED4D1B] border-[#ED4D1B]/30";
+                            else if (b.status === "Expired") badgeStyle = "bg-slate-100 text-slate-500 border-slate-200";
+
+                            return (
+                              <span className={`inline-block px-2 py-0.5 rounded-md text-[9px] font-black border ${badgeStyle}`}>
+                                {b.status}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button 
-                              onClick={() => handleToggleStatus(selectedEvent.id, idx)}
-                              className="p-1 text-zinc-500 hover:text-blue-500 hover:bg-zinc-100 rounded border border-[#edeef4] transition-colors"
-                              title="Toggle Status"
+                              onClick={() => setActiveTicketBooking(b)}
+                              className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded border border-[#AEAEAE]" 
+                              title="View Ticket"
                             >
-                              <ArrowRightLeft size={10} />
+                              <Eye size={11} />
                             </button>
                             <button 
-                              className="p-1 text-zinc-500 hover:text-amber-500 hover:bg-zinc-100 rounded border border-[#edeef4] transition-colors"
-                              title={tier.status === 'Sold Out' ? 'Resume Sales' : 'Pause Sales'}
+                              onClick={() => triggerNotification(`Resent ticket confirmation to ${b.email}`)}
+                              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded border border-[#AEAEAE]" 
+                              title="Resend Ticket"
                             >
-                              {tier.status === 'Sold Out' ? <PlayCircle size={10} /> : <PauseCircle size={10} />}
+                              <RefreshCw size={11} />
                             </button>
                           </div>
                         </td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* Total Summary Footer */}
+            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 pt-3 border-t border-[#AEAEAE]">
+              <div className="grid grid-cols-3 gap-4 bg-slate-50 border border-[#AEAEAE] rounded-[15px] p-3 md:px-6 md:py-2">
+                <div>
+                  <span className="block text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Filtered Bookings</span>
+                  <span className="text-[13px] font-black text-slate-900">{totalBookingsCount}</span>
+                </div>
+                <div className="border-l border-slate-200 pl-4">
+                  <span className="block text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Tickets Distributed</span>
+                  <span className="text-[13px] font-black text-slate-900">{totalTicketsQty}</span>
+                </div>
+                <div className="border-l border-slate-200 pl-4">
+                  <span className="block text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Filtered Amount Paid</span>
+                  <span className="text-[13px] font-black text-[#5331EA]">₹{totalAmountCollected.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Functional table pagination */}
+              <div className="flex justify-end items-center gap-1 text-[11px] text-slate-500 font-medium select-none shrink-0">
+                <button 
+                  onClick={() => setGuestPage(prev => Math.max(prev - 1, 1))}
+                  disabled={guestPage === 1}
+                  className={`px-2.5 py-1 rounded border border-[#AEAEAE] text-slate-700 transition-colors ${guestPage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 bg-white'}`}
+                >
+                  Previous
+                </button>
+                
+                {Array.from({ length: Math.min(totalPages, 5) }).map((_, idx) => {
+                  const pgNum = idx + 1;
+                  return (
+                    <button
+                      key={pgNum}
+                      onClick={() => setGuestPage(pgNum)}
+                      className={`w-6 h-6 rounded font-bold flex items-center justify-center shadow-sm border transition-all ${guestPage === pgNum ? 'bg-[#5331EA] text-white border-[#5331EA]' : 'bg-white hover:bg-slate-100 text-slate-700 border-[#AEAEAE]'}`}
+                    >
+                      {pgNum}
+                    </button>
+                  );
+                })}
+                
+                {totalPages > 5 && <span className="px-1 text-slate-300">...</span>}
+
+                <button 
+                  onClick={() => setGuestPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={guestPage === totalPages}
+                  className={`px-2.5 py-1 rounded border border-[#AEAEAE] text-slate-700 transition-colors ${guestPage === totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 bg-white'}`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            {/* Inline Boarding Pass / Ticket Detail Section */}
+            {activeTicketBooking && (
+              <div className="mt-4 p-5 bg-white text-slate-800 rounded-[15px] border border-[#AEAEAE] shadow-md relative animate-fadeIn">
+                <button 
+                  onClick={() => setActiveTicketBooking(null)}
+                  className="absolute right-4 top-4 text-slate-400 hover:text-slate-700 p-1 hover:bg-slate-100 rounded-md transition-colors"
+                  title="Close Details"
+                >
+                  <X size={16} />
+                </button>
+
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#AEAEAE]">
+                  <div className="w-6 h-6 rounded bg-[#5331EA] text-[9px] font-black flex items-center justify-center text-white">
+                    TIC
+                  </div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    Selected Ticket Pass Detail (Inline view)
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Col 1: Attendee Info */}
+                  <div className="space-y-3">
+                    <div>
+                      <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Event Name</span>
+                      <span className="text-xs font-extrabold text-slate-800">{selectedEvent.name}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Attendee</span>
+                        <span className="text-xs font-bold text-slate-800">{activeTicketBooking.name}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Ticket Category</span>
+                        <span className="text-xs font-bold text-[#5331EA]">{activeTicketBooking.tier}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Booking Ref</span>
+                        <span className="text-xs font-mono font-bold text-slate-800">{activeTicketBooking.id}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Qty / Price</span>
+                        <span className="text-xs font-bold text-slate-800">{activeTicketBooking.qty} Ticket(s) / ₹{activeTicketBooking.amount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    {/* Additional Details & Timestamp */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                      <div>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Contact Email</span>
+                        <span className="text-[10px] font-semibold text-slate-600 truncate block max-w-[140px]" title={activeTicketBooking.email}>
+                          {activeTicketBooking.email}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Booking Time</span>
+                        <span className="text-[10px] font-bold text-slate-600 block">
+                          {activeTicketBooking.date} at {activeTicketBooking.time}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Col 2: Cancel/Refund Info */}
+                  <div className="flex flex-col justify-center">
+                    {activeTicketBooking.status === 'Cancelled' || activeTicketBooking.status === 'Refunded' || activeTicketBooking.status === 'Expired' ? (
+                      <div className="bg-red-50 border border-red-100 rounded-[15px] p-3.5 space-y-2">
+                        <div className="flex items-center gap-1.5 text-red-500 font-extrabold text-[10px] uppercase tracking-wider">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                          <span>Cancellation / Refund Details</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Refund Amt</span>
+                            <span className="font-bold text-slate-800">
+                              {activeTicketBooking.refundAmount && activeTicketBooking.refundAmount > 0 
+                                ? `₹${activeTicketBooking.refundAmount.toLocaleString()}` 
+                                : '₹0 (No Refund)'}
+                            </span>
+                          </div>
+                          {activeTicketBooking.refundId && (
+                            <div>
+                              <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Refund ID</span>
+                              <span className="font-mono text-[10px] font-bold text-slate-800">{activeTicketBooking.refundId}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="pt-1.5 border-t border-slate-100">
+                          <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest">Revocation Reason</span>
+                          <span className="block text-[11px] font-medium text-slate-600 italic mt-0.5">
+                            "{activeTicketBooking.cancelReason || 'No reason provided.'}"
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-[#0AC655]/10 border border-[#0AC655]/30 rounded-[15px] p-3.5 flex flex-col justify-center items-center text-center space-y-1">
+                        <span className="inline-block px-2.5 py-0.5 rounded-md text-[9px] font-black bg-[#0AC655]/20 text-[#0AC655] border border-[#0AC655]/30">
+                          ACTIVE BOOKING
+                        </span>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">
+                          This booking is fully active and verified on the blockchain registry.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Col 3: QR Code Watermark */}
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-white p-3 border border-[#AEAEAE] rounded-[15px] w-full max-w-[200px] flex flex-col items-center justify-center gap-1.5 relative overflow-hidden">
+                      <svg className="w-24 h-24 text-slate-800 shrink-0" viewBox="0 0 100 100" fill="currentColor">
+                        {/* Top-Left Position Detection Pattern */}
+                        <rect x="0" y="0" width="30" height="30" />
+                        <rect x="5" y="5" width="20" height="20" fill="white" />
+                        <rect x="10" y="10" width="10" height="10" />
+
+                        {/* Top-Right Position Detection Pattern */}
+                        <rect x="70" y="0" width="30" height="30" />
+                        <rect x="75" y="5" width="20" height="20" fill="white" />
+                        <rect x="80" y="10" width="10" height="10" />
+
+                        {/* Bottom-Left Position Detection Pattern */}
+                        <rect x="0" y="70" width="30" height="30" />
+                        <rect x="5" y="75" width="20" height="20" fill="white" />
+                        <rect x="10" y="80" width="10" height="10" />
+
+                        {/* Timing/Grid pattern */}
+                        <rect x="40" y="5" width="5" height="5" />
+                        <rect x="50" y="15" width="5" height="5" />
+                        <rect x="60" y="10" width="5" height="5" />
+                        <rect x="45" y="25" width="5" height="5" />
+                        
+                        <rect x="5" y="40" width="5" height="5" />
+                        <rect x="15" y="50" width="5" height="5" />
+                        <rect x="10" y="60" width="5" height="5" />
+                        <rect x="25" y="45" width="5" height="5" />
+                        
+                        <rect x="35" y="35" width="10" height="10" />
+                        <rect x="40" y="40" width="20" height="10" />
+                        <rect x="55" y="35" width="10" height="10" />
+                        <rect x="35" y="55" width="15" height="5" />
+                        <rect x="50" y="50" width="10" height="15" />
+                        
+                        <rect x="75" y="75" width="15" height="15" />
+                        <rect x="80" y="80" width="5" height="5" fill="white" />
+                        
+                        <rect x="85" y="45" width="5" height="5" />
+                        <rect x="90" y="55" width="5" height="5" />
+                        <rect x="75" y="60" width="5" height="5" />
+                        <rect x="65" y="80" width="5" height="5" />
+                        <rect x="80" y="65" width="5" height="5" />
+                      </svg>
+                      <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest mt-1">
+                        * {activeTicketBooking.id} *
+                      </span>
+                      
+                      {(activeTicketBooking.status === 'Cancelled' || activeTicketBooking.status === 'Refunded' || activeTicketBooking.status === 'Expired') && (
+                        <div className="absolute inset-0 bg-red-600/90 backdrop-blur-[1px] flex items-center justify-center rotate-6 scale-110 shadow-lg border-y border-dashed border-white">
+                          <span className="text-white font-black text-sm tracking-widest uppercase select-none">
+                            {activeTicketBooking.status === 'Expired' ? 'EXPIRED' : 'VOIDED'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
+
         </div>
-      </div>
+      )}
+
+
 
     </div>
   );

@@ -85,7 +85,6 @@ export default function Navbar() {
     }, []);
 
     const hideNavbar =
-        pathname?.startsWith('/organizer') ||
         pathname?.startsWith('/ticket') ||
         pathname?.startsWith('/admin') ||
         pathname === '/contact' ||
@@ -147,7 +146,7 @@ export default function Navbar() {
         pathname.startsWith('/list-your-dining') ||
         pathname.startsWith('/list-your-events') ||
         pathname.startsWith('/list-your-play');
-    const isOrganizerDashboard = pathname === '/organizer/dashboard';
+    const isOrganizer = pathname.startsWith('/organizer');
     const isPlayPage = pathname.startsWith('/play');
     const isHome = pathname === '/';
     const isEventDetail = pathname.match(/^\/events\/[^/]+$/);
@@ -178,7 +177,7 @@ export default function Navbar() {
                         />
                     </Link>
 
-                    {!isListingPage && !isOrganizerDashboard && !isSettingsPage && (
+                    {!isListingPage && !isOrganizer && !isSettingsPage && (
                         <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide">
                             {navItems.map((item) => {
                                 const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -213,7 +212,7 @@ export default function Navbar() {
                         </div>
                     )}
 
-                    {!isListingPage && !isOrganizerDashboard && !isSettingsPage && !isSearchVisible && (
+                    {!isListingPage && !isOrganizer && !isSettingsPage && !isSearchVisible && (
                         <>
                             <LocationSelector
                                 location={currentLocation}
