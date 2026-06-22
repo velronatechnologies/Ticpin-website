@@ -189,7 +189,7 @@ export default function ReviewBookingPage() {
     // If organizer is logged in (has organizerSession), block access
     if (organizerSession && !session) {
       toast.error('Only user accounts can book tickets. Please login as a user.');
-      router.push('/auth/login');
+      router.push('/login');
       return;
     }
   }, [session, organizerSession, router]);
@@ -2315,7 +2315,7 @@ export default function ReviewBookingPage() {
 
       {/* ====== DESKTOP VIEW (hidden md:block) ====== */}
       <div className="hidden md:flex flex-col min-h-screen w-full overflow-x-hidden">
-        <style>{`
+            <style>{`
                 @font-face {
                     font-family: 'Anek Tamil Condensed';
                     src: url('/fonts/AnekTamil_Condensed-Medium.ttf') format('truetype');
@@ -2328,9 +2328,7 @@ export default function ReviewBookingPage() {
                     font-weight: 700;
                     font-style: normal;
                 }
-
-                @import url('https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400;500;600;700;800&family=Anek+Tamil+Condensed:wght@400;500;600;700&display=swap');
-                
+ 
                 :root {
                     --font-anek-latin: 'Anek Latin', sans-serif;
                     --font-anek-tamil: 'Anek Tamil Condensed', sans-serif;

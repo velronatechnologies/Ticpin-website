@@ -105,12 +105,12 @@ export default function TicketSelectionPage() {
   }, []);
 
 
-  // Enforce logged-in session: redirect to event details if not authenticated
+  // Enforce logged-in session: redirect to login if not authenticated
   useEffect(() => {
     const activeSession = getUserSession();
     if (!activeSession?.id) {
       toast.error("Please login to book tickets");
-      router.replace(`/events/${name}`);
+      router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     }
   }, [name, router]);
   const initialCountsRef = useRef<Record<number, number>>({});
@@ -1275,8 +1275,6 @@ export default function TicketSelectionPage() {
             font-weight: 500;
             font-style: normal;
         }
-
-        @import url('https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400;500;600;700;800&family=Anek+Tamil+Condensed:wght@400;500;600;700&display=swap');
       `}</style>
     </div>
   );

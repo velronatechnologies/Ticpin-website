@@ -754,9 +754,8 @@ export default function DiningReviewPage() {
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
             <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Anek+Tamil+Condensed:wght@100;200;300;400;500;600;700;800&display=swap');
                 .font-anek-condensed {
-                    font-family: 'Anek Tamil Condensed', sans-serif;
+                    font-family: var(--font-anek-tamil-condensed), sans-serif;
                 }
             `}</style>
         </div>

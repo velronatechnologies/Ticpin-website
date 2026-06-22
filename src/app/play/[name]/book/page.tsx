@@ -1247,16 +1247,14 @@ export default function PlayBookPage() {
                     font-weight: bold;
                     font-style: normal;
                 }
-
+ 
                 @font-face {
                     font-family: 'Anek Tamil Medium';
                     src: url('/AnekTamil_Condensed-Medium.ttf') format('truetype');
                     font-weight: 500;
                     font-style: normal;
                 }
-
-                @import url('https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400;500;600;700;800&family=Anek+Tamil+Condensed:wght@400;500;600;700&display=swap');
-                
+ 
                 :root {
                     --font-anek-latin: 'Anek Latin', sans-serif;
                     --font-anek-tamil: 'Anek Tamil Condensed', sans-serif;

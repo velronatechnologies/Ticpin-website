@@ -75,8 +75,22 @@ export function proxy(request: NextRequest) {
         return response;
     }
     
+    // Organizer login / onboarding routes
+    const isDiningLoginRoute = pathname === '/list-your-dining/Login' || pathname === '/list-your-dining/Signin' || pathname === '/list-your-dining/otp';
+    const isEventsLoginRoute = pathname === '/list-your-events/Login' || pathname === '/list-your-events/Signin' || pathname === '/list-your-events/otp';
+    const isPlayLoginRoute = pathname === '/list-your-play/Login' || pathname === '/list-your-play/Signin' || pathname === '/list-your-play/otp';
+
+    // Organizer protected routes (setup and creation/management)
+    const isDiningOrgRoute = pathname.startsWith('/list-your-dining/setup') || pathname.startsWith('/list-your-dining/list-your-Setups') || pathname.startsWith('/dining/create') || pathname.startsWith('/dining/edit');
+    const isEventsOrgRoute = pathname.startsWith('/list-your-events/setup') || pathname.startsWith('/list-your-events/list-your-Setups') || pathname.startsWith('/events/create') || pathname.startsWith('/events/edit');
+    const isPlayOrgRoute = pathname.startsWith('/list-your-play/setup') || pathname.startsWith('/list-your-play/list-your-Setups') || pathname.startsWith('/play/create') || pathname.startsWith('/play/edit');
+
     // Check if the route is protected
     const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+    const isBookingRoute = 
+        (/^\/events\/[^\/]+\/book(\/.*)?$/).test(pathname) ||
+        (/^\/dining\/venue\/[^\/]+\/book(\/.*)?$/).test(pathname) ||
+        (/^\/play\/[^\/]+\/book(\/.*)?$/).test(pathname);
     const isAdminProtected = ADMIN_ROUTES.some(route => pathname.startsWith(route));
     const isOrganizerProtected = pathname.startsWith('/organizer');
 
@@ -84,8 +98,21 @@ export function proxy(request: NextRequest) {
     const userSession = request.cookies.get('ticpin_user_session');
     const orgSession = request.cookies.get('ticpin_session');
     
-    // Auth logic for normal users
-    if (isProtected && !userSession) {
+    // Redirect logged-in organizers away from login/register pages
+    if (orgSession) {
+        if (isDiningLoginRoute) {
+            return NextResponse.redirect(new URL('/organizer/dashboard?category=dining', request.url));
+        }
+        if (isEventsLoginRoute) {
+            return NextResponse.redirect(new URL('/organizer/dashboard?category=events', request.url));
+        }
+        if (isPlayLoginRoute) {
+            return NextResponse.redirect(new URL('/organizer/dashboard?category=play', request.url));
+        }
+    }
+
+    // Auth logic for normal users and booking paths
+    if ((isProtected || isBookingRoute) && !userSession) {
         // Redirect to login page if not logged in
         const search = request.nextUrl.search || '';
         return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname + search)}`, request.url));
@@ -94,8 +121,26 @@ export function proxy(request: NextRequest) {
     // Auth logic for organizer dashboard pages
     if (isOrganizerProtected) {
         if (!orgSession) {
-            // Redirect to dining partner login as default
-            return NextResponse.redirect(new URL(`/list-your-dining/Login?redirect=${encodeURIComponent(pathname)}`, request.url));
+            const searchParams = request.nextUrl.searchParams;
+            const category = searchParams.get('category');
+            let loginUrl = '/list-your-dining/Login';
+            if (category === 'events') loginUrl = '/list-your-events/Login';
+            if (category === 'play') loginUrl = '/list-your-play/Login';
+            return NextResponse.redirect(new URL(`${loginUrl}?redirect=${encodeURIComponent(pathname + request.nextUrl.search)}`, request.url));
+        }
+    }
+
+    // Auth logic for organizer onboarding setup and creation pages
+    if (!orgSession) {
+        const search = request.nextUrl.search || '';
+        if (isDiningOrgRoute) {
+            return NextResponse.redirect(new URL(`/list-your-dining/Login?redirect=${encodeURIComponent(pathname + search)}`, request.url));
+        }
+        if (isEventsOrgRoute) {
+            return NextResponse.redirect(new URL(`/list-your-events/Login?redirect=${encodeURIComponent(pathname + search)}`, request.url));
+        }
+        if (isPlayOrgRoute) {
+            return NextResponse.redirect(new URL(`/list-your-play/Login?redirect=${encodeURIComponent(pathname + search)}`, request.url));
         }
     }
 
@@ -170,5 +215,26 @@ export const config = {
         '/organizer/:path*',
         '/ticlists/:path*',
         '/myboooking/:path*',
+        '/events/:name/book',
+        '/events/:name/book/:path*',
+        '/dining/venue/:name/book',
+        '/dining/venue/:name/book/:path*',
+        '/play/:name/book',
+        '/play/:name/book/:path*',
+        '/list-your-dining/:path*',
+        '/list-your-events/:path*',
+        '/list-your-play/:path*',
+        '/dining/create',
+        '/dining/create/:path*',
+        '/dining/edit',
+        '/dining/edit/:path*',
+        '/play/create',
+        '/play/create/:path*',
+        '/play/edit',
+        '/play/edit/:path*',
+        '/events/create',
+        '/events/create/:path*',
+        '/events/edit',
+        '/events/edit/:path*',
     ],
 };

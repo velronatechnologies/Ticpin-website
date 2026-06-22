@@ -17,7 +17,7 @@ const PROTECTED_ROUTES = [
 
 const isRouteProtected = (path: string) => {
     const cleanPath = path.split('?')[0];
-    return PROTECTED_ROUTES.some(route => cleanPath.startsWith(route));
+    return PROTECTED_ROUTES.some(route => cleanPath.startsWith(route)) || cleanPath.includes('/book/');
 };
 
 function LoginContent() {

@@ -236,7 +236,7 @@ export default function TicketSelectionPage() {
       toast.error(
         "Only user accounts can book tickets. Please login as a user.",
       );
-      router.push("/auth/login");
+      router.push("/login");
       return;
     }
 

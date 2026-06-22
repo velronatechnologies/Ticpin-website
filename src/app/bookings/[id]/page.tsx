@@ -1838,8 +1838,6 @@ import { useUserSession } from "@/lib/auth/user";
 import { bookingApi } from "@/lib/api/booking";
 import { profileApi } from "@/lib/api/profile";
 import Image from "next/image";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import { QRCodeCanvas } from "qrcode.react";
 
 function formatPrice(price: number): string {
@@ -1994,6 +1992,9 @@ export default function BookingDetailsPage() {
     if (!ticketRef.current) return;
     setDownloading(true);
     try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
       const canvas = await html2canvas(ticketRef.current, {
         scale: 2,
         useCORS: true,

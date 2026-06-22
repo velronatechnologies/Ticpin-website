@@ -11,35 +11,37 @@ import {
 
 import { clearOrganizerSession } from '@/lib/auth/organizer';
 
-// Import all sub panels
-import OverviewPanel from './panels/Overview';
-import StatusPanel from './panels/Status';
-import OrganizerDirectoryPanel from './panels/OrganizerDirectory';
-import KYCApprovalsPanel from './panels/KYCApprovals';
-import AgreementsPanel from './panels/Agreements';
-import CredentialLogsPanel from './panels/CredentialLogs';
-import UserDirectoryPanel from './panels/UserDirectory';
-import TicpassManagementPanel from './panels/TicpassManagement';
-import UserPreferencesPanel from './panels/UserPreferences';
-import EventsPanel from './panels/Events';
-import PlayPanel from './panels/Play';
-import DiningPanel from './panels/Dining';
-import GateScannersPanel from './panels/GateScanners';
-import BookingsMasterPanel from './panels/BookingsMaster';
-import PayoutSettlementsPanel from './panels/PayoutSettlements';
-import OfflineReceiptsPanel from './panels/OfflineReceipts';
-import DonationsRefundsPanel from './panels/DonationsRefunds';
-import DiscountCouponsPanel from './panels/DiscountCoupons';
-import DynamicOffersPanel from './panels/DynamicOffers';
-import PushNotificationsPanel from './panels/PushNotifications';
-import SupportTicketsPanel from './panels/SupportTickets';
-import SecurityLogsPanel from './panels/SecurityLogs';
-import AssetManagerPanel from './panels/AssetManager';
-import DatabaseEditorPanel from './panels/DatabaseEditor';
-import CacheManagementPanel from './panels/CacheManagement';
-import AdminDirectoryPanel from './panels/AdminDirectory';
-import SalesVelocityPanel from './panels/SalesVelocity';
-import RateLimitsPanel from './panels/RateLimits';
+import dynamic from 'next/dynamic';
+
+// Import all sub panels dynamically to split the bundle
+const OverviewPanel = dynamic(() => import('./panels/Overview'), { ssr: false });
+const StatusPanel = dynamic(() => import('./panels/Status'), { ssr: false });
+const OrganizerDirectoryPanel = dynamic(() => import('./panels/OrganizerDirectory'), { ssr: false });
+const KYCApprovalsPanel = dynamic(() => import('./panels/KYCApprovals'), { ssr: false });
+const AgreementsPanel = dynamic(() => import('./panels/Agreements'), { ssr: false });
+const CredentialLogsPanel = dynamic(() => import('./panels/CredentialLogs'), { ssr: false });
+const UserDirectoryPanel = dynamic(() => import('./panels/UserDirectory'), { ssr: false });
+const TicpassManagementPanel = dynamic(() => import('./panels/TicpassManagement'), { ssr: false });
+const UserPreferencesPanel = dynamic(() => import('./panels/UserPreferences'), { ssr: false });
+const EventsPanel = dynamic(() => import('./panels/Events'), { ssr: false });
+const PlayPanel = dynamic(() => import('./panels/Play'), { ssr: false });
+const DiningPanel = dynamic(() => import('./panels/Dining'), { ssr: false });
+const GateScannersPanel = dynamic(() => import('./panels/GateScanners'), { ssr: false });
+const BookingsMasterPanel = dynamic(() => import('./panels/BookingsMaster'), { ssr: false });
+const PayoutSettlementsPanel = dynamic(() => import('./panels/PayoutSettlements'), { ssr: false });
+const OfflineReceiptsPanel = dynamic(() => import('./panels/OfflineReceipts'), { ssr: false });
+const DonationsRefundsPanel = dynamic(() => import('./panels/DonationsRefunds'), { ssr: false });
+const DiscountCouponsPanel = dynamic(() => import('./panels/DiscountCoupons'), { ssr: false });
+const DynamicOffersPanel = dynamic(() => import('./panels/DynamicOffers'), { ssr: false });
+const PushNotificationsPanel = dynamic(() => import('./panels/PushNotifications'), { ssr: false });
+const SupportTicketsPanel = dynamic(() => import('./panels/SupportTickets'), { ssr: false });
+const SecurityLogsPanel = dynamic(() => import('./panels/SecurityLogs'), { ssr: false });
+const AssetManagerPanel = dynamic(() => import('./panels/AssetManager'), { ssr: false });
+const DatabaseEditorPanel = dynamic(() => import('./panels/DatabaseEditor'), { ssr: false });
+const CacheManagementPanel = dynamic(() => import('./panels/CacheManagement'), { ssr: false });
+const AdminDirectoryPanel = dynamic(() => import('./panels/AdminDirectory'), { ssr: false });
+const SalesVelocityPanel = dynamic(() => import('./panels/SalesVelocity'), { ssr: false });
+const RateLimitsPanel = dynamic(() => import('./panels/RateLimits'), { ssr: false });
 
 // List of all 28 navigation items divided by categories
 const navCategories = [

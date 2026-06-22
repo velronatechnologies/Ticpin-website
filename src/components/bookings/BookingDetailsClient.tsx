@@ -9,8 +9,6 @@ import {
     ChevronLeft, Calendar, Clock, Users, FileText
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { bookingApi } from '@/lib/api/booking';
 import { profileApi } from '@/lib/api/profile';
 import { useUserSession } from '@/lib/auth/user';
@@ -131,6 +129,9 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
         if (!ticketRef.current) return;
         setDownloading(true);
         try {
+            const html2canvas = (await import('html2canvas')).default;
+            const { jsPDF } = await import('jspdf');
+
             const canvas = await html2canvas(ticketRef.current, {
                 scale: 2,
                 useCORS: true,

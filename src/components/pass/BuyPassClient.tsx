@@ -11,8 +11,19 @@ import {
     ChevronDown,
     ArrowRight
 } from 'lucide-react';
-import Script from 'next/script';
 import Image from 'next/image';
+
+function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (typeof document === 'undefined') return resolve();
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(s);
+    });
+}
 
 const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_Sfoa7iPvGXuN0d';
 
@@ -178,6 +189,7 @@ export default function BuyPassClient({ user, organizer, initialProfile, initial
         setIsProcessing(true);
 
         try {
+            await loadScript('https://checkout.razorpay.com/v1/checkout.js');
             const orgCheck = await fetch(`/backend/api/organizer/check-email?email=${encodeURIComponent(formData.email)}`);
             if (!orgCheck.ok) {
                 toast.error('Failed to validate email. Please try again.');
@@ -286,7 +298,6 @@ export default function BuyPassClient({ user, organizer, initialProfile, initial
 
     return (
         <div className="min-h-screen bg-white text-black font-['Anek_Latin']" style={{ height: '100vh' }}>
-            <Script src="https://checkout.razorpay.com/v1/checkout.js" onLoad={() => setIsRazorpayLoaded(true)} onError={() => toast.error('Failed to load payment gateway. Please refresh.')} />
 
             <header className="fixed top-0 left-0 right-0 z-[100] bg-white border-b border-gray-200 px-10 py-6 font-[family-name:var(--font-anek-latin)]">
                 <div className="max-w-[1440px] mx-auto flex items-center justify-between">
@@ -398,7 +409,7 @@ export default function BuyPassClient({ user, organizer, initialProfile, initial
 
         <button 
                             onClick={handlePayment}
-                            disabled={loading || isProcessing || !agreeTerms || (!isRazorpayLoaded && !((window as any).Razorpay))}
+                            disabled={loading || isProcessing || !agreeTerms}
                             className="w-[280px] h-[72px] bg-black rounded-[10px] flex items-center active:scale-95 disabled:opacity-40 transition-all overflow-hidden"
                         >
                             <div className="flex-1 px-6 border-r border-white/20 text-left">
@@ -408,8 +419,6 @@ export default function BuyPassClient({ user, organizer, initialProfile, initial
                             <div className="w-[100px] flex items-center justify-center gap-2">
                                 {(loading || isProcessing) ? (
                                     <Loader2 className="animate-spin text-white flex-shrink-0" />
-                                ) : (!isRazorpayLoaded && !((window as any).Razorpay)) ? (
-                                    <Loader2 className="animate-spin text-white w-5 h-5 flex-shrink-0" />
                                 ) : (
                                     <>
                                         <span className="text-white font-bold text-[18px] uppercase">Buy</span>
