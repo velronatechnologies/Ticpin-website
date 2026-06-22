@@ -1,7 +1,12 @@
+'use cache';
+
 import Image from 'next/image';
 import React from 'react';
+import { cacheLife, cacheTag } from 'next/cache';
 
-export default function TermsAndConditionsComponent() {
+export default async function TermsAndConditionsComponent() {
+    cacheLife('days');
+    cacheTag('terms-page');
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
             {/* Header / Logo Section */}

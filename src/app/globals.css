@@ -94,6 +94,13 @@
   body {
     overflow-x: hidden !important;
     width: 100%;
+    -ms-overflow-style: none !important; /* IE and Edge */
+    scrollbar-width: none !important; /* Firefox */
+  }
+
+  /* Hide scrollbars globally for Chrome, Safari, Opera */
+  ::-webkit-scrollbar {
+    display: none !important;
   }
 
   /* Prevent any child element from causing horizontal scroll */

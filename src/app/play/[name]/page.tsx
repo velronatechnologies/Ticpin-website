@@ -1,5 +1,8 @@
+'use cache';
+
 import type { Metadata } from 'next';
 import PlayDetailClient from './PlayDetailClient';
+import { cacheLife, cacheTag } from 'next/cache';
 
 interface RealPlay {
     id: string;
@@ -66,6 +69,8 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 export default async function PlayDetailPage({ params }: { params: Promise<{ name: string }> }) {
     const { name } = await params;
     const decodedName = decodeURIComponent(name);
+    cacheLife('days');
+    cacheTag('play-venues-list', `play-venue-detail-${decodedName}`);
     const venue = await getVenueData(decodedName);
 
     if (!venue) {

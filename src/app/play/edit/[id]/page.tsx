@@ -11,7 +11,7 @@ import { playApi } from '@/lib/api/play';
 import { organizerApi } from '@/lib/api/organizer';
 import { toast } from '@/components/ui/Toast';
 
-export default function EditPlayPage() {
+function EditPlayPageComponent() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
@@ -1472,5 +1472,13 @@ export default function EditPlayPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function EditPlayPage() {
+    return (
+        <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#FFFCED] via-white to-white"><div className="text-center"><div className="w-10 h-10 border-4 border-[#E7C200] border-t-transparent rounded-full animate-spin mx-auto mb-4" />Loading...</div></div>}>
+            <EditPlayPageComponent />
+        </React.Suspense>
     );
 }

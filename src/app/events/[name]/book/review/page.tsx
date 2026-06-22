@@ -33,6 +33,11 @@ import { toast } from "@/components/ui/Toast";
 import { AlertCircle } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import {
+  clearEventBookingStorage,
+  isCurrentEventCart,
+  safeJsonParse,
+} from "@/lib/bookingFlow";
 
 const AuthModal = dynamic(() => import("@/components/modals/AuthModal"), {
   ssr: false,
@@ -181,15 +186,15 @@ export default function ReviewBookingPage() {
 
   // BUG FIX #4: Validate role on mount - only users can access review pages
   useEffect(() => {
-    if (!session) {
-      // User not logged in - let them login
-      return;
-    }
-    
     // If organizer is logged in (has organizerSession), block access
     if (organizerSession && !session) {
       toast.error('Only user accounts can book tickets. Please login as a user.');
       router.push('/login');
+      return;
+    }
+
+    if (!session) {
+      // User not logged in - let them login
       return;
     }
   }, [session, organizerSession, router]);
@@ -297,11 +302,31 @@ export default function ReviewBookingPage() {
       }
 
       let savedCart = sessionStorage.getItem("ticpin_cart");
+      const fetchCurrentEvent = async () => {
+        const eRes = await fetch(
+          `/backend/api/events/${encodeURIComponent(name)}`,
+          { credentials: "include" },
+        );
+        if (!eRes.ok) throw new Error("Failed to fetch event");
+        const current = await eRes.json();
+        if (current?.id) {
+          setEventData((prev: any) => ({ ...prev, ...current }));
+        }
+        return current;
+      };
       
       // If cart exists in sessionStorage AND Zustand has a reservation, skip backend check
       // (User is navigating back from tickets page - reservation is still valid)
       if (savedCart && reservationStore.reservationId && reservationStore.hasActiveReservation()) {
-        const parsedCart = JSON.parse(savedCart);
+        const parsedCart = safeJsonParse<CartData>(savedCart);
+        const currentEvent = await fetchCurrentEvent();
+        if (!parsedCart || !isCurrentEventCart(parsedCart, currentEvent.id)) {
+          clearEventBookingStorage();
+          reservationStore.clearReservation();
+          router.replace(`/events/${name}/book`);
+          setIsValidating(false);
+          return;
+        }
         setCart(parsedCart);
         if (parsedCart.type === "event" && parsedCart.eventId) {
           setEventData((prev: any) => ({ ...prev, id: parsedCart.eventId, name: parsedCart.eventName }));
@@ -314,19 +339,22 @@ export default function ReviewBookingPage() {
       let eventId = "";
 
       if (savedCart) {
-        parsedCart = JSON.parse(savedCart);
+        parsedCart = safeJsonParse<CartData>(savedCart);
+        const currentEvent = await fetchCurrentEvent();
+        if (!parsedCart || !isCurrentEventCart(parsedCart, currentEvent.id)) {
+          clearEventBookingStorage();
+          reservationStore.clearReservation();
+          router.replace(`/events/${name}/book`);
+          setIsValidating(false);
+          return;
+        }
         eventId = parsedCart.eventId;
         setCart(parsedCart);
       } else {
         // Self-healing: if cart is missing (e.g. copied/duplicated tab),
         // fetch the event details to get eventId and verify active reservation
         try {
-          const eRes = await fetch(
-            `/backend/api/events/${encodeURIComponent(name)}`,
-            { credentials: "include" },
-          );
-          if (!eRes.ok) throw new Error("Failed to fetch event");
-          const eventData = await eRes.json();
+          const eventData = await fetchCurrentEvent();
 
           const activeRes = await bookingApi.checkActiveReservation(
             eventData.id,
@@ -512,8 +540,14 @@ export default function ReviewBookingPage() {
 
   useEffect(() => {
     const saved = sessionStorage.getItem("ticpin_cart");
-    if (saved) {
-      const data = JSON.parse(saved);
+    if (saved && eventData?.id) {
+      const data = safeJsonParse<CartData>(saved);
+      if (!data || !isCurrentEventCart(data, eventData.id)) {
+        clearEventBookingStorage();
+        reservationStore.clearReservation();
+        router.replace(`/events/${name}/book`);
+        return;
+      }
       // Default to 'event' if not specified
       const cartData = { ...data, type: data.type || "event" };
       setCart(cartData);
@@ -535,8 +569,8 @@ export default function ReviewBookingPage() {
 
     const savedBilling = sessionStorage.getItem("ticpin_billing_data");
     if (savedBilling) {
-      try {
-        const parsed = JSON.parse(savedBilling);
+      const parsed = safeJsonParse<any>(savedBilling);
+      if (parsed) {
         setBilling((prev) => ({
           ...prev,
           ...parsed,
@@ -544,7 +578,7 @@ export default function ReviewBookingPage() {
             parsed.nationality || prev.nationality || "Indian resident",
           state: parsed.state || prev.state || "",
         }));
-      } catch (e) {}
+      }
     }
 
     // ── Cashfree redirect return ───────────────────────────────────
@@ -559,9 +593,14 @@ export default function ReviewBookingPage() {
     ) {
       const pending = pendingPaymentStr;
       if (pending) {
-        try {
-          const p = JSON.parse(pending);
-          if (p.cart) {
+        const p = safeJsonParse<any>(pending);
+        if (p?.cart) {
+          if (eventData?.id && !isCurrentEventCart(p.cart, eventData.id)) {
+            sessionStorage.removeItem("ticpin_pending_payment");
+            clearEventBookingStorage();
+            router.replace(`/events/${name}/book`);
+            return;
+          }
             setCart(p.cart);
             if (p.cart.type === "event" && p.cart.eventId) {
               setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
@@ -585,9 +624,6 @@ export default function ReviewBookingPage() {
                 p.orderID,
               );
             }, 200);
-          }
-        } catch (e) {
-          console.error("Cashfree return parse error", e);
         }
       }
     }
@@ -597,7 +633,7 @@ export default function ReviewBookingPage() {
         passApi.getActivePass(session.id!).then(setPass);
       });
     }
-  }, [router, session?.id]);
+  }, [router, session?.id, eventData?.id, name, reservationStore]);
 
   // Also pre-fill with session data if available and state is empty
   useEffect(() => {
@@ -1248,34 +1284,25 @@ export default function ReviewBookingPage() {
     // This prevents the "slot is expired" error that occurs if the user takes too long
     // filling out billing details (locks expire at 10 minutes)
     try {
-      if (cart.type !== "event" && reservationStore.reservationId && session?.id) {
-        const lockCheckRes = await fetch(
-          `/backend/api/booking/lock/status?lock_key=${localStorage.getItem('ticpin_lock_key') || ''}&type=event`,
-          { credentials: "include" }
+      if ((cart.type ?? "event") === "event" && reservationStore.reservationId && session?.id) {
+        const activeRes = await bookingApi.checkActiveReservation(
+          cart.eventId,
+          session.id,
+          reservationStore.reservationId,
         );
-        
-        if (lockCheckRes.ok) {
-          const lockData = await lockCheckRes.json();
-          const activeLocks = lockData.locks || [];
-          
-          // If no active locks found, the slot has expired
-          if (activeLocks.length === 0) {
-            isPayingRef.current = false;
-            setBookingLoading(false);
-            setBookingError("Your slot locks have expired. Redirecting to reselect tickets...");
-            toast.error("Your slot locks have expired. Please select tickets again.");
-            
-            // Clear reservation and redirect
-            reservationStore.clearReservation();
-            sessionStorage.removeItem("ticpin_cart");
-            sessionStorage.removeItem("ticpin_billing_email");
-            sessionStorage.removeItem("ticpin_billing_data");
-            
-            setTimeout(() => {
-              router.replace(`/events/${name}/book`);
-            }, 2000);
-            return;
-          }
+
+        if (!activeRes?.active) {
+          isPayingRef.current = false;
+          setBookingLoading(false);
+          setBookingError("Your ticket reservation has expired. Redirecting to reselect tickets...");
+          toast.error("Your ticket reservation has expired. Please select tickets again.");
+          reservationStore.clearReservation();
+          clearEventBookingStorage();
+
+          setTimeout(() => {
+            router.replace(`/events/${name}/book`);
+          }, 2000);
+          return;
         }
       }
     } catch (err) {

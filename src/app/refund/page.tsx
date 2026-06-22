@@ -1,7 +1,12 @@
+'use cache';
+
 import React from 'react';
 import Image from 'next/image';
+import { cacheLife, cacheTag } from 'next/cache';
 
-export default function RefundAndCancellationComponent() {
+export default async function RefundAndCancellationComponent() {
+    cacheLife('days');
+    cacheTag('refund-page');
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
             {/* Header / Logo Section */}

@@ -11,6 +11,7 @@ import { getOrganizerSession } from '@/lib/auth/organizer';
 import { uploadMedia } from '@/lib/api/admin';
 import { eventsApi } from '@/lib/api/events';
 import { organizerApi } from '@/lib/api/organizer';
+import { EventMediaKind, validateEventMediaFile } from '@/lib/mediaValidation';
 
 type EventPoc = { name: string; email: string; mobile: string };
 type EventSalesNotif = { email: string; mobile: string };
@@ -82,6 +83,7 @@ const CreateEventPage = () => {
     const [hasContent, setHasContent] = useState(false);
     const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const [authChecked, setAuthChecked] = useState(false);
+    const [authStatus, setAuthStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
 
     // Form fields
     const [eventName, setEventName] = useState('');
@@ -171,7 +173,7 @@ const CreateEventPage = () => {
     const [layoutName, setLayoutName] = useState('');
 
     useEffect(() => {
-        if (!authChecked) return;
+        if (authStatus !== 'allowed') return;
 
         // Check if there is layout data returned from layout editor
         const isLayout = sessionStorage.getItem('is-layout-based') === 'true';
@@ -240,7 +242,7 @@ const CreateEventPage = () => {
                 console.error('Failed to parse event draft:', e);
             }
         }
-    }, [authChecked]);
+    }, [authStatus]);
 
     const [uploading, setUploading] = useState<Record<string, boolean>>({});
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -281,12 +283,14 @@ const CreateEventPage = () => {
 
         const session = getOrganizerSession();
         if (!session) {
+            setAuthStatus('checking');
             router.replace('/list-your-events/Login');
             return;
         }
 
         // Check if organizer has approved events registration
         if (!session.isAdmin && session.categoryStatus?.events !== 'approved') {
+            setAuthStatus('checking');
             router.replace('/list-your-events/Login');
             return;
         }
@@ -453,7 +457,11 @@ const CreateEventPage = () => {
     useEffect(() => {
         const checkAuth = async () => {
             let session = getOrganizerSession();
-            if (!session) { setAuthChecked(false); return; }
+            if (!session) {
+                setAuthChecked(false);
+                setAuthStatus('denied');
+                return;
+            }
 
             // If not approved and not admin, re-sync from DB once to be sure
             if (!session.isAdmin && session.categoryStatus?.events !== 'approved') {
@@ -468,10 +476,12 @@ const CreateEventPage = () => {
 
             if (!session.isAdmin && session.categoryStatus?.events !== 'approved') {
                 setAuthChecked(false);
+                setAuthStatus('denied');
                 return;
             }
 
             setAuthChecked(true);
+            setAuthStatus('allowed');
             // Default organizer name in payment
             setPayment(p => ({ ...p, organizerName: session.email.split('@')[0] }));
             // Pre-fill bank details from saved organizer setup
@@ -498,7 +508,19 @@ const CreateEventPage = () => {
         return () => clearTimeout(timer);
     }, [router]);
 
-    if (!authChecked) {
+    if (authStatus === 'checking') {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#D3CBF5]/10">
+                <div className="bg-white rounded-[24px] p-10 shadow-lg max-w-md text-center space-y-4">
+                    <div className="mx-auto h-8 w-8 rounded-full border-4 border-black border-t-transparent animate-spin" />
+                    <h2 className="text-[24px] font-semibold text-black">Checking access</h2>
+                    <p className="text-[16px] text-zinc-500">Please wait while we verify your events registration.</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (authStatus === 'denied' || !authChecked) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#D3CBF5]/10">
                 <div className="bg-white rounded-[24px] p-10 shadow-lg max-w-md text-center space-y-4">
@@ -510,10 +532,10 @@ const CreateEventPage = () => {
         );
     }
 
-    const handleUpload = async (key: string, file: File) => {
-        const maxSizeMB = key === 'video' ? 5 : 1.5;
-        if (file.size > maxSizeMB * 1024 * 1024) {
-            toast.warning(`File size exceeds the allowable limit. Maximum allowed size is ${maxSizeMB}MB.`);
+    const handleUpload = async (key: EventMediaKind, file: File) => {
+        const validation = validateEventMediaFile(file, key);
+        if (!validation.ok) {
+            toast.warning(validation.message);
             return;
         }
 
@@ -528,13 +550,22 @@ const CreateEventPage = () => {
         finally { setUploading(u => ({ ...u, [key]: false })); }
     };
 
-    const makeUploadInput = (key: string, accept: string) => (
+    const makeUploadInput = (key: EventMediaKind, accept: string) => (
         <input type="file" accept={accept} className="hidden"
             id={`upload-${key}`}
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(key, f); }} />
+            onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) void handleUpload(key, f);
+                e.currentTarget.value = '';
+            }} />
     );
 
     const handleArtistImageUpload = async (idx: number, file: File) => {
+        const validation = validateEventMediaFile(file, 'artist');
+        if (!validation.ok) {
+            toast.warning(validation.message);
+            return;
+        }
         const key = `artist-${idx}`;
         setUploading(u => ({ ...u, [key]: true }));
         try {
@@ -545,6 +576,11 @@ const CreateEventPage = () => {
     };
 
     const handleTicketImageUpload = async (idx: number, file: File) => {
+        const validation = validateEventMediaFile(file, 'ticket');
+        if (!validation.ok) {
+            toast.warning(validation.message);
+            return;
+        }
         const key = `ticket-${idx}`;
         setUploading(u => ({ ...u, [key]: true }));
         try {
@@ -1564,7 +1600,11 @@ const CreateEventPage = () => {
                                 <div key={idx} className="bg-[#F5F5F5] rounded-[12px] p-6 mb-6 space-y-4">
                                     {/* hidden upload input per artist */}
                                     <input type="file" id={`upload-artist-${idx}`} accept="image/*" className="hidden"
-                                        onChange={e => { const f = e.target.files?.[0]; if (f) handleArtistImageUpload(idx, f); }} />
+                                        onChange={e => {
+                                            const f = e.target.files?.[0];
+                                            if (f) void handleArtistImageUpload(idx, f);
+                                            e.currentTarget.value = '';
+                                        }} />
                                     <div className="flex items-center justify-between">
                                         <span className="text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Artist {idx + 1}</span>
                                         <button onClick={() => setArtists(prev => prev.filter((_, i) => i !== idx))}
@@ -1668,7 +1708,11 @@ const CreateEventPage = () => {
                                         <div key={idx} className="bg-[#F5F5F5] rounded-[12px] p-6 mb-6 space-y-4">
                                             {/* hidden upload input per ticket category */}
                                             <input type="file" id={`upload-ticket-${idx}`} accept="image/*" className="hidden"
-                                                onChange={e => { const f = e.target.files?.[0]; if (f) handleTicketImageUpload(idx, f); }} />
+                                                onChange={e => {
+                                                    const f = e.target.files?.[0];
+                                                    if (f) void handleTicketImageUpload(idx, f);
+                                                    e.currentTarget.value = '';
+                                                }} />
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[22px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Category {idx + 1}</span>
                                                 <button onClick={() => setTicketCategories(prev => prev.filter((_, i) => i !== idx))}

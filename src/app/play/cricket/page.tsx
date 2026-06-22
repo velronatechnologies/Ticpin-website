@@ -1,3 +1,6 @@
+'use cache';
+
+import { cacheLife, cacheTag } from 'next/cache';
 import CategoryClient from '../CategoryClient';
 
 interface RealPlay {
@@ -26,6 +29,8 @@ async function getCricketVenues(): Promise<RealPlay[]> {
 }
 
 export default async function CricketPage() {
+    cacheLife('days');
+    cacheTag('play-venues-list', 'play-category-cricket');
     const venues = await getCricketVenues();
     return (
         <CategoryClient

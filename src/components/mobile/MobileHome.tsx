@@ -79,7 +79,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
     const { userSession, organizerSession, sync, logoutUser, logoutOrganizer } = useIdentityStore();
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
-    
+
     // Organizer takes priority when dual-logged-in; user as fallback.
     const activeSession = organizerSession || userSession;
     const session = activeSession;
@@ -654,7 +654,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             )}
 
                                             {/* Overlay Icons */}
-                                          
+
                                         </div>
 
                                         {/* Bottom Details Section */}
@@ -673,7 +673,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             </p>
 
                                             {/* Fire/Hot Icon */}
-                                            <div 
+                                            <div
                                                 onClick={(e) => handleLikeToggle(
                                                     scrollEvents[0].id,
                                                     scrollEvents[0].name || '',
@@ -687,10 +687,10 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                 )}
                                                 className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-10 active:scale-90 ${likedEventIds.includes(scrollEvents[0]?.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
                                             >
-                                                <img 
-                                                    src="/mobile_icons/Vector 2.svg" 
-                                                    alt="Hot" 
-                                                    className="w-[17px] h-[17px] object-contain" 
+                                                <img
+                                                    src="/mobile_icons/Vector 2.svg"
+                                                    alt="Hot"
+                                                    className="w-[17px] h-[17px] object-contain"
                                                     style={{ filter: likedEventIds.includes(scrollEvents[0]?.id) ? 'brightness(0) invert(1)' : 'none' }}
                                                 />
                                             </div>
@@ -813,7 +813,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                     </p>
 
                                                     {/* Fire/Hot Icon */}
-                                                    <div 
+                                                    <div
                                                         onClick={(e) => handleLikeToggle(
                                                             event.id,
                                                             event.name || '',
@@ -827,10 +827,10 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                         )}
                                                         className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-10 active:scale-90 ${likedEventIds.includes(event.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
                                                     >
-                                                        <img 
-                                                            src="/mobile_icons/Vector 2.svg" 
-                                                            alt="Hot" 
-                                                            className="w-[17px] h-[17px] object-contain" 
+                                                        <img
+                                                            src="/mobile_icons/Vector 2.svg"
+                                                            alt="Hot"
+                                                            className="w-[17px] h-[17px] object-contain"
                                                             style={{ filter: likedEventIds.includes(event.id) ? 'brightness(0) invert(1)' : 'none' }}
                                                         />
                                                     </div>

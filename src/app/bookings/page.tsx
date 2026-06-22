@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronRight, RefreshCw, Ticket, PlayCircle, Utensils, MapPin, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ChevronRight, RefreshCw, Ticket, PlayCircle, MapPin, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
@@ -17,7 +17,11 @@ function BookingsContent() {
     const searchParams = useSearchParams();
     const session = useUserSession();
     const typeParam = searchParams.get('type') as any;
-    const activeTab = typeParam && ['dining', 'events', 'play'].includes(typeParam) ? typeParam : 'play';
+    const activeTab = typeParam && ['events', 'play'].includes(typeParam) ? typeParam : 'play';
+    const currentPathWithQuery = () =>
+        typeof window === 'undefined'
+            ? '/bookings'
+            : `${window.location.pathname}${window.location.search || ''}`;
 
     useEffect(() => {
         const checkMobile = () => {
@@ -39,7 +43,6 @@ function BookingsContent() {
     const [error, setError] = useState<string | null>(null);
 
     const tabs = [
-        { id: 'dining', label: 'Dining' },
         { id: 'events', label: 'Events' },
         { id: 'play', label: 'Play' },
     ];
@@ -76,7 +79,7 @@ function BookingsContent() {
             console.error('Failed to fetch bookings:', err);
             if (err.message === 'UNAUTHORIZED') {
                 clearUserSession();
-                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+                router.push(`/login?redirect=${encodeURIComponent(currentPathWithQuery())}`);
                 return;
             }
             setError('Failed to load bookings. Please try again.');
@@ -95,7 +98,7 @@ function BookingsContent() {
 
     useEffect(() => {
         if (!loading && !session) {
-            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            router.replace(`/login?redirect=${encodeURIComponent(currentPathWithQuery())}`);
         }
     }, [loading, session, router]);
 
@@ -121,7 +124,7 @@ function BookingsContent() {
                 <div className="text-center max-w-md">
                     <h2 className="text-[34px] font-semibold text-black mb-4">Please log in</h2>
                     <p className="text-[#686868] text-[20px] mb-8">You need to be logged in to review your bookings.</p>
-                    <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="px-8 py-4 bg-black text-white rounded-full text-[20px] font-semibold inline-block">
+                    <Link href={`/login?redirect=${encodeURIComponent(currentPathWithQuery())}`} className="px-8 py-4 bg-black text-white rounded-full text-[20px] font-semibold inline-block">
                         Login / Sign Up
                     </Link>
                 </div>
@@ -257,9 +260,7 @@ function BookingsContent() {
                     ) : (
                         <div className="text-center py-20 bg-zinc-50 rounded-[12px] border border-dashed border-zinc-300 w-full">
                             <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                {activeTab === 'events' ? <Ticket size={32} className="text-zinc-400" /> :
-                                    activeTab === 'play' ? <PlayCircle size={32} className="text-zinc-400" /> :
-                                        <Utensils size={32} className="text-zinc-400" />}
+                                {activeTab === 'events' ? <Ticket size={32} className="text-zinc-400" /> : <PlayCircle size={32} className="text-zinc-400" />}
                             </div>
                             <p className="text-zinc-500 text-[18px]">No {activeTab} bookings found</p>
                             <p className="text-zinc-400 text-[14px] mt-1">Start exploring and make your first booking!</p>

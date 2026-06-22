@@ -41,7 +41,11 @@ export const ArtistSection = ({
                     id={`upload-artist-${idx}`}
                     accept="image/*"
                     className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(idx, f); }}
+                    onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) onUpload(idx, f);
+                        e.currentTarget.value = '';
+                    }}
                 />
                 <div className="flex items-center justify-between">
                     <span className="text-[22px] font-semibold text-black">Artist {idx + 1}</span>
@@ -128,7 +132,11 @@ export const TicketSection = ({
                     id={`upload-ticket-${idx}`}
                     accept="image/*"
                     className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(idx, f); }}
+                    onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) onUpload(idx, f);
+                        e.currentTarget.value = '';
+                    }}
                 />
                 <div className="flex items-center justify-between">
                     <span className="text-[22px] font-semibold text-black">Category {idx + 1}</span>

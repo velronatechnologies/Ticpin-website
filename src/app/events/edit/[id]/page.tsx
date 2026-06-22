@@ -12,6 +12,7 @@ import { organizerApi } from '@/lib/api/organizer';
 import { toast } from '@/components/ui/Toast';
 import { ArtistSection, TicketSection } from '@/components/events/shared/FormSections';
 import InteractiveVenueMap from '@/components/events/InteractiveVenueMap';
+import { EventMediaKind, validateEventMediaFile } from '@/lib/mediaValidation';
 
 type EventPoc = { name: string; email: string; mobile: string };
 type EventSalesNotif = { email: string; mobile: string };
@@ -393,7 +394,9 @@ export default function EditEventPage() {
             setAuthChecked(true);
 
             try {
-                const d = await eventsApi.getEventDirect(id) as Record<string, unknown>;
+                // Load the organizer-owned event record so the editor reflects
+                // the same source of truth that the organizer update endpoint writes to.
+                const d = await eventsApi.getById(id) as Record<string, unknown>;
                 setEventName((d.name as string) ?? '');
                 const desc = (d.description as string) ?? '';
                 setDescription(desc);
@@ -733,7 +736,12 @@ export default function EditEventPage() {
         );
     }
 
-    const handleUpload = async (key: string, file: File, multi = false) => {
+    const handleUpload = async (key: EventMediaKind, file: File, multi = false) => {
+        const validation = validateEventMediaFile(file, key);
+        if (!validation.ok) {
+            toast.warning(validation.message);
+            return;
+        }
         setUploading(u => ({ ...u, [key]: true }));
         try {
             const url = await uploadMedia(file);
@@ -746,6 +754,11 @@ export default function EditEventPage() {
     };
 
     const handleArtistImageUpload = async (idx: number, file: File) => {
+        const validation = validateEventMediaFile(file, 'artist');
+        if (!validation.ok) {
+            toast.warning(validation.message);
+            return;
+        }
         const key = `artist-${idx}`;
         setUploading(u => ({ ...u, [key]: true }));
         try {
@@ -756,6 +769,11 @@ export default function EditEventPage() {
     };
 
     const handleTicketImageUpload = async (idx: number, file: File) => {
+        const validation = validateEventMediaFile(file, 'ticket');
+        if (!validation.ok) {
+            toast.warning(validation.message);
+            return;
+        }
         const key = `ticket-${idx}`;
         setUploading(u => ({ ...u, [key]: true }));
         try {
@@ -766,6 +784,11 @@ export default function EditEventPage() {
     };
 
     const handleReplaceGalleryImage = async (file: File, index: number) => {
+        const validation = validateEventMediaFile(file, 'gallery');
+        if (!validation.ok) {
+            toast.warning(validation.message);
+            return;
+        }
         setUploading(u => ({ ...u, gallery_replace: true }));
         try {
             const url = await uploadMedia(file);
@@ -775,9 +798,13 @@ export default function EditEventPage() {
         finally { setUploading(u => ({ ...u, gallery_replace: false })); }
     };
 
-    const makeUploadInput = (key: string, accept: string, multi = false) => (
+    const makeUploadInput = (key: EventMediaKind, accept: string, multi = false) => (
         <input type="file" accept={accept} className="hidden" id={`upload-${key}`}
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(key, f, multi); }} />
+            onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) void handleUpload(key, f, multi);
+                e.currentTarget.value = '';
+            }} />
     );
 
     const handleNavigateToLayoutEditor = () => {
@@ -1023,7 +1050,7 @@ export default function EditEventPage() {
                     {makeUploadInput('gallery', 'image/*,video/*', true)}
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/*"
                         className="hidden"
                         id="upload-gallery-replace"
                         onChange={e => {

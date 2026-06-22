@@ -1,5 +1,8 @@
+'use cache';
+
 import { Metadata } from 'next';
 import EventsClient from './EventsClient';
+import { cacheLife, cacheTag } from 'next/cache';
 
 export const metadata: Metadata = {
     title: "Events | Ticpin",
@@ -51,6 +54,8 @@ async function getEvents(): Promise<RealEvent[]> {
 }
 
 export default async function EventsPage() {
+    cacheLife('days');
+    cacheTag('events-list');
     const events = await getEvents();
     return <EventsClient initialEvents={events} />;
 }

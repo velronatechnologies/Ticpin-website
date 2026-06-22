@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
+    "@opennextjs/cloudflare": "^1.19.11",
     "@tanstack/react-query": "^5.95.2",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@types/dompurify": "^3.2.0",
@@ -55,6 +56,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.2.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.103.0"
   }
 }

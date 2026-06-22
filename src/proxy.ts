@@ -23,6 +23,25 @@ export function proxy(request: NextRequest) {
     const deviceCookie = request.cookies.get('device_view')?.value;
     const isMobileUA = deviceCookie === 'mobile' || (deviceCookie !== 'desktop' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent));
 
+    // Temporary Dining Route Block - redirect to coming soon page
+    const isDiningBooking = pathname.startsWith('/bookings/dining') || 
+                            pathname === '/bookings/dining-tickets' || 
+                            pathname === '/profile/bookings/dining' ||
+                            (pathname === '/myboooking' && request.nextUrl.searchParams.get('type') === 'dining');
+
+    if (isDiningBooking) {
+        return NextResponse.redirect(new URL('/dining', request.url));
+    }
+
+    const isDiningRoot = pathname === '/dining' || pathname === '/dining/';
+    const isDiningSubpathOrAdminOrList = (pathname.startsWith('/dining/') && !isDiningRoot) || 
+                                         pathname.startsWith('/list-your-dining') || 
+                                         pathname.startsWith('/admin/dining');
+
+    if (isDiningSubpathOrAdminOrList) {
+        return NextResponse.redirect(new URL('/dining', request.url));
+    }
+
     if (isMobileUA) {
         if (pathname.startsWith('/bookings')) {
             const search = request.nextUrl.search || '';
@@ -123,7 +142,7 @@ export function proxy(request: NextRequest) {
         if (!orgSession) {
             const searchParams = request.nextUrl.searchParams;
             const category = searchParams.get('category');
-            let loginUrl = '/list-your-dining/Login';
+            let loginUrl = '/list-your-events/Login';
             if (category === 'events') loginUrl = '/list-your-events/Login';
             if (category === 'play') loginUrl = '/list-your-play/Login';
             return NextResponse.redirect(new URL(`${loginUrl}?redirect=${encodeURIComponent(pathname + request.nextUrl.search)}`, request.url));

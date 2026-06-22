@@ -1,3 +1,6 @@
+'use cache';
+
+import { cacheLife, cacheTag } from 'next/cache';
 import CategoryClient from '../CategoryClient';
 
 async function getPickleballVenues() {
@@ -16,6 +19,8 @@ async function getPickleballVenues() {
 }
 
 export default async function PickleballPage() {
+    cacheLife('days');
+    cacheTag('play-venues-list', 'play-category-pickleball');
     const venues = await getPickleballVenues();
     return (
         <CategoryClient

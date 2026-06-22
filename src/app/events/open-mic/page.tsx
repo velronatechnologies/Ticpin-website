@@ -1,3 +1,6 @@
+'use cache';
+
+import { cacheLife, cacheTag } from 'next/cache';
 import EventCategoryClient from '../EventCategoryClient';
 
 async function getOpenMicEvents() {
@@ -16,6 +19,8 @@ async function getOpenMicEvents() {
 }
 
 export default async function OpenMicPage() {
+    cacheLife('days');
+    cacheTag('events-list', 'event-category-open-mic');
     const events = await getOpenMicEvents();
     return (
         <EventCategoryClient

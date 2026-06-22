@@ -72,7 +72,7 @@ export default function MyPassComingSoon() {
           <span className="text-zinc-400 select-none">MEMBERSHIP STAGE</span>
         </div>
         <div className="text-zinc-400 select-none text-center sm:text-right">
-          &copy; {new Date().getFullYear()} Ticpin. All rights reserved.
+          &copy; 2026 Ticpin. All rights reserved.
         </div>
       </footer>
     </div>

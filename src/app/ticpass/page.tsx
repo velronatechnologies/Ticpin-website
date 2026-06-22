@@ -1,9 +1,12 @@
-'use client';
+'use cache';
 
 import React from 'react';
 import Link from 'next/link';
+import { cacheLife, cacheTag } from 'next/cache';
 
-export default function TicpassComingSoon() {
+export default async function TicpassComingSoon() {
+  cacheLife('days');
+  cacheTag('ticpass-page');
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between items-center px-6 py-12 relative overflow-hidden font-sans">
       {/* Soft blurred ambient glows to match the Prismania design */}
@@ -72,7 +75,7 @@ export default function TicpassComingSoon() {
           <span className="text-zinc-400 select-none">MEMBERSHIP STAGE</span>
         </div>
         <div className="text-zinc-400 select-none text-center sm:text-right">
-          &copy; {new Date().getFullYear()} Ticpin. All rights reserved.
+          &copy; 2026 Ticpin. All rights reserved.
         </div>
       </footer>
     </div>

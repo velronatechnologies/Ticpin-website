@@ -138,48 +138,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         }
     }, [userSession, isOpen, initialView, onClose]);
 
-    // Preload reCAPTCHA on modal open/number view for instant 1-3s OTP speeds
-    // Commented out since Firebase phone auth is disabled/mocked
-    /* useEffect(() => {
-        if (!isOpen || !auth || view !== 'number') return;
 
-        const initRecaptcha = async () => {
-            try {
-                if (!(window as any).recaptchaVerifier) {
-                    let container = document.getElementById('recaptcha-container');
-                    if (!container) {
-                        container = document.createElement('div');
-                        container.id = 'recaptcha-container';
-                        document.body.appendChild(container);
-                    }
-
-                    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                        size: 'invisible',
-                        callback: (response: any) => {
-                            console.log('reCAPTCHA solved successfully');
-                        },
-                        'expired-callback': () => {
-                            console.log('reCAPTCHA expired');
-                        }
-                    });
-
-                    // Render immediately to warm up Google's recaptcha iframe in the background
-                    await verifier.render();
-                    (window as any).recaptchaVerifier = verifier;
-                    console.log('reCAPTCHA preloaded and rendered in background');
-                }
-            } catch (err) {
-                console.error("reCAPTCHA Preload Error:", err);
-            }
-        };
-
-        initRecaptcha();
-    }, [isOpen, view]); */
 
     // Warm up the Vercel Serverless Go backend on modal open to eliminate cold starts
     useEffect(() => {
         if (isOpen) {
-            fetch('/backend/api/health').catch(() => {});
+            fetch('/backend/api/health').catch(() => { });
         }
     }, [isOpen]);
 
@@ -212,8 +176,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         }
 
         setError('');
-        setView('otp');
-        setTimeLeft(120);
+        setLoading(true);
 
         try {
             // Call backend to generate and store real OTP (printed to console in dev)
@@ -224,9 +187,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             });
             const d = await res.json();
             if (!res.ok) {
-                setView('number');
-                setTimeLeft(0);
                 setError(d.error || 'Failed to send OTP');
+                setLoading(false);
                 return;
             }
 
@@ -240,13 +202,16 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 localStorage.setItem(`user_otp_sent_at_${number}`, Date.now().toString());
             }
 
+            // Spin animation for 1 second after request succeeds
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
             setView('otp');
             setTimeLeft(remaining);
         } catch (err: any) {
             console.error('Send OTP Error:', err);
-            setView('number');
-            setTimeLeft(0);
             setError('Failed to send OTP. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -328,26 +293,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
 
     return (
         <div
-            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${
-                view === 'profile' || view === 'bookings' 
-                    ? 'justify-end pointer-events-none' 
-                    : 'items-center justify-center p-0 md:p-4 overflow-hidden'
-            }`}
+            className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${view === 'profile' || view === 'bookings'
+                ? 'justify-end pointer-events-none'
+                : 'items-center justify-center p-0 md:p-4 overflow-hidden'
+                }`}
             style={{ fontFamily: 'var(--font-anek-latin)' }}
         >
-            <div 
-                onClick={onClose} 
-                className={`fixed inset-0 bg-white md:bg-black/60 md:backdrop-blur-sm transition-opacity duration-500 pointer-events-auto ${
-                    isOpen ? 'opacity-100' : 'opacity-0'
-                }`} 
+            <div
+                onClick={onClose}
+                className={`fixed inset-0 bg-white md:bg-black/60 md:backdrop-blur-sm transition-opacity duration-500 pointer-events-auto ${isOpen ? 'opacity-100' : 'opacity-0'
+                    }`}
             />
 
             <div
-                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${
-                    view === 'profile' || view === 'bookings'
-                        ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
-                        : 'w-full h-full md:w-[850px] md:h-[700px] rounded-none md:rounded-[35px] md:animate-in md:zoom-in duration-300'
-                }`}
+                className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${view === 'profile' || view === 'bookings'
+                    ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
+                    : 'w-full h-auto md:w-[500px] rounded-none md:rounded-[30px]'
+                    }`}
                 style={
                     view !== 'profile' && view !== 'bookings'
                         ? isMobile
@@ -364,21 +326,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                         handleSendOtp={handleLogin} handleVerifyOtp={handleOtpSubmit} handleResend={handleLogin}
                         onClose={onClose}
                         timeLeft={timeLeft}
-                        onNumberChange={() => { 
-                            setView('number'); 
-                            setOtp(['', '', '', '', '', '']); 
-                            setError(''); 
-                            // Safely clear old recaptcha to avoid duplicate/stale state
-                            // Commented out since recaptcha preloading is disabled
-                            /* try {
-                                const verifier = (window as any).recaptchaVerifier;
-                                if (verifier) {
-                                    if (typeof verifier.clear === 'function') {
-                                        verifier.clear();
-                                    }
-                                    (window as any).recaptchaVerifier = null;
-                                }
-                            } catch (e) {} */
+                        onNumberChange={() => {
+                            setView('number');
+                            setOtp(['', '', '', '', '', '']);
+                            setError('');
+
                         }}
                     />
                 ) : (

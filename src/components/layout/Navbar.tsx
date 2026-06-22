@@ -154,6 +154,7 @@ export default function Navbar() {
     const isDiningDetail = pathname.match(/^\/dining\/venue\/[^/]+$/);
     const isEvents = pathname === '/events';
     const isSettingsPage = pathname.endsWith('/settings');
+    const showSearchAndLocation = pathname === '/events' || pathname === '/play';
 
     return (
         <header
@@ -213,30 +214,28 @@ export default function Navbar() {
                         </div>
                     )}
 
-                    {!isListingPage && !isOrganizer && !isSettingsPage && !isSearchVisible && (
+                    {showSearchAndLocation && !isSearchVisible && (
                         <>
                             <LocationSelector
                                 location={currentLocation}
                                 onOpenModal={() => setIsLocationOpen(true)}
                                 onClear={clearLocation}
                             />
-                            {!isEventDetail && (
-                                <div
-                                    onClick={() => setIsSearchVisible(true)}
-                                    className="hidden lg:block w-5 h-5 cursor-pointer"
-                                    style={{
-                                        backgroundColor: isPlayPage ? '#E7C200' : '#5331EA',
-                                        maskImage: 'url(/search.svg)', WebkitMaskImage: 'url(/search.svg)',
-                                        maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
-                                        maskPosition: 'center', WebkitMaskPosition: 'center',
-                                        maskSize: 'contain', WebkitMaskSize: 'contain'
-                                    }}
-                                />
-                            )}
+                            <div
+                                onClick={() => setIsSearchVisible(true)}
+                                className="hidden lg:block w-5 h-5 cursor-pointer"
+                                style={{
+                                    backgroundColor: isPlayPage ? '#E7C200' : '#5331EA',
+                                    maskImage: 'url(/search.svg)', WebkitMaskImage: 'url(/search.svg)',
+                                    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
+                                    maskPosition: 'center', WebkitMaskPosition: 'center',
+                                    maskSize: 'contain', WebkitMaskSize: 'contain'
+                                }}
+                            />
                         </>
                     )}
 
-                    {!isListingPage && !isSettingsPage && !isEventDetail && (
+                    {showSearchAndLocation && (
                         <SearchInput
                             isVisible={isSearchVisible}
                             isPlayPage={isPlayPage}

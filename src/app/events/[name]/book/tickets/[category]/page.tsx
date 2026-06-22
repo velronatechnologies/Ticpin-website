@@ -32,7 +32,13 @@ import { useRef } from "react";
 import { MobileVisualMap, DesktopVisualMap } from "./VisualMap";
 import { toast } from "@/components/ui/Toast";
 import { formatPrice } from "@/lib/utils";
-import MobileChooseTickets from "@/components/mobile/Choosetickects";
+import {
+  clearEventBookingStorage,
+  readEventCart,
+  readScopedTempCounts,
+  safeJsonParse,
+  writeScopedTempCounts,
+} from "@/lib/bookingFlow";
 
 
 interface TicketCategory {
@@ -95,14 +101,6 @@ export default function TicketSelectionPage() {
   const organizerSession = useOrganizerSession();
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
 
   // Enforce logged-in session: redirect to login if not authenticated
@@ -193,18 +191,14 @@ export default function TicketSelectionPage() {
       // Restore existing cart into counts
       const cartData = sessionStorage.getItem("ticpin_cart");
       if (cartData) {
-        try {
-          const cart = JSON.parse(cartData);
-          if (cart.tickets) {
+        const cart = event?.id ? readEventCart(event.id) : null;
+        if (cart) {
             // We'll update counts when event loads
             // Store temporarily to apply after event fetch
             sessionStorage.setItem(
               "ticpin_restore_counts",
               JSON.stringify(cart.tickets),
             );
-          }
-        } catch (e) {
-          console.error("Failed to parse cart data:", e);
         }
       }
 
@@ -272,9 +266,8 @@ export default function TicketSelectionPage() {
         // Reconstruct categories from layout_json if layout-based
         let activeCategories = eventData.ticket_categories || [];
         if (eventData.is_layout_based && eventData.layout_json) {
-          try {
-            const layout = JSON.parse(eventData.layout_json);
-            if (layout && Array.isArray(layout.elements)) {
+          const layout = safeJsonParse<any>(eventData.layout_json);
+          if (layout && Array.isArray(layout.elements)) {
               const classSections = layout.elements.filter(
                 (el: any) => el.type === "section" && el.sectionType === "class"
               );
@@ -287,9 +280,6 @@ export default function TicketSelectionPage() {
                   has_image: !!el.image_url,
                 }));
               }
-            }
-          } catch (e) {
-            console.error("Error parsing layout_json for activeCategories:", e);
           }
         }
 
@@ -297,41 +287,55 @@ export default function TicketSelectionPage() {
         let restoreCounts = sessionStorage.getItem("ticpin_restore_counts");
         const hasActiveRes = reservationStore.hasActiveReservation() && reservationStore.eventId === eventData.id;
         const isEditingFlag = (sessionStorage.getItem("ticpin_edit_selection") === "1") && hasActiveRes;
+        const currentCart = readEventCart(eventData.id);
+        const rawCart = sessionStorage.getItem("ticpin_cart");
 
-        if (hasActiveRes || isEditingFlag) {
+        if (rawCart && !currentCart) {
+          clearEventBookingStorage();
+          reservationStore.clearReservation();
+        }
+
+        let canRestore = hasActiveRes || isEditingFlag;
+        if (!canRestore && currentCart && session?.id) {
+          try {
+            const activeRes = await bookingApi.checkActiveReservation(eventData.id, session.id);
+            if (activeRes.active) {
+              reservationStore.setReservation(
+                activeRes.reservation_id,
+                activeRes.event_id,
+                currentCart.tickets,
+                activeRes.expires_at,
+              );
+              canRestore = true;
+            }
+          } catch (e) {
+            console.error("Failed to verify current event reservation:", e);
+          }
+        }
+
+        if (canRestore) {
           if (!restoreCounts) {
-            const cartData = sessionStorage.getItem("ticpin_cart");
-            if (cartData) {
-              try {
-                const cart = JSON.parse(cartData);
-                if (cart.eventId === eventData.id && cart.tickets) {
-                  restoreCounts = JSON.stringify(cart.tickets);
-                }
-              } catch (e) {
-                console.error("Failed to parse cart fallback:", e);
-              }
+            if (currentCart?.tickets) {
+              restoreCounts = JSON.stringify(currentCart.tickets);
             }
           }
         } else {
-          sessionStorage.removeItem("ticpin_cart");
-          sessionStorage.removeItem("ticpin_restore_counts");
-          sessionStorage.removeItem("ticpin_edit_selection");
-          sessionStorage.removeItem("ticpin_temp_counts");
+          clearEventBookingStorage();
           reservationStore.clearReservation();
         }
 
         let isTemp = false;
         if (!restoreCounts) {
-          const temp = sessionStorage.getItem("ticpin_temp_counts");
+          const temp = readScopedTempCounts(eventData.id);
           if (temp) {
-            restoreCounts = temp;
+            restoreCounts = JSON.stringify(temp);
             isTemp = true;
           }
         }
 
         if (restoreCounts && activeCategories.length > 0) {
-          try {
-            const tickets = JSON.parse(restoreCounts);
+          const tickets = safeJsonParse<any[]>(restoreCounts);
+          if (Array.isArray(tickets)) {
             const initialCounts: Record<number, number> = {};
 
             tickets.forEach((ticket: any) => {
@@ -348,8 +352,6 @@ export default function TicketSelectionPage() {
               initialCountsRef.current = initialCounts;
             }
             sessionStorage.removeItem("ticpin_restore_counts");
-          } catch (e) {
-            console.error("Failed to restore counts:", e);
           }
         }
 
@@ -419,9 +421,8 @@ export default function TicketSelectionPage() {
   const categories: TicketCategory[] = useMemo(() => {
     if (!event) return [];
     if (event.is_layout_based && event.layout_json) {
-      try {
-        const layout = JSON.parse(event.layout_json);
-        if (layout && Array.isArray(layout.elements)) {
+      const layout = safeJsonParse<any>(event.layout_json);
+      if (layout && Array.isArray(layout.elements)) {
           const classSections = layout.elements.filter(
             (el: any) => el.type === "section" && el.sectionType === "class"
           );
@@ -434,9 +435,6 @@ export default function TicketSelectionPage() {
               has_image: !!el.image_url,
             }));
           }
-        }
-      } catch (e) {
-        console.error("Error parsing layout_json for categories:", e);
       }
     }
     return event.ticket_categories || [];
@@ -452,17 +450,16 @@ export default function TicketSelectionPage() {
         }))
         .filter((t) => t.quantity > 0);
       if (countsList.length > 0) {
-        sessionStorage.setItem("ticpin_temp_counts", JSON.stringify(countsList));
+        if (event?.id) writeScopedTempCounts(event.id, countsList);
       } else {
         sessionStorage.removeItem("ticpin_temp_counts");
       }
     }
-  }, [counts, categories]);
+  }, [counts, categories, event?.id]);
 
   const layoutPrices = useMemo(() => {
     if (!event?.layout_json) return {};
-    try {
-      const layout = JSON.parse(event.layout_json);
+    const layout = safeJsonParse<any>(event.layout_json);
       const map: Record<string, number> = {};
       if (layout && Array.isArray(layout.elements)) {
         layout.elements.forEach((el: any) => {
@@ -472,10 +469,6 @@ export default function TicketSelectionPage() {
         });
       }
       return map;
-    } catch (e) {
-      console.error("Failed to parse layoutPrices:", e);
-      return {};
-    }
   }, [event?.layout_json]);
 
   const getAvailable = (cat: TicketCategory) => {
@@ -620,6 +613,10 @@ export default function TicketSelectionPage() {
     if (isReservingRef.current) return;
     isReservingRef.current = true;
     setIsCreatingReservation(true);
+    const resetReservationUi = () => {
+      isReservingRef.current = false;
+      setIsCreatingReservation(false);
+    };
 
     const ticketReqs = categories
       .map((cat, i) => ({
@@ -635,9 +632,16 @@ export default function TicketSelectionPage() {
       today.setHours(0, 0, 0, 0);
       if (eventDate < today) {
         toast.error("Event date has passed. Bookings are closed.");
+        resetReservationUi();
         router.push(`/events/${name}`);
         return;
       }
+    }
+
+    if (!event?.id || ticketReqs.length === 0) {
+      toast.error("Please select at least one ticket.");
+      resetReservationUi();
+      return;
     }
 
     const cart = {
@@ -734,15 +738,6 @@ export default function TicketSelectionPage() {
         </div>
       </div>
     );
-
-  if (isMobile) {
-    return (
-      <MobileChooseTickets
-        eventName={name}
-        onBack={() => router.back()}
-      />
-    );
-  }
 
   return (
 

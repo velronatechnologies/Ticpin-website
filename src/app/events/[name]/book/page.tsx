@@ -21,6 +21,7 @@ import AuthModal from "@/components/modals/AuthModal";
 import { toast } from "@/components/ui/Toast";
 import ProfileDrawer from "@/components/layout/Navbar/ProfileDrawer";
 import InteractiveVenueMap from "@/components/events/InteractiveVenueMap";
+import { clearEventBookingStorage, readEventCart, safeJsonParse } from "@/lib/bookingFlow";
 
 interface TicketCategory {
   name: string;
@@ -285,7 +286,7 @@ export default function TicketSelectionPage() {
         if (forceNewSelection) {
           sessionStorage.removeItem("ticpin_force_new_selection");
           reservationStore.clearReservation();
-          sessionStorage.removeItem("ticpin_cart");
+          clearEventBookingStorage();
           const availability = await bookingApi.getEventAvailability(
             eventData.id,
           );
@@ -295,36 +296,41 @@ export default function TicketSelectionPage() {
         }
 
         // 1. Check Zustand store or sessionStorage cart first
-        const cartData = sessionStorage.getItem("ticpin_cart");
         const hasStoreRes =
           reservationStore.hasActiveReservation() &&
           reservationStore.eventId === eventData.id;
-        let parsedCart: any = null;
-        if (cartData) {
-          try {
-            parsedCart = JSON.parse(cartData);
-          } catch (e) {
-            console.error("Failed to parse cart data:", e);
-          }
+        const rawCart = sessionStorage.getItem("ticpin_cart");
+        const parsedCart = readEventCart(eventData.id);
+
+        if (rawCart && !parsedCart) {
+          clearEventBookingStorage();
+          reservationStore.clearReservation();
         }
 
-        if (hasStoreRes && parsedCart && parsedCart.eventId === eventData.id) {
-          if (parsedCart && parsedCart.tickets) {
-            // If store doesn't have it but session does, restore store first
-            if (!hasStoreRes) {
-              const expiresAt =
-                sessionStorage.getItem("ticpin_expires_at") ||
-                new Date(Date.now() + 10 * 60 * 1000).toISOString();
-              const resId =
-                sessionStorage.getItem("ticpin_reservation_id") || "";
-              reservationStore.setReservation(
-                resId,
-                eventData.id,
-                parsedCart.tickets,
-                expiresAt,
-              );
-            }
+        if (parsedCart) {
+          let canRestoreCart = hasStoreRes;
 
+          if (!canRestoreCart && session?.id) {
+            try {
+              const activeRes = await bookingApi.checkActiveReservation(
+                eventData.id,
+                session.id,
+              );
+              if (activeRes.active) {
+                reservationStore.setReservation(
+                  activeRes.reservation_id,
+                  activeRes.event_id,
+                  parsedCart.tickets,
+                  activeRes.expires_at,
+                );
+                canRestoreCart = true;
+              }
+            } catch (e) {
+              console.error("Error restoring cart reservation:", e);
+            }
+          }
+
+          if (canRestoreCart && parsedCart.tickets) {
             const initialCountsMap: Record<number, number> = {};
             parsedCart.tickets.forEach((ticket: any) => {
               const index = eventData.ticket_categories?.findIndex(
@@ -350,13 +356,16 @@ export default function TicketSelectionPage() {
                 setSelectedZoneName(cat.name);
               }
             }
+            const availability = await bookingApi.getEventAvailability(
+              eventData.id,
+            );
+            setBookedMap(availability.booked ?? {});
+            setLoading(false);
+            return;
           }
-          const availability = await bookingApi.getEventAvailability(
-            eventData.id,
-          );
-          setBookedMap(availability.booked ?? {});
-          setLoading(false);
-          return;
+
+          clearEventBookingStorage();
+          reservationStore.clearReservation();
         }
 
         // 2. Check backend for active reservation if logged in
@@ -411,25 +420,21 @@ export default function TicketSelectionPage() {
                 if (cat) {
                   setSelectedZoneName(cat.name);
                 }
-              }
-
-              const availability = await bookingApi.getEventAvailability(
-                eventData.id,
-              );
-              setBookedMap(availability.booked ?? {});
-              setLoading(false);
-              return;
-            }
-          } catch (e) {
-            console.error("Error checking active reservation:", e);
-          }
-        }
+	              }
+	            const availability = await bookingApi.getEventAvailability(
+	              eventData.id,
+	            );
+	            setBookedMap(availability.booked ?? {});
+	            setLoading(false);
+	            return;
+	          }
+	          } catch (e) {
+	            console.error("Error checking active reservation:", e);
+	          }
+	        }
 
         // 3. No active reservation, load availability
-        sessionStorage.removeItem("ticpin_cart");
-        sessionStorage.removeItem("ticpin_restore_counts");
-        sessionStorage.removeItem("ticpin_edit_selection");
-        sessionStorage.removeItem("ticpin_temp_counts");
+        clearEventBookingStorage();
         reservationStore.clearReservation();
         const availability = await bookingApi.getEventAvailability(
           eventData.id,
@@ -462,9 +467,8 @@ export default function TicketSelectionPage() {
   const categories: TicketCategory[] = useMemo(() => {
     if (!event) return [];
     if (event.is_layout_based && event.layout_json) {
-      try {
-        const layout = JSON.parse(event.layout_json);
-        if (layout && Array.isArray(layout.elements)) {
+      const layout = safeJsonParse<any>(event.layout_json);
+      if (layout && Array.isArray(layout.elements)) {
           const classSections = layout.elements.filter(
             (el: any) => el.type === "section" && el.sectionType === "class",
           );
@@ -477,9 +481,6 @@ export default function TicketSelectionPage() {
               has_image: !!el.image_url,
             }));
           }
-        }
-      } catch (e) {
-        console.error("Error parsing layout_json for categories:", e);
       }
     }
     return event.ticket_categories || [];
@@ -488,9 +489,9 @@ export default function TicketSelectionPage() {
   const layoutPrices = useMemo(() => {
     if (!event?.layout_json) return {};
     try {
-      const layout = JSON.parse(event.layout_json);
-      const map: Record<string, number> = {};
-      if (layout && Array.isArray(layout.elements)) {
+        const layout = safeJsonParse<any>(event.layout_json);
+        const map: Record<string, number> = {};
+        if (layout && Array.isArray(layout.elements)) {
         layout.elements.forEach((el: any) => {
           if (el.name && el.price !== undefined) {
             map[el.name.toUpperCase()] = el.price;
@@ -508,7 +509,8 @@ export default function TicketSelectionPage() {
   const filteredLayoutJson = useMemo(() => {
     if (!event?.layout_json) return null;
     try {
-      const layout: any = JSON.parse(event.layout_json);
+      const layout = safeJsonParse<any>(event.layout_json);
+      if (!layout) return event.layout_json;
 
       const filterPlatinum = (node: any): any => {
         if (Array.isArray(node)) {

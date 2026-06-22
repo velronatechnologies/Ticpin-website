@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, RefreshCw, Ticket, PlayCircle, Utensils, MapPin, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ChevronRight, RefreshCw, Ticket, PlayCircle, MapPin, MessageSquare } from 'lucide-react';
 import { useUserSession } from '@/lib/auth/user';
 import { bookingApi } from '@/lib/api/booking';
 
@@ -17,8 +17,8 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
     const session = useUserSession();
     
     const initialTab = searchParams.get('type') as any;
-    const [activeTab, setActiveTab] = useState<'dining' | 'events' | 'play'>(
-        initialTab && ['dining', 'events', 'play'].includes(initialTab) ? initialTab : 'play'
+    const [activeTab, setActiveTab] = useState<'events' | 'play'>(
+        initialTab && ['events', 'play'].includes(initialTab) ? initialTab : 'play'
     );
     const sortBookingsDesc = (items: any[]) => {
         const getTime = (b: any) => {
@@ -41,13 +41,12 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
 
     useEffect(() => {
         const type = searchParams.get('type') as any;
-        if (type && ['dining', 'events', 'play'].includes(type) && type !== activeTab) {
+        if (type && ['events', 'play'].includes(type) && type !== activeTab) {
             setActiveTab(type);
         }
     }, [searchParams, activeTab]);
 
     const tabs = [
-        { id: 'dining', label: 'Dining' },
         { id: 'events', label: 'Events' },
         { id: 'play', label: 'Play' },
     ];
@@ -119,7 +118,7 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
                         <button
                             key={tab.id}
                             onClick={() => {
-                                setActiveTab(tab.id as any);
+                                setActiveTab(tab.id as 'events' | 'play');
                                 router.replace(`/bookings?type=${tab.id}`, { scroll: false });
                             }}
                             className={`px-[30px] md:px-[45px] py-[10px] rounded-[40px] text-[18px] md:text-[25px] font-medium transition-all duration-300 whitespace-nowrap ${
@@ -228,9 +227,7 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
                     ) : (
                         <div className="text-center py-20 bg-zinc-50 rounded-[25px] border border-dashed border-zinc-300 w-full">
                             <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                {activeTab === 'events' ? <Ticket size={32} className="text-zinc-400" /> : 
-                                 activeTab === 'play' ? <PlayCircle size={32} className="text-zinc-400" /> : 
-                                 <Utensils size={32} className="text-zinc-400" />}
+                                {activeTab === 'events' ? <Ticket size={32} className="text-zinc-400" /> : <PlayCircle size={32} className="text-zinc-400" />}
                             </div>
                             <p className="text-zinc-500 text-[18px]">No {activeTab} bookings found</p>
                             <p className="text-zinc-400 text-[14px] mt-1">Start exploring and make your first booking!</p>

@@ -8,16 +8,22 @@ if (typeof globalThis !== "undefined") {
   const originalFetch = globalThis.fetch;
   if (originalFetch) {
     globalThis.fetch = function (input, init) {
-      const targetBackend = "https://go-backend.ramjib2311.workers.dev";
+      const targetBackend = "https://go-backend.itzrvm2337.workers.dev";
       if (typeof input === "string" && input.startsWith("/backend/")) {
         input = input.replace("/backend", targetBackend);
       } else if (input instanceof URL && input.pathname.startsWith("/backend/")) {
         const newUrl = new URL(input.toString());
         newUrl.protocol = "https:";
-        newUrl.host = "go-backend.ramjib2311.workers.dev";
+        newUrl.host = "go-backend.itzrvm2337.workers.dev";
         newUrl.pathname = newUrl.pathname.replace("/backend", "");
         input = newUrl;
       }
+      
+      // Inject internal server-to-server secret header
+      init = init || {};
+      init.headers = new Headers(init.headers);
+      init.headers.set("X-Ticpin-Internal", "ticpin-ssr-secret");
+      
       return originalFetch(input, init);
     };
   }
@@ -29,6 +35,7 @@ import Providers from "@/components/providers/Providers";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
+import React, { Suspense } from "react";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -99,7 +106,9 @@ export default function RootLayout({
         <ToastProvider>
           <Providers>
             <ErrorBoundary>
-              <NavbarWrapper />
+              <Suspense fallback={null}>
+                <NavbarWrapper />
+              </Suspense>
               {children}
             </ErrorBoundary>
           </Providers>

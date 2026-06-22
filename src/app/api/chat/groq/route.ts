@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-export const runtime = "edge";
-
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // System prompt for Ticpin assistant

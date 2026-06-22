@@ -79,7 +79,7 @@ export default function ListYourDiningComingSoon() {
 
       {/* Footer */}
       <footer className="px-6 py-6 text-center text-zinc-600 text-xs relative z-10 border-t border-white/5 bg-black/20">
-        &copy; {new Date().getFullYear()} Ticpin. All rights reserved.
+        &copy; 2026 Ticpin. All rights reserved.
       </footer>
     </div>
   );

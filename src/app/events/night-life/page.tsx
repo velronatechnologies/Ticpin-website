@@ -1,3 +1,6 @@
+'use cache';
+
+import { cacheLife, cacheTag } from 'next/cache';
 import EventCategoryClient from '../EventCategoryClient';
 
 async function getNightLifeEvents() {
@@ -16,6 +19,8 @@ async function getNightLifeEvents() {
 }
 
 export default async function NightLifePage() {
+    cacheLife('days');
+    cacheTag('events-list', 'event-category-night-life');
     const events = await getNightLifeEvents();
     return (
         <EventCategoryClient

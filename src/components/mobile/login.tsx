@@ -95,6 +95,9 @@ export default function MobileLogin() {
                 toast.success('OTP sent successfully');
             }
 
+            // Spin animation for 1 second after request succeeds
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
             setView('otp');
             setTimeLeft(remaining);
         } catch (err: any) {

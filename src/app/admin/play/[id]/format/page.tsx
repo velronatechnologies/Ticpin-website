@@ -708,4 +708,10 @@ const AdminFormatPage = () => {
     );
 };
 
-export default AdminFormatPage;
+export default function Page() {
+    return (
+        <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+            <AdminFormatPage />
+        </React.Suspense>
+    );
+}

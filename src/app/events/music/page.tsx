@@ -1,3 +1,6 @@
+'use cache';
+
+import { cacheLife, cacheTag } from 'next/cache';
 import EventCategoryClient from '../EventCategoryClient';
 
 async function getMusicEvents() {
@@ -16,6 +19,8 @@ async function getMusicEvents() {
 }
 
 export default async function MusicPage() {
+    cacheLife('days');
+    cacheTag('events-list', 'event-category-music');
     const events = await getMusicEvents();
     return (
         <EventCategoryClient

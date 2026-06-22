@@ -1,0 +1,73 @@
+minimatch@3.1.5
+├─┬ @eslint/config-array@0.21.1
+│ └─┬ eslint@9.39.3
+│   ├─┬ @eslint-community/eslint-utils@4.9.1
+│   │ ├─┬ @typescript-eslint/utils@8.59.2
+│   │ │ ├─┬ @typescript-eslint/eslint-plugin@8.59.2
+│   │ │ │ └─┬ typescript-eslint@8.59.2
+│   │ │ │   └─┬ eslint-config-next@16.2.6
+│   │ │ │     └── new@0.1.0 (devDependencies)
+│   │ │ ├─┬ @typescript-eslint/type-utils@8.59.2
+│   │ │ │ └── @typescript-eslint/eslint-plugin@8.59.2 [deduped]
+│   │ │ └── typescript-eslint@8.59.2 [deduped]
+│   │ └── eslint@9.39.3 [circular]
+│   ├── @typescript-eslint/eslint-plugin@8.59.2 [deduped]
+│   ├─┬ @typescript-eslint/parser@8.59.2
+│   │ ├── @typescript-eslint/eslint-plugin@8.59.2 [deduped]
+│   │ ├─┬ eslint-module-utils@2.12.1
+│   │ │ └─┬ eslint-plugin-import@2.32.0
+│   │ │   ├── eslint-config-next@16.2.6 [deduped]
+│   │ │   └─┬ eslint-import-resolver-typescript@3.10.1
+│   │ │     ├── eslint-config-next@16.2.6 [deduped]
+│   │ │     └── eslint-module-utils@2.12.1 [circular]
+│   │ ├── eslint-plugin-import@2.32.0 [deduped]
+│   │ └── typescript-eslint@8.59.2 [deduped]
+│   ├── @typescript-eslint/type-utils@8.59.2 [deduped]
+│   ├── @typescript-eslint/utils@8.59.2 [deduped]
+│   ├── eslint-config-next@16.2.6 [deduped]
+│   ├── eslint-import-resolver-typescript@3.10.1 [deduped]
+│   ├── eslint-module-utils@2.12.1 [deduped]
+│   ├── eslint-plugin-import@2.32.0 [deduped]
+│   ├─┬ eslint-plugin-jsx-a11y@6.10.2
+│   │ └── eslint-config-next@16.2.6 [deduped]
+│   ├─┬ eslint-plugin-react@7.37.5
+│   │ └── eslint-config-next@16.2.6 [deduped]
+│   ├─┬ eslint-plugin-react-hooks@7.1.1
+│   │ └── eslint-config-next@16.2.6 [deduped]
+│   ├── new@0.1.0 (devDependencies)
+│   └── typescript-eslint@8.59.2 [deduped]
+├─┬ @eslint/eslintrc@3.3.4
+│ └── eslint@9.39.3 [deduped]
+├── eslint@9.39.3 [deduped]
+├── eslint-plugin-import@2.32.0 [deduped]
+├── eslint-plugin-jsx-a11y@6.10.2 [deduped]
+└── eslint-plugin-react@7.37.5 [deduped]
+
+minimatch@10.2.4
+├─┬ @ts-morph/common@0.27.0
+│ └─┬ ts-morph@26.0.0
+│   └─┬ shadcn@4.7.0
+│     └── new@0.1.0 (dependencies)
+└─┬ @typescript-eslint/typescript-estree@8.59.2
+  ├─┬ @typescript-eslint/parser@8.59.2
+  │ ├─┬ @typescript-eslint/eslint-plugin@8.59.2
+  │ │ └─┬ typescript-eslint@8.59.2
+  │ │   └─┬ eslint-config-next@16.2.6
+  │ │     └── new@0.1.0 (devDependencies)
+  │ ├─┬ eslint-module-utils@2.12.1
+  │ │ └─┬ eslint-plugin-import@2.32.0
+  │ │   ├── eslint-config-next@16.2.6 [deduped]
+  │ │   └─┬ eslint-import-resolver-typescript@3.10.1
+  │ │     ├── eslint-config-next@16.2.6 [deduped]
+  │ │     └── eslint-module-utils@2.12.1 [circular]
+  │ ├── eslint-plugin-import@2.32.0 [deduped]
+  │ └── typescript-eslint@8.59.2 [deduped]
+  ├─┬ @typescript-eslint/type-utils@8.59.2
+  │ └── @typescript-eslint/eslint-plugin@8.59.2 [deduped]
+  ├─┬ @typescript-eslint/utils@8.59.2
+  │ ├── @typescript-eslint/eslint-plugin@8.59.2 [deduped]
+  │ ├── @typescript-eslint/type-utils@8.59.2 [deduped]
+  │ └── typescript-eslint@8.59.2 [deduped]
+  └── typescript-eslint@8.59.2 [deduped]
+
+Found 2 versions of minimatch
