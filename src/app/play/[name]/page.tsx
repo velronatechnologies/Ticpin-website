@@ -41,7 +41,7 @@ async function getVenueData(name: string): Promise<RealPlay | null> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/play/${encodeURIComponent(name)}`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) return null;
         return res.json();

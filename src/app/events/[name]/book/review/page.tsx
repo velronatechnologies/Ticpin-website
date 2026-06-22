@@ -56,6 +56,9 @@ import OrderSummary from "./OrderSummary";
 import OffersCoupons from "./OffersCoupons";
 import BillingDetailsForm from "./BillingDetailsForm";
 import MobileReviewBooking from "@/components/mobile/MobileReviewBooking";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useCurrentTime } from "@/hooks/use-current-time";
+import { isEventBookingClosed } from "@/lib/event-booking";
 
 interface CartData {
   eventId: string;
@@ -222,18 +225,10 @@ export default function ReviewBookingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pass, setPass] = useState<any>(null);
 
-  const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
+  const nowMs = useCurrentTime(30000);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setIsMobile(window.innerWidth < 768);
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // Split name when billing name loaded
   useEffect(() => {
@@ -430,33 +425,7 @@ export default function ReviewBookingPage() {
       .then((data) => {
         if (data && data.id) {
           // Check if event booking is closed
-          const isClosed = (() => {
-            if (data.is_sales_paused || data.is_canceled) return true;
-            if (data.ticket_close_date) {
-              const closeDate = new Date(data.ticket_close_date);
-              if (
-                !isNaN(closeDate.getTime()) &&
-                closeDate.getTime() < Date.now()
-              ) {
-                return true;
-              }
-            }
-            if (data.event_end_date) {
-              const endDate = new Date(data.event_end_date);
-              if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-                return true;
-              }
-            }
-            if (data.date) {
-              const eventDate = new Date(data.date);
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              if (eventDate < today) {
-                return true;
-              }
-            }
-            return false;
-          })();
+          const isClosed = isEventBookingClosed(data, nowMs, true);
 
           if (isClosed) {
             toast.error("Bookings for this event are closed.");
@@ -467,7 +436,7 @@ export default function ReviewBookingPage() {
         }
       })
       .catch((err) => console.error("Error fetching event details:", err));
-  }, [name, router]);
+  }, [name, nowMs, router]);
 
   // Timer countdown with 2-min warning for slot lock expiry (10-minute timeout)
   useEffect(() => {
@@ -480,8 +449,7 @@ export default function ReviewBookingPage() {
       if (isPayingRef.current) return;
 
       const expiresTime = new Date(expiresAt).getTime();
-      const now = Date.now();
-      const diff = Math.max(0, Math.floor((expiresTime - now) / 1000));
+      const diff = Math.max(0, Math.floor((expiresTime - Date.now()) / 1000));
       setTimeRemaining(diff);
 
       // Show warning popup at 2 minutes (120 seconds) - gives users time to complete payment
@@ -1612,7 +1580,7 @@ export default function ReviewBookingPage() {
     );
   }
 
-  if (mounted && isMobile) {
+  if (isMobile) {
     return (
       <MobileReviewBooking
         cart={cart as any}

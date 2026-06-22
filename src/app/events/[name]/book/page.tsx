@@ -22,6 +22,8 @@ import { toast } from "@/components/ui/Toast";
 import ProfileDrawer from "@/components/layout/Navbar/ProfileDrawer";
 import InteractiveVenueMap from "@/components/events/InteractiveVenueMap";
 import { clearEventBookingStorage, readEventCart, safeJsonParse } from "@/lib/bookingFlow";
+import { useCurrentTime } from "@/hooks/use-current-time";
+import { isEventBookingClosed } from "@/lib/event-booking";
 
 interface TicketCategory {
   name: string;
@@ -51,24 +53,6 @@ interface EventData {
   layout_json?: string;
 }
 
-const isBookingClosed = (evt: EventData) => {
-  if (!evt) return false;
-  if (evt.is_sales_paused || evt.is_canceled) return true;
-  if (evt.ticket_close_date) {
-    const closeDate = new Date(evt.ticket_close_date);
-    if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
-      return true;
-    }
-  }
-  if (evt.event_end_date) {
-    const endDate = new Date(evt.event_end_date);
-    if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-      return true;
-    }
-  }
-  return false;
-};
-
 export default function TicketSelectionPage() {
   const router = useRouter();
   const params = useParams();
@@ -91,6 +75,7 @@ export default function TicketSelectionPage() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [showVisualMap, setShowVisualMap] = useState(false);
   const [selectedZoneName, setSelectedZoneName] = useState<string | null>(null);
+  const nowMs = useCurrentTime();
 
   const session = useUserSession();
   const organizerSession = useOrganizerSession();
@@ -269,7 +254,7 @@ export default function TicketSelectionPage() {
     })
       .then((r) => r.json())
       .then(async (eventData) => {
-        if (isBookingClosed(eventData)) {
+        if (isEventBookingClosed(eventData, nowMs)) {
           toast.error("Booking for this event is closed!");
           router.push(`/events/${name}`);
           return;
@@ -279,6 +264,7 @@ export default function TicketSelectionPage() {
           return;
         }
         setEvent(eventData);
+        const availabilityPromise = bookingApi.getEventAvailability(eventData.id);
 
         // If user came back from review intentionally, start fresh selection.
         const forceNewSelection =
@@ -287,9 +273,7 @@ export default function TicketSelectionPage() {
           sessionStorage.removeItem("ticpin_force_new_selection");
           reservationStore.clearReservation();
           clearEventBookingStorage();
-          const availability = await bookingApi.getEventAvailability(
-            eventData.id,
-          );
+          const availability = await availabilityPromise;
           setBookedMap(availability.booked ?? {});
           setLoading(false);
           return;
@@ -356,9 +340,7 @@ export default function TicketSelectionPage() {
                 setSelectedZoneName(cat.name);
               }
             }
-            const availability = await bookingApi.getEventAvailability(
-              eventData.id,
-            );
+            const availability = await availabilityPromise;
             setBookedMap(availability.booked ?? {});
             setLoading(false);
             return;
@@ -421,9 +403,7 @@ export default function TicketSelectionPage() {
                   setSelectedZoneName(cat.name);
                 }
 	              }
-	            const availability = await bookingApi.getEventAvailability(
-	              eventData.id,
-	            );
+	            const availability = await availabilityPromise;
 	            setBookedMap(availability.booked ?? {});
 	            setLoading(false);
 	            return;
@@ -436,9 +416,7 @@ export default function TicketSelectionPage() {
         // 3. No active reservation, load availability
         clearEventBookingStorage();
         reservationStore.clearReservation();
-        const availability = await bookingApi.getEventAvailability(
-          eventData.id,
-        );
+        const availability = await availabilityPromise;
         setBookedMap(availability.booked ?? {});
         setLoading(false);
       })
@@ -446,7 +424,7 @@ export default function TicketSelectionPage() {
         console.error(err);
         setLoading(false);
       });
-  }, [name, router, session?.id]);
+  }, [name, nowMs, router, session?.id]);
 
   useEffect(() => {
     if (session?.id) {

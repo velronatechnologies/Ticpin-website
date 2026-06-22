@@ -76,20 +76,15 @@ function DashboardContent() {
         return <div className="h-[calc(100vh-80px)] w-full bg-zinc-50 animate-pulse" />;
     }
 
-    // If no session after loading complete, show error instead of redirecting
+    // If no session after loading complete, redirect to login
+    useEffect(() => {
+        if (!session && hasMounted && !loading) {
+            router.replace('/list-your-dining/Login');
+        }
+    }, [session, hasMounted, loading, router]);
+
     if (!session) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                <p className="text-xl text-red-600">No organizer session found</p>
-                <p className="text-gray-500">Please log in as an organizer first</p>
-                <button
-                    onClick={() => router.push('/list-your-dining/Login')}
-                    className="px-6 py-3 bg-[#5331EA] text-white rounded-xl"
-                >
-                    Go to Organizer Login
-                </button>
-            </div>
-        );
+        return null;
     }
 
     const themes = {

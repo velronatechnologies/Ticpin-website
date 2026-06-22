@@ -11,6 +11,7 @@ import FilterBar from '@/components/play/FilterBar';
 import ArtistsSection from './ArtistsSection';
 import EventsGrid from './EventsGrid';
 import MobileEvents from '@/components/mobile/MobileEvents';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EventArtist {
     name: string;
@@ -45,14 +46,10 @@ export default function EventsClient({ initialEvents }: { initialEvents: RealEve
     const [events] = useState<RealEvent[]>(initialEvents);
     const selectedLocation = useLocation();
     const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // Handle category from URL query param
@@ -152,7 +149,7 @@ export default function EventsClient({ initialEvents }: { initialEvents: RealEve
         return result;
     }, [events, activeFilter, modalFilters, selectedLocation, mounted]);
 
-    if (mounted && isMobile) {
+    if (isMobile) {
         return <MobileEvents events={events} />;
     }
 

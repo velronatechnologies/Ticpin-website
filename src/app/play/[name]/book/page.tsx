@@ -15,6 +15,7 @@ import { passApi, TicpinPass } from '@/lib/api/pass';
 import { Zap, ShieldCheck } from 'lucide-react';
 import { useSlotLock } from '@/hooks/useSlotLock';
 import MobilePlayBooking from '@/components/mobile/MobilePlayBooking';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Navbar Components
 import LocationSelector from '@/components/layout/Navbar/LocationSelector';
@@ -189,16 +190,7 @@ export default function PlayBookPage() {
     const [loading, setLoading] = useState(true);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [isAuthChecking, setIsAuthChecking] = useState(true);
-    const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         const activeSession = getUserSession();
@@ -702,7 +694,7 @@ export default function PlayBookPage() {
     }
     if (!venue) return <div className="text-center py-20 text-zinc-500">Venue not found</div>;
 
-    if (mounted && isMobile) {
+    if (isMobile) {
         return (
             <MobilePlayBooking
                 venue={venue}

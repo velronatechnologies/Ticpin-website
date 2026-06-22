@@ -53,7 +53,7 @@ async function getEventData(name: string): Promise<EventData | null> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/events/${encodeURIComponent(name)}`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) return null;
         return await res.json();
@@ -81,7 +81,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 async function getMobileEventData(id: string) {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/mobile/event/${id}`, { cache: 'no-store' });
+        const res = await fetch(`${base}/api/mobile/event/${id}`, { next: { revalidate: 300 } });
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {

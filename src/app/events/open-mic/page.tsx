@@ -6,7 +6,7 @@ import EventCategoryClient from '../EventCategoryClient';
 async function getOpenMicEvents() {
     try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/events?category=Open%20Mic`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) return [];
         const data = await res.json();

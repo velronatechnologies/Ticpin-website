@@ -43,7 +43,7 @@ async function getVenueData(name: string): Promise<RealDining | null> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/dining/${encodeURIComponent(name)}`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) return null;
         return res.json();
@@ -57,7 +57,7 @@ async function getVenueOffers(name: string): Promise<OfferRecord[]> {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/dining/${encodeURIComponent(name)}/offers`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) return [];
         const data = await res.json();
@@ -88,7 +88,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 async function getMobileVenueData(id: string) {
     try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/mobile/dining/${id}`, { cache: 'no-store' });
+        const res = await fetch(`${base}/api/mobile/dining/${id}`, { next: { revalidate: 300 } });
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {

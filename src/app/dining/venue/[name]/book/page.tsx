@@ -11,6 +11,7 @@ import { passApi, TicpinPass } from '@/lib/api/pass';
 import { Zap } from 'lucide-react';
 import { useSlotLock } from '@/hooks/useSlotLock';
 import MobileDiningBooking from '@/components/mobile/MobileDiningBooking';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 interface RealDining {
@@ -73,16 +74,7 @@ const DiningBooking: React.FC = () => {
     const [pass, setPass] = useState<TicpinPass | null>(null);
     const [usePass, setUsePass] = useState(false);
 
-    const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (session?.id) {
@@ -225,7 +217,7 @@ const DiningBooking: React.FC = () => {
 
     if (!venue) return <div className="text-center py-20">Restaurant not found</div>;
 
-    if (mounted && isMobile) {
+    if (isMobile) {
         return (
             <MobileDiningBooking
                 venue={venue}

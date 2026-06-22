@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
 import MobilePlayDetails from '@/components/mobile/MobilePlayDetails';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
@@ -95,16 +96,13 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
         window.scrollTo(0, 0);
     }, []);
 
-    const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
-        setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+        if (venue?.name) {
+            router.prefetch(`/play/${encodeURIComponent(venue.name)}/book`);
+        }
+    }, [venue?.name, router]);
 
     const handleBook = () => {
         if (!venue) return;
@@ -129,7 +127,7 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
     }, [venue?.description]);
 
     // Mobile view
-    if (mounted && isMobile) {
+    if (isMobile) {
         return <MobilePlayDetails venue={venue} offers={[]} />;
     }
 

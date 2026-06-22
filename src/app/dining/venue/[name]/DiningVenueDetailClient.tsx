@@ -8,6 +8,7 @@ import { ArrowLeft, MapPin, Star, ChevronDown, ChevronRight, PhoneCall } from 'l
 import BookingCard from '@/components/dining/venue/BookingCard';
 import Image from 'next/image';
 import MobileDiningDetails from '@/components/mobile/MobileDiningDetails';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface OfferRecord {
     id: string;
@@ -47,11 +48,18 @@ interface RealDining {
 export default function DiningVenueDetailClient({ venue, id, offers }: { venue: RealDining, id: string, offers: OfferRecord[] }) {
     const router = useRouter();
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
+    const isMobile = useIsMobile();
 
     // Scroll to top on page load
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
+
+    useEffect(() => {
+        if (venue?.name) {
+            router.prefetch(`/dining/venue/${encodeURIComponent(venue.name)}/book`);
+        }
+    }, [venue?.name, router]);
 
     const smallImages = (venue.gallery_urls && venue.gallery_urls.length > 0)
         ? venue.gallery_urls.slice(0, 4)
@@ -63,7 +71,7 @@ export default function DiningVenueDetailClient({ venue, id, offers }: { venue: 
     const facilities = venue.guide?.facilities || [];
 
     // Mobile view
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (isMobile) {
         return <MobileDiningDetails venue={venue} offers={offers} />;
     }
 

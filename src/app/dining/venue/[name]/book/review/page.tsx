@@ -15,6 +15,7 @@ import { getBookingStatus } from '@/lib/utils/booking-status';
 import AuthModal from '@/components/modals/AuthModal';
 import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
 import MobileDiningReview from '@/components/mobile/MobileDiningReview';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 interface CartData {
@@ -86,18 +87,9 @@ export default function DiningReviewPage() {
     // Modals
     const [showAuthModal, setShowAuthModal] = useState(false);
 
-    const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const isMobile = useIsMobile();
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-
-    useEffect(() => {
-        setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
 
     // Split name when billing name loaded
     useEffect(() => {
@@ -141,11 +133,20 @@ export default function DiningReviewPage() {
             try {
                 const parsed = JSON.parse(savedCart);
                 setCart(parsed);
-                // Load venue data
-                fetch(`/backend/api/dining/${venueName}`).then(r => r.json()).then(data => {
-                    setVenueData({ id: data._id, name: data.name, portrait_image_url: data.portrait_image_url, landscape_image_url: data.landscape_image_url });
-                    setCart(prev => prev ? { ...prev, city: data.city || '' } : null);
-                }).catch(console.error);
+                const venuePromise = fetch(`/backend/api/dining/${venueName}`).then(r => r.json());
+                const offersPromise = fetch(`/backend/api/dining/${venueName}/offers`).then(r => r.json());
+                Promise.all([venuePromise, offersPromise])
+                    .then(([data, offers]) => {
+                        setVenueData({ id: data._id, name: data.name, portrait_image_url: data.portrait_image_url, landscape_image_url: data.landscape_image_url });
+                        setCart(prev => prev ? { ...prev, city: data.city || '' } : null);
+
+                        const arr = Array.isArray(offers) ? offers : [];
+                        if (parsed.offerId) {
+                            const offer = arr.find((o: OfferItem) => o.id === parsed.offerId);
+                            setSelectedOffer(offer || null);
+                        }
+                    })
+                    .catch(console.error);
             } catch (e) {
                 router.push(`/dining/venue/${venueName}/book`);
             }
@@ -204,19 +205,6 @@ export default function DiningReviewPage() {
         };
         loadUserData();
     }, [session]);
-
-    // Load offers
-    useEffect(() => {
-        if (venueData) {
-            fetch(`/backend/api/dining/${venueName}/offers`).then(r => r.json()).then(offers => {
-                const arr = Array.isArray(offers) ? offers : [];
-                if (cart?.offerId) {
-                    const offer = arr.find((o: OfferItem) => o.id === cart.offerId);
-                    setSelectedOffer(offer || null);
-                }
-            }).catch(console.error);
-        }
-    }, [venueData, cart]);
 
     // Persist changes
     useEffect(() => {
@@ -444,7 +432,7 @@ export default function DiningReviewPage() {
         );
     }
 
-    if (mounted && isMobile) {
+    if (isMobile) {
         return (
             <MobileDiningReview
                 cart={cart}

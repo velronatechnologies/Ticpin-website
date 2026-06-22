@@ -39,6 +39,8 @@ import {
   safeJsonParse,
   writeScopedTempCounts,
 } from "@/lib/bookingFlow";
+import { useCurrentTime } from "@/hooks/use-current-time";
+import { isEventBookingClosed } from "@/lib/event-booking";
 
 
 interface TicketCategory {
@@ -95,6 +97,7 @@ export default function TicketSelectionPage() {
     number | null
   >(null);
   const [selectedZoneName, setSelectedZoneName] = useState<string | null>(null);
+  const nowMs = useCurrentTime();
   const isReservingRef = useRef(false);
   const session = useUserSession();
   const reservationStore = useReservationStore();
@@ -227,33 +230,7 @@ export default function TicketSelectionPage() {
         }
 
         // Check if event booking is closed
-        const isClosed = (() => {
-          if (eventData.is_sales_paused || eventData.is_canceled) return true;
-          if (eventData.ticket_close_date) {
-            const closeDate = new Date(eventData.ticket_close_date);
-            if (
-              !isNaN(closeDate.getTime()) &&
-              closeDate.getTime() < Date.now()
-            ) {
-              return true;
-            }
-          }
-          if (eventData.event_end_date) {
-            const endDate = new Date(eventData.event_end_date);
-            if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-              return true;
-            }
-          }
-          if (eventData.date) {
-            const eventDate = new Date(eventData.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (eventDate < today && eventData.status !== "unlimited") {
-              return true;
-            }
-          }
-          return false;
-        })();
+        const isClosed = isEventBookingClosed(eventData, nowMs, true);
 
         if (isClosed) {
           toast.error("Bookings for this event are closed.");
@@ -262,6 +239,7 @@ export default function TicketSelectionPage() {
         }
 
         setEvent(eventData);
+        const availabilityPromise = bookingApi.getEventAvailability(eventData.id);
 
         // Reconstruct categories from layout_json if layout-based
         let activeCategories = eventData.ticket_categories || [];
@@ -392,9 +370,7 @@ export default function TicketSelectionPage() {
 
         setShowVisualMap(false);
         try {
-          const availability = await bookingApi.getEventAvailability(
-            eventData.id,
-          );
+          const availability = await availabilityPromise;
           setBookedMap(availability.booked ?? {});
         } catch (e) {
           console.error(e);
@@ -409,7 +385,7 @@ export default function TicketSelectionPage() {
         .then(setPass)
         .catch(() => setPass(null));
     }
-  }, [name, session?.id]);
+  }, [name, nowMs, session?.id]);
 
   useEffect(() => {
     fetch(`/backend/api/coupons/event`)

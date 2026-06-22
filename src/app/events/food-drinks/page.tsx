@@ -6,7 +6,7 @@ import EventCategoryClient from '../EventCategoryClient';
 async function getFoodDrinksEvents() {
     try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/events?category=Food%20%26%20Drinks`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) return [];
         const data = await res.json();

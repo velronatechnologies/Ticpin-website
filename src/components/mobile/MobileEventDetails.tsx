@@ -48,6 +48,7 @@ interface MobileEventDetailsProps {
         price_starts_from?: number;
         ticket_categories?: { name: string; price?: number; capacity?: number }[];
         layout_json?: string;
+        is_layout_based?: boolean;
         artist_details?: { name: string; profession?: string; image_url?: string }[];
         artists?: { name: string; image_url?: string; description?: string }[];
         event_category?: string;
@@ -226,10 +227,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             return;
         }
         if (!session) {
-            router.push(`/login?redirect=${encodeURIComponent(`/events/${encodeURIComponent(event.name)}/book`)}`);
+            const redirectPath = event.is_layout_based
+                ? `/events/${encodeURIComponent(event.name)}/book`
+                : `/events/${encodeURIComponent(event.name)}/book/tickets/all`;
+            router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
             return;
         }
-        router.push(`/events/${encodeURIComponent(event.name)}/book`);
+        if (event.is_layout_based) {
+            router.push(`/events/${encodeURIComponent(event.name)}/book`);
+        } else {
+            router.push(`/events/${encodeURIComponent(event.name)}/book/tickets/all`);
+        }
     };
 
     const toggleAccordion = (section: string) => {

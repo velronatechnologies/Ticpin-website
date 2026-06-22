@@ -13,6 +13,9 @@ import { toast } from '@/components/ui/Toast';
 import Footer from '@/components/layout/Footer';
 import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
 import MobileEventDetails from '@/components/mobile/MobileEventDetails';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useCurrentTime } from '@/hooks/use-current-time';
+import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
 
 interface TicketCategory {
     name: string;
@@ -71,6 +74,7 @@ interface EventData {
     event_end_date?: string;
     is_sales_paused?: boolean;
     is_canceled?: boolean;
+    is_layout_based?: boolean;
     layout_json?: string;
 }
 
@@ -84,9 +88,14 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
     const session = useUserSession();
     const organizerSession = getOrganizerSession();
     const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
+    const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+    const isMobile = useIsMobile();
+    const nowMs = useCurrentTime();
 
     useEffect(() => {
         const fetchAvailability = async () => {
+            setAvailabilityLoaded(false);
+            setBookedMap({});
             try {
                 const avail = await bookingApi.getEventAvailability(event.id);
                 if (avail && avail.booked) {
@@ -94,6 +103,8 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                 }
             } catch (err) {
                 console.error('Failed to fetch availability:', err);
+            } finally {
+                setAvailabilityLoaded(true);
             }
         };
         if (event?.id) {
@@ -101,46 +112,40 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
         }
     }, [event?.id]);
 
+    useEffect(() => {
+        if (id && event) {
+            if (event.is_layout_based) {
+                router.prefetch(`/events/${id}/book`);
+            } else {
+                router.prefetch(`/events/${id}/book/tickets/all`);
+            }
+        }
+    }, [id, event, router]);
+
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
     const bookingStatus = useMemo(() => {
         if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
-        
-        if (event.is_sales_paused || event.is_canceled) {
+
+        if (isEventBookingClosed(event, nowMs)) {
             return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
         }
 
-        if (event.ticket_open_date) {
-            const openDate = new Date(event.ticket_open_date);
-            if (!isNaN(openDate.getTime()) && openDate.getTime() > Date.now()) {
-                const formatted = openDate.toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short'
-                }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                });
-                return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
-            }
+        if (isEventBookingNotOpenedYet(event, nowMs)) {
+            const openDate = new Date(event.ticket_open_date!);
+            const formatted = openDate.toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short'
+            }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+            return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
         }
-        
-        if (event.ticket_close_date) {
-            const closeDate = new Date(event.ticket_close_date);
-            if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
-                return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
-            }
-        }
-        
-        if (event.event_end_date) {
-            const endDate = new Date(event.event_end_date);
-            if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-                return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
-            }
-        }
-        
+
         return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
-    }, [event]);
+    }, [event, nowMs]);
 
     const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
 
@@ -154,10 +159,11 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
             toast.error('Booking for this event is closed!');
             return;
         }
-        // Fetch live availability from backend before entering the booking flow
         try {
-            const avail = await bookingApi.getEventAvailability(event.id);
-            const bookedMap = avail.booked ?? {};
+            const availabilityMap =
+                availabilityLoaded
+                    ? bookedMap
+                    : (await bookingApi.getEventAvailability(event.id)).booked ?? {};
 
             const categories = event.ticket_categories || [];
 
@@ -169,7 +175,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                     hasInfinite = true;
                     break;
                 }
-                const booked = bookedMap[cat.name] ?? 0;
+                const booked = availabilityMap[cat.name] ?? 0;
                 const left = cat.capacity - booked;
                 if (left > 0) {
                     totalAvailable += left;
@@ -188,7 +194,11 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
             setIsLoginModalOpen(true);
             return;
         }
-        router.push(`/events/${id}/book`);
+        if (event.is_layout_based) {
+            router.push(`/events/${id}/book`);
+        } else {
+            router.push(`/events/${id}/book/tickets/all`);
+        }
     };
 
     const formattedDate = useMemo(() => {
@@ -206,17 +216,6 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
     }, [event?.description]);
 
     const bannerImg = useMemo(() => event?.landscape_image_url || event?.portrait_image_url || '', [event]);
-
-    // Mobile view check
-    const [isMobile, setIsMobile] = useState(false);
-    useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
 
     if (isMobile) {
         return <MobileEventDetails event={event} offers={[]} />;

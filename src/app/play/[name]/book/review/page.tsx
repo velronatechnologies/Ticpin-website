@@ -17,6 +17,9 @@ import { toast } from '@/components/ui/Toast';
 import UserMenu from '@/components/layout/Navbar/UserMenu';
 import ProfileDrawer from '@/components/layout/Navbar/ProfileDrawer';
 import MobilePlayReview from '@/components/mobile/MobilePlayReview';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useCurrentTime } from '@/hooks/use-current-time';
+import { isExpiringWithinDay } from '@/lib/event-booking';
 
 
 import { CITIES } from '@/app/events/create/data';
@@ -175,16 +178,8 @@ export default function PlayReviewPage() {
     const [cart, setCart] = useState<CartData | null>(null);
     const [step, setStep] = useState<'review' | 'billing' | 'success'>('review');
 
-    const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const isMobile = useIsMobile();
+    const nowMs = useCurrentTime(30000);
 
     const [lockedGrandTotal, setLockedGrandTotal] = useState<number | null>(null);
 
@@ -223,7 +218,6 @@ export default function PlayReviewPage() {
 
     const [expandedSection, setExpandedSection] = useState<'none' | 'offers' | 'coupons'>('none');
     const [showGstDetails, setShowGstDetails] = useState(false);
-    const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({});
 
     const [email, setEmail] = useState('');
     useEffect(() => {
@@ -534,87 +528,55 @@ export default function PlayReviewPage() {
     }, [billing, setRememberedBilling]);
     useEffect(() => { sessionStorage.setItem('ticpin_play_step', step); }, [step]);
 
-    // Countdown timer effect
-    useEffect(() => {
-        const timer = setInterval(() => {
-            const newTimeLeft: { [key: string]: string } = {};
+    const timeLeft = useMemo(() => {
+        const formatDiff = (expiryMs: number) => {
+            const diff = expiryMs - nowMs;
+            if (diff <= 0) return 'Expired';
 
-            // Calculate time left for offers
-            offers.forEach(o => {
-                if (o.valid_until) {
-                    const expiry = new Date(o.valid_until).getTime();
-                    const now = Date.now();
-                    const diff = expiry - now;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-                    if (diff > 0) {
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            if (hours > 24) {
+                const days = Math.floor(hours / 24);
+                const remainingHours = hours % 24;
+                return `${days}d ${remainingHours}h ${minutes}m`;
+            }
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${Math.max(1, minutes)}m`;
+        };
 
-                        if (hours > 24) {
-                            const days = Math.floor(hours / 24);
-                            const remainingHours = hours % 24;
-                            newTimeLeft[o.id] = `${days}d ${remainingHours}h ${minutes}m`;
-                        } else if (hours > 0) {
-                            newTimeLeft[o.id] = `${hours}h ${minutes}m ${seconds}s`;
-                        } else if (minutes > 0) {
-                            newTimeLeft[o.id] = `${minutes}m ${seconds}s`;
-                        } else {
-                            newTimeLeft[o.id] = `${seconds}s`;
-                        }
-                    } else {
-                        newTimeLeft[o.id] = 'Expired';
-                    }
-                }
-            });
-
-            // Calculate time left for coupons
-            availableCoupons.forEach(c => {
-                if (c.valid_until) {
-                    const expiry = new Date(c.valid_until).getTime();
-                    const now = Date.now();
-                    const diff = expiry - now;
-
-                    if (diff > 0) {
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-                        if (hours > 24) {
-                            const days = Math.floor(hours / 24);
-                            const remainingHours = hours % 24;
-                            newTimeLeft[`coupon_${c.id}`] = `${days}d ${remainingHours}h ${minutes}m`;
-                        } else if (hours > 0) {
-                            newTimeLeft[`coupon_${c.id}`] = `${hours}h ${minutes}m ${seconds}s`;
-                        } else if (minutes > 0) {
-                            newTimeLeft[`coupon_${c.id}`] = `${minutes}m ${seconds}s`;
-                        } else {
-                            newTimeLeft[`coupon_${c.id}`] = `${seconds}s`;
-                        }
-                    } else {
-                        newTimeLeft[`coupon_${c.id}`] = 'Expired';
-                    }
-                }
-            });
-
-            setTimeLeft(newTimeLeft);
-        }, 1000); // Update every second
-
-        return () => clearInterval(timer);
-    }, [offers, availableCoupons]);
+        const nextTimeLeft: { [key: string]: string } = {};
+        offers.forEach((offer) => {
+            if (!offer.valid_until) return;
+            nextTimeLeft[offer.id] = formatDiff(new Date(offer.valid_until).getTime());
+        });
+        availableCoupons.forEach((coupon) => {
+            if (!coupon.valid_until) return;
+            nextTimeLeft[`coupon_${coupon.id}`] = formatDiff(new Date(coupon.valid_until).getTime());
+        });
+        return nextTimeLeft;
+    }, [availableCoupons, nowMs, offers]);
 
     useEffect(() => {
         if (!venueName) return;
-        bookingApi.getPlayOffers(venueName).then(setOffers).catch(() => setOffers([]));
-        bookingApi.getCouponsByCategory('play', session?.id).then(res => {
-            setAvailableCoupons(Array.isArray(res) ? res : []);
-        }).catch(() => setAvailableCoupons([]));
+        Promise.all([
+            bookingApi.getPlayOffers(venueName),
+            bookingApi.getCouponsByCategory('play', session?.id),
+        ])
+            .then(([offerList, couponList]) => {
+                setOffers(Array.isArray(offerList) ? offerList : []);
+                setAvailableCoupons(Array.isArray(couponList) ? couponList : []);
+            })
+            .catch(() => {
+                setOffers([]);
+                setAvailableCoupons([]);
+            });
     }, [venueName, session?.id]);
     const orderAmount = cart?.totalPrice ?? 0;
     const bookingFee = Math.round(orderAmount * 0.13);
     // Check if any offers are expiring soon
-    const hasExpiringOffers = offers.some(o => o.valid_until && new Date(o.valid_until) <= new Date(Date.now() + 24 * 60 * 60 * 1000) && new Date(o.valid_until) > new Date());
-    const hasExpiringCoupons = availableCoupons.some(c => c.valid_until && new Date(c.valid_until) <= new Date(Date.now() + 24 * 60 * 60 * 1000) && new Date(c.valid_until) > new Date());
+    const hasExpiringOffers = offers.some((offer) => isExpiringWithinDay(offer.valid_until, nowMs));
+    const hasExpiringCoupons = availableCoupons.some((coupon) => isExpiringWithinDay(coupon.valid_until, nowMs));
     const totalDiscount = offerDiscount + couponDiscount;
     const isPassApplied = cart?.use_pass ?? false;
     const grandTotal = isPassApplied ? 0 : Math.max(0, orderAmount + bookingFee - totalDiscount);
@@ -625,7 +587,7 @@ export default function PlayReviewPage() {
             return;
         }
 
-        const isExpiringSoon = offer.valid_until && new Date(offer.valid_until) <= new Date(Date.now() + 24 * 60 * 60 * 1000) && new Date(offer.valid_until) > new Date();
+        const isExpiringSoon = isExpiringWithinDay(offer.valid_until, nowMs);
 
         const disc = offer.discount_type === 'percent'
             ? Math.round(orderAmount * offer.discount_value / 100)
@@ -660,7 +622,7 @@ export default function PlayReviewPage() {
 
             // Check if this coupon is expiring soon
             const coupon = availableCoupons.find(cp => cp.code.toUpperCase() === c.toUpperCase());
-            const isExpiringSoon = coupon && coupon.valid_until && new Date(coupon.valid_until) <= new Date(Date.now() + 24 * 60 * 60 * 1000) && new Date(coupon.valid_until) > new Date();
+            const isExpiringSoon = coupon ? isExpiringWithinDay(coupon.valid_until, nowMs) : false;
 
             if (isExpiringSoon) {
                 const expiryDate = new Date(coupon.valid_until!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1050,7 +1012,7 @@ export default function PlayReviewPage() {
         );
     }
 
-    if (mounted && isMobile && step !== 'success') {
+    if (isMobile && step !== 'success') {
         return (
             <MobilePlayReview
                 cart={cart}
@@ -1295,9 +1257,9 @@ export default function PlayReviewPage() {
                                     {expandedSection === 'offers' && (
                                         <div className="p-4 md:p-5 bg-zinc-50 border-b border-[#AEAEAE]/40 space-y-3">
                                             {offers.length > 0 ? offers.map(o => {
-                                                const isExpiringSoon = o.valid_until && new Date(o.valid_until) <= new Date(Date.now() + 24 * 60 * 60 * 1000);
+                                                const isExpiringSoon = isExpiringWithinDay(o.valid_until, nowMs);
                                                 const expiryDate = o.valid_until ? new Date(o.valid_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
-                                                const isExpired = Boolean(o.valid_until && new Date(o.valid_until) < new Date());
+                                                const isExpired = Boolean(o.valid_until && new Date(o.valid_until).getTime() <= nowMs);
                                                 const countdown = timeLeft[o.id] || 'Loading...';
 
                                                 return (
@@ -1388,9 +1350,9 @@ export default function PlayReviewPage() {
                                             {availableCoupons.length > 0 && (
                                                 <div className="space-y-2 pt-1">
                                                     {availableCoupons.map(c => {
-                                                        const isExpiringSoon = c.valid_until && new Date(c.valid_until) <= new Date(Date.now() + 24 * 60 * 60 * 1000);
+                                                        const isExpiringSoon = isExpiringWithinDay(c.valid_until, nowMs);
                                                         const expiryDate = c.valid_until ? new Date(c.valid_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
-                                                        const isExpired = Boolean(c.valid_until && new Date(c.valid_until) < new Date());
+                                                        const isExpired = Boolean(c.valid_until && new Date(c.valid_until).getTime() <= nowMs);
                                                         const countdown = timeLeft[`coupon_${c.id}`] || 'Loading...';
 
                                                         return (

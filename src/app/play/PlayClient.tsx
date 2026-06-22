@@ -8,6 +8,7 @@ import FilterBar from '@/components/play/FilterBar';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import MobilePlay from '@/components/mobile/MobilePlay';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RealPlay {
     _id?: string;
@@ -49,25 +50,10 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
     const [activeFilter, setActiveFilter] = useState('All');
     const [modalFilters, setModalFilters] = useState<Record<string, string[]>>({});
     const [mounted, setMounted] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         setMounted(true);
-        setIsMobile(window.innerWidth < 768);
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    useEffect(() => {
-        fetch(`/backend/api/play`)
-            .then(r => r.json())
-            .then(data => {
-                const list: RealPlay[] = Array.isArray(data) ? data : (data?.data ?? []);
-                const approved = list.filter(v => v.status === 'approved');
-                if (approved.length > 0) setVenues(approved);
-            })
-            .catch(() => { });
     }, []);
 
     const selectedSports = modalFilters.sports ?? [];
@@ -143,7 +129,7 @@ export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[
     }
 
     // Mobile view - only after mount to prevent hydration mismatch
-    if (mounted && isMobile) {
+    if (isMobile) {
         return <MobilePlay venues={venues} />;
     }
 

@@ -32,7 +32,7 @@ interface RealEvent {
 async function getEvents(): Promise<RealEvent[]> {
     try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/events`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!response.ok) {
             console.warn(`Backend responded with ${response.status} for events fetch`);

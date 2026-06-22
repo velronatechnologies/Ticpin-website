@@ -24,7 +24,7 @@ interface RealPlay {
 async function getPlayVenues(): Promise<RealPlay[]> {
     try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/play?limit=100`, {
-            cache: 'no-store'
+            next: { revalidate: 300 }
         });
         if (!res.ok) {
             console.warn(`Backend responded with ${res.status} for play venues fetch`);
