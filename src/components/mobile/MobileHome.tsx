@@ -1124,7 +1124,6 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                     <Link href="/terms" className="text-white text-[15px] hover:opacity-70 transition-opacity">Terms & Conditions</Link>
                     <Link href="/privacy" className="text-white text-[15px] hover:opacity-70 transition-opacity">Privacy Policy</Link>
                     <Link href="/contact" className="text-white text-[15px] hover:opacity-70 transition-opacity">Contact Us</Link>
-                    <Link href="/list-your-events" className="text-white text-[15px] hover:opacity-70 transition-opacity">List your events</Link>
                 </div>
 
                 <div className="w-full h-[0.5px] bg-[#686868] mb-8" />

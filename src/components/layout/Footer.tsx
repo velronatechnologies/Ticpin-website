@@ -60,7 +60,7 @@ export default function Footer() {
                         ))}
                         <Link
                             href={dynamicLink.href}
-                            className="text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap"
+                            className="hidden md:inline text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap"
                         >
                             {dynamicLink.name}
                         </Link>

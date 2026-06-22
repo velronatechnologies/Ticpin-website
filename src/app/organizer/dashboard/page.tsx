@@ -71,17 +71,17 @@ function DashboardContent() {
         syncStatus();
     }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Before mount: server and client render the same pulse (fixes hydration mismatch)
-    if (!hasMounted || loading) {
-        return <div className="h-[calc(100vh-80px)] w-full bg-zinc-50 animate-pulse" />;
-    }
-
     // If no session after loading complete, redirect to login
     useEffect(() => {
         if (!session && hasMounted && !loading) {
             router.replace('/list-your-dining/Login');
         }
     }, [session, hasMounted, loading, router]);
+
+    // Before mount: server and client render the same pulse (fixes hydration mismatch)
+    if (!hasMounted || loading) {
+        return <div className="h-[calc(100vh-80px)] w-full bg-zinc-50 animate-pulse" />;
+    }
 
     if (!session) {
         return null;

@@ -5,20 +5,40 @@ import { useRouter, usePathname } from 'next/navigation';
 import { getOrganizerSession } from '@/lib/auth/organizer';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    const [authorized, setAuthorized] = useState(false);
-    const [hasCheckedSession, setHasCheckedSession] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
+    
+    const [isMobile, setIsMobile] = useState<boolean | null>(() => {
+        if (typeof window !== 'undefined') {
+            const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const mobileWidth = window.innerWidth < 768;
+            return mobileUA || mobileWidth;
+        }
+        return null;
+    });
+
+    const [authorized, setAuthorized] = useState(false);
+    const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setHasCheckedSession(true);
-        }, 100);
-        return () => clearTimeout(timer);
+        const checkMobile = () => {
+            const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const mobileWidth = window.innerWidth < 768;
+            setIsMobile(mobileUA || mobileWidth);
+        };
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     useEffect(() => {
+        if (isMobile) {
+            router.replace('/events');
+        }
+    }, [isMobile, router]);
+
+    useEffect(() => {
         if (!hasCheckedSession) return;
+        if (isMobile === null || isMobile) return;
         
         if (pathname?.startsWith('/admin/login') || pathname?.startsWith('/admin/newadminpanel')) {
             setAuthorized(true);
@@ -33,9 +53,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } else {
             setAuthorized(true);
         }
-    }, [hasCheckedSession, pathname, router]);
+    }, [hasCheckedSession, pathname, router, isMobile]);
 
-    if (!authorized || !hasCheckedSession) {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setHasCheckedSession(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (isMobile === null || isMobile || !authorized || !hasCheckedSession) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
                 <div className="animate-pulse flex flex-col items-center gap-4">
