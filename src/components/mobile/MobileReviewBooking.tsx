@@ -170,8 +170,6 @@ export default function MobileReviewBooking({
         }
     }, [userSession, identity.rememberedBilling, setBilling, setEmail]);
 
-    if (!cart) return null;
-
     const fmtDate = (iso: string) => {
         if (!iso) return '';
         const d = new Date(iso + 'T00:00:00');
@@ -182,7 +180,7 @@ export default function MobileReviewBooking({
         ? eventData.venue_address.split(',')[0].trim()
         : '';
     const venueName = venueFirstSegment || eventData?.venue_name || '';
-    const cityName = eventData?.city || cart.city || '';
+    const cityName = eventData?.city || cart?.city || '';
 
     // Active Display Variables
     const activeName = billing.name || userSession?.name || '';
@@ -197,6 +195,8 @@ export default function MobileReviewBooking({
             setIsEditingBilling(true);
         }
     }, [hasMissingDetails]);
+
+    if (!cart) return null;
 
     return (
         <div className="md:hidden fixed inset-0 z-[140] bg-white font-sans overflow-y-auto pb-32 flex flex-col" style={{ fontFamily: "'Anek Latin', sans-serif" }}>
