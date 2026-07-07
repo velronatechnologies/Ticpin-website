@@ -224,6 +224,7 @@ export default function ReviewBookingPage() {
   const [bookingId, setBookingId] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pass, setPass] = useState<any>(null);
+  const [ticketUpdateInProgress, setTicketUpdateInProgress] = useState(false);
 
   const isMobile = useIsMobile();
   const nowMs = useCurrentTime(30000);
@@ -846,31 +847,32 @@ export default function ReviewBookingPage() {
   );
 
   const removeTicket = async (i: number) => {
-    if (!cart || !session?.id) return;
+    if (!cart || !session?.id || ticketUpdateInProgress) return;
 
-    const newTickets = cart.tickets.filter((_, idx) => idx !== i);
-
-    if (newTickets.length === 0) {
-      // If all tickets removed, release reservation and redirect back
-      try {
-        if (reservationStore.reservationId) {
-          await bookingApi.unlockReservation(reservationStore.reservationId);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      reservationStore.clearReservation();
-      sessionStorage.removeItem("ticpin_cart");
-      router.replace(`/events/${name}/book`);
-      return;
-    }
-
-    const ticketReqs = newTickets.map((t) => ({
-      category: t.name,
-      quantity: t.quantity,
-    }));
-
+    setTicketUpdateInProgress(true);
     try {
+      const newTickets = cart.tickets.filter((_, idx) => idx !== i);
+
+      if (newTickets.length === 0) {
+        // If all tickets removed, release reservation and redirect back
+        try {
+          if (reservationStore.reservationId) {
+            await bookingApi.unlockReservation(reservationStore.reservationId);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+        reservationStore.clearReservation();
+        sessionStorage.removeItem("ticpin_cart");
+        router.replace(`/events/${name}/book`);
+        return;
+      }
+
+      const ticketReqs = newTickets.map((t) => ({
+        category: t.name,
+        quantity: t.quantity,
+      }));
+
       const res = await bookingApi.createReservation(
         cart.eventId,
         session.id,
@@ -901,30 +903,34 @@ export default function ReviewBookingPage() {
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to update reservation.");
+    } finally {
+      setTicketUpdateInProgress(false);
     }
   };
 
   const updateTicketQuantity = async (i: number, newQuantity: number) => {
-    if (!cart || !session?.id) return;
-    const oldQuantity = cart.tickets[i].quantity;
+    if (!cart || !session?.id || ticketUpdateInProgress) return;
 
-    if (newQuantity < 1) {
-      removeTicket(i);
-      return;
-    }
-
-    // Optimistically calculate new tickets array
-    const newTickets = cart.tickets.map((t, idx) =>
-      idx === i ? { ...t, quantity: newQuantity } : t,
-    );
-
-    // Format for backend
-    const ticketReqs = newTickets.map((t) => ({
-      category: t.name,
-      quantity: t.quantity,
-    }));
-
+    setTicketUpdateInProgress(true);
     try {
+      const oldQuantity = cart.tickets[i].quantity;
+
+      if (newQuantity < 1) {
+        removeTicket(i);
+        return;
+      }
+
+      // Optimistically calculate new tickets array
+      const newTickets = cart.tickets.map((t, idx) =>
+        idx === i ? { ...t, quantity: newQuantity } : t,
+      );
+
+      // Format for backend
+      const ticketReqs = newTickets.map((t) => ({
+        category: t.name,
+        quantity: t.quantity,
+      }));
+
       // Re-reserve with new quantities. This deletes the old reservation and locks new seats
       const res = await bookingApi.createReservation(
         cart.eventId,
@@ -961,6 +967,8 @@ export default function ReviewBookingPage() {
         err.message ||
           "Failed to update reservation. Selected tickets may not be available.",
       );
+    } finally {
+      setTicketUpdateInProgress(false);
     }
   };
 
