@@ -1,28 +1,29 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { clearUserSession } from '@/lib/auth/user';
-import { clearOrganizerSession } from '@/lib/auth/organizer';
+import { clearAllData } from '@/lib/auth/clearAll';
 
 export default function LogoutPage() {
-  const router = useRouter();
-
   useEffect(() => {
-    // 1. Clear both sessions
-    clearUserSession();
-    clearOrganizerSession();
-    
-    // 2. Small delay to ensure cookies are cleared before redirect
-    const timer = setTimeout(() => {
-      // 3. Redirect to home page
-      router.replace('/');
-      // 4. Force a hard refresh to clear any cached states
-      window.location.href = '/';
-    }, 500);
+    let cancelled = false;
 
-    return () => clearTimeout(timer);
-  }, [router]);
+    const logout = async () => {
+      await Promise.allSettled([
+        fetch('/backend/api/auth/logout/user', { method: 'POST', credentials: 'include' }),
+        fetch('/backend/api/auth/logout/organizer', { method: 'POST', credentials: 'include' }),
+      ]);
+
+      if (!cancelled) {
+        clearAllData();
+      }
+    };
+
+    void logout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>

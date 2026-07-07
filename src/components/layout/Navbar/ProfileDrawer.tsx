@@ -127,10 +127,22 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     if (!isMounted) return null;
 
     const handleLogout = () => {
-        if (activeRole === 'organizer') {
-            onOrganizerLogout?.();
+        if (activeRole === 'organizer' && onOrganizerLogout) {
+            onOrganizerLogout();
+            onClose();
+            return;
+        }
+
+        if (activeRole !== 'organizer' && onUserLogout) {
+            onUserLogout();
+            onClose();
+            return;
+        }
+
+        if (router) {
+            router.push('/logout');
         } else {
-            onUserLogout?.();
+            nextRouter.push('/logout');
         }
         onClose();
     };

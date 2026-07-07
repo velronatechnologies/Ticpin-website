@@ -484,7 +484,13 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                 className="flex flex-col items-center gap-[10px] flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
                             >
                                 <div className="w-[113px] h-[113px] rounded-full bg-[#D9D9D9] overflow-hidden border border-[#D9D9D9] relative">
-                                    <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" />
+                                    {artist.image ? (
+                                        <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[32px] font-semibold text-zinc-500">
+                                            {artist.name?.charAt(0)?.toUpperCase() || 'A'}
+                                        </div>
+                                    )}
                                 </div>
                                 <span className="text-[15px] font-medium text-black">{artist.name}</span>
                             </div>
