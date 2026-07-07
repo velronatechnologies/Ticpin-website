@@ -1,12 +1,7 @@
-'use cache';
-
 import React from 'react';
 import Link from 'next/link';
-import { cacheLife, cacheTag } from 'next/cache';
 
 export default async function DiningComingSoon() {
-  cacheLife('days');
-  cacheTag('dining-page');
   return (
     <div className="min-h-screen w-full bg-white text-black flex flex-col justify-between items-center px-6 py-12 relative overflow-hidden font-sans">
       {/* Soft blurred ambient glows to match the Prismania design */}

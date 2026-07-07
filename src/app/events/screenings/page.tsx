@@ -1,6 +1,3 @@
-'use cache';
-
-import { cacheLife, cacheTag } from 'next/cache';
 import EventCategoryClient from '../EventCategoryClient';
 
 async function getScreeningsEvents() {
@@ -19,8 +16,6 @@ async function getScreeningsEvents() {
 }
 
 export default async function ScreeningsPage() {
-    cacheLife('days');
-    cacheTag('events-list', 'event-category-screenings');
     const events = await getScreeningsEvents();
     return (
         <EventCategoryClient

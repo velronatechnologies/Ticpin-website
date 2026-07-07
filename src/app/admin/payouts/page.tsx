@@ -5,8 +5,8 @@ import AdminPayoutsClient from '@/components/admin/AdminPayoutsClient';
 
 async function getAdminPayoutsData() {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('ticpin_session');
-    const token = cookieStore.get('ticpin_token');
+    const sessionCookie = cookieStore.get('ticpin_session_info');
+    const token = cookieStore.get('__Host-ticpin_session');
 
     if (!sessionCookie || !token) {
         return null;
@@ -29,14 +29,14 @@ async function getAdminPayoutsData() {
             fetch(`${backendUrl}/api/admin/payouts?page=1&limit=20`, {
                 headers: {
                     'Authorization': `Bearer ${session.id}`,
-                    'Cookie': `ticpin_token=${token.value}`
+                    'Cookie': `__Host-ticpin_session=${token.value}`
                 },
                 next: { revalidate: 0 } 
             }),
             fetch(`${backendUrl}/api/admin/payouts/organizers`, {
                 headers: {
                     'Authorization': `Bearer ${session.id}`,
-                    'Cookie': `ticpin_token=${token.value}`
+                    'Cookie': `__Host-ticpin_session=${token.value}`
                 },
                 next: { revalidate: 3600 } 
             })

@@ -1,4 +1,6 @@
-const BASE = "/backend/api/pass";
+import { BACKEND_API_BASE } from '../backend';
+
+const BASE = `${BACKEND_API_BASE}/pass`;
 
 export interface BenefitCounter {
   total: number;

@@ -472,7 +472,7 @@ export default function DiningReviewPage() {
         <div className="min-h-screen font-anek-latin" style={{ background: 'linear-gradient(180deg, #ECE8FD 0%, #FFFFFF 100%)' }}>
             <header className="sticky top-0 z-50 w-full h-[70px] bg-white/80 backdrop-blur-md border-b border-zinc-200/50 flex items-center justify-between px-4 md:px-10 lg:px-20">
                 <div className="cursor-pointer transition-opacity hover:opacity-80" onClick={() => (step === 'review' ? router.push('/') : setStep('review'))}>
-                    <Image src="/ticpin-logo-black.png" alt="TICPIN" width={120} height={25} className="h-6 w-auto object-contain" />
+                    <Image src="/ticpin-logo-black.png" alt="TICPIN" width={120} height={25} className="h-6 w-auto object-contain" style={{ width: "auto" }} />
                 </div>
                 <div className="hidden md:flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold ${step === 'review' ? 'bg-black text-white' : 'bg-zinc-100 text-zinc-400'}`}>1</div>

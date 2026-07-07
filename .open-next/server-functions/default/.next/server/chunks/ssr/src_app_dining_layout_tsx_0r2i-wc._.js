@@ -1,0 +1,3 @@
+module.exports=[362120,a=>{"use strict";var b=a.i(826326),c=a.i(927468),d=a.i(502669);a.s(["default",0,function({children:a}){let e=(0,c.usePathname)(),f=(0,c.useRouter)();return((0,d.useEffect)(()=>{"/dining"!==e&&f.replace("/dining")},[e,f]),"/dining"!==e)?(0,b.jsx)("div",{className:"min-h-screen bg-white flex items-center justify-center",children:(0,b.jsx)("div",{className:"w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin"})}):(0,b.jsx)(b.Fragment,{children:a})}])}];
+
+//# sourceMappingURL=src_app_dining_layout_tsx_0r2i-wc._.js.map

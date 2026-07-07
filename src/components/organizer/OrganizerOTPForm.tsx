@@ -108,7 +108,7 @@ function OTPContent({ vertical, api, setupPath, loginPath }: Props) {
             useIdentityStore.getState().loginOrganizer(session);
             const { clearOTPSentAt } = await import('@/lib/utils/otp-state');
             clearOTPSentAt(email, vertical);
-            
+
             if (isAdmin) {
                 router.push('/admin');
             } else if (catStatus[vertical]) {

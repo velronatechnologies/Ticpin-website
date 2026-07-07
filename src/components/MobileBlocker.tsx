@@ -24,6 +24,7 @@ export default function MobileBlocker() {
                         width={120}
                         height={32}
                         className="h-8 w-auto invert brightness-0"
+                        style={{ width: "auto" }}
                     />
                 </div>
                 

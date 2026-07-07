@@ -1,5 +1,7 @@
-const ADMIN_BASE = '/backend/api/admin';
-const ORG_BASE = '/backend/api/organizer';
+import { BACKEND_API_BASE } from '../backend';
+
+const ADMIN_BASE = `${BACKEND_API_BASE}/admin`;
+const ORG_BASE = `${BACKEND_API_BASE}/organizer`;
 
 async function adminRequest<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`${ADMIN_BASE}${path}`, {

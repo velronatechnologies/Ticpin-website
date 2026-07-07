@@ -26,7 +26,7 @@ function UserProfileContent() {
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [pass, setPass] = useState<TicpinPass | null>(null);
-    const [hasCheckedSession, setHasCheckedSession] = useState(false);
+    const [sessionReady, setSessionReady] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
@@ -38,16 +38,13 @@ function UserProfileContent() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Mark session as ready after first read from cookie
     useEffect(() => {
-        // Wait for session to load first
-        const timer = setTimeout(() => {
-            setHasCheckedSession(true);
-        }, 100);
-        return () => clearTimeout(timer);
-    }, []);
+        setSessionReady(true);
+    }, [userSession]);
 
     useEffect(() => {
-        if (!hasCheckedSession) return;
+        if (!sessionReady) return;
         
         if (!userSession) {
             router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
@@ -80,13 +77,13 @@ function UserProfileContent() {
         };
 
         fetchProfile();
-    }, [userSession?.id, hasCheckedSession, router]);
+    }, [userSession?.id, sessionReady, router]);
 
     if (mounted && isMobile) {
         return <MobileProfile />;
     }
 
-    if (loading || !hasCheckedSession) {
+    if (loading || !sessionReady) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#5331EA]"></div>

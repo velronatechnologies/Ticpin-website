@@ -46,12 +46,12 @@ const LoginView: React.FC<LoginViewProps> = ({
     }, [view, otpRefs]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden overflow-y-hidden">
+        <div className="h-full flex flex-col overflow-hidden">
             {/* Permanent recaptcha-container so it never gets unmounted */}
             <div id="recaptcha-container"></div>
 
             {/* Banner Section */}
-            <div className="relative h-[260px] sm:h-[300px] flex flex-col items-center justify-center p-0 overflow-hidden shrink-0">
+            <div className="relative h-[200px] sm:h-[220px] flex flex-col items-center justify-center p-0 overflow-hidden shrink-0">
                 <Image
                     src="/login/banner.jpeg"
                     alt="Login Banner"
@@ -59,31 +59,31 @@ const LoginView: React.FC<LoginViewProps> = ({
                     className="object-cover"
                     priority
                 />
-                <button onClick={onClose} className="absolute top-6 right-6 text-white/80 hover:text-white transition-colors z-20 bg-black/20 p-2 rounded-full backdrop-blur-sm">
-                    <X size={24} />
+                <button onClick={onClose} className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors z-20 bg-black/20 p-2 rounded-full backdrop-blur-sm">
+                    <X size={20} />
                 </button>
             </div>
 
-            <div className="p-6 sm:p-8 space-y-6 flex-1 flex flex-col items-center justify-center bg-white">
+            <div className="p-6 sm:p-8 space-y-5 flex-1 flex flex-col items-center justify-center bg-white">
                 {view === 'number' ? (
                     <>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-[26px] sm:text-[32px] text-zinc-900 font-bold tracking-tight">Enter your mobile number</h3>
-                            <p className="text-[14px] sm:text-base text-zinc-500 font-semibold leading-tight">Don't have an account? We'll set one up for you</p>
+                        <div className="text-center space-y-1.5">
+                            <h3 className="text-[22px] sm:text-[24px] text-zinc-900 font-bold tracking-tight">Enter your mobile number</h3>
+                            <p className="text-[13px] sm:text-[14px] text-zinc-500 font-medium leading-tight">Don't have an account? We'll set one up for you</p>
                         </div>
 
-                        <div className="w-full max-w-[604px] space-y-6">
-                            <div className="flex gap-3">
-                                <div className="flex items-center gap-1.5 px-3 bg-white border border-zinc-200 rounded-[15px] h-[55px] cursor-pointer hover:border-zinc-400 transition-all">
+                        <div className="w-full max-w-[360px] space-y-4">
+                            <div className="flex gap-2">
+                                <div className="flex items-center gap-1 px-2.5 bg-white border border-zinc-200 rounded-[12px] h-[50px] cursor-pointer hover:border-zinc-400 transition-all shrink-0">
                                     <Image src="https://flagcdn.com/w40/in.png" alt="IN" width={20} height={13} className="w-5 h-3.5 object-cover rounded-sm" />
-                                    <span className="text-base text-zinc-900 font-bold">+91</span>
+                                    <span className="text-sm text-zinc-900 font-bold">+91</span>
                                     <ChevronDown size={14} className="text-zinc-400" />
                                 </div>
                                 <input
                                     autoFocus
                                     type="tel"
                                     placeholder="Enter mobile number"
-                                    className="flex-1 px-4 bg-white border border-zinc-200 rounded-[15px] text-base font-semibold focus:outline-none focus:border-black h-[55px] transition-all"
+                                    className="flex-1 px-3.5 bg-white border border-zinc-200 rounded-[12px] text-sm font-semibold focus:outline-none focus:border-black h-[50px] transition-all"
                                     value={number}
                                     onChange={(e) => {
                                         const val = e.target.value.replace(/\D/g, '');
@@ -93,12 +93,12 @@ const LoginView: React.FC<LoginViewProps> = ({
                                 />
                             </div>
 
-                            {error && <p className="text-red-500 text-sm -mt-2 font-medium">{error}</p>}
+                            {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
 
                             <button
                                 onClick={handleSendOtp}
                                 disabled={number.length !== 10 || loading}
-                                className={`w-full h-[55px] text-base font-bold rounded-[15px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2
+                                className={`w-full h-[50px] text-sm font-bold rounded-[12px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2
                                     ${number.length === 10 
                                         ? 'bg-black text-white hover:bg-zinc-800' 
                                         : 'bg-[#DEDEDE] text-black cursor-not-allowed'
@@ -113,7 +113,7 @@ const LoginView: React.FC<LoginViewProps> = ({
                             </button>
 
                             <div className="text-center pt-2">
-                                <p className="text-[12px] text-zinc-400 font-semibold leading-normal">
+                                <p className="text-[11px] text-zinc-400 font-semibold leading-normal">
                                     By continuing, you agree to our<br />
                                     <span className="text-[#3311D1] font-semibold cursor-pointer hover:underline">Terms of Service</span>&nbsp;and&nbsp;
                                     <span className="text-[#3311D1] font-semibold cursor-pointer hover:underline">Privacy Policy</span>
@@ -123,9 +123,9 @@ const LoginView: React.FC<LoginViewProps> = ({
                     </>
                 ) : (
                     <>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-[26px] sm:text-[32px] text-zinc-900 font-bold tracking-tight">Enter OTP</h3>
-                            <p className="text-[14px] sm:text-base text-zinc-500 font-semibold leading-tight">
+                        <div className="text-center space-y-1.5">
+                            <h3 className="text-[22px] sm:text-[24px] text-zinc-900 font-bold tracking-tight">Enter OTP</h3>
+                            <p className="text-[13px] sm:text-[14px] text-zinc-500 font-medium leading-tight">
                                 We sent a 6-digit code to +91 {number}{' '}
                                 <span
                                     className="text-[#3311D1] font-bold cursor-pointer hover:underline"
@@ -136,8 +136,8 @@ const LoginView: React.FC<LoginViewProps> = ({
                             </p>
                         </div>
 
-                        <div className="w-full max-w-[604px] space-y-6 flex flex-col justify-center items-center">
-                            <div className="flex justify-center gap-1.5 sm:gap-3 w-full">
+                        <div className="w-full max-w-[360px] space-y-5 flex flex-col justify-center items-center">
+                            <div className="flex justify-center gap-1.5 w-full">
                                 {otp.map((digit, i) => (
                                     <input
                                         key={i}
@@ -145,7 +145,7 @@ const LoginView: React.FC<LoginViewProps> = ({
                                         type="text"
                                         inputMode="numeric"
                                         maxLength={1}
-                                        className="w-10 h-[50px] sm:w-[55px] sm:h-[55px] bg-white border border-zinc-200 rounded-[12px] text-center text-lg sm:text-2xl font-bold focus:outline-none focus:border-black transition-all shadow-sm"
+                                        className="w-10 h-[48px] bg-white border border-zinc-200 rounded-[10px] text-center text-lg font-bold focus:outline-none focus:border-black transition-all shadow-sm"
                                         value={digit}
                                         onChange={(e) => handleOtpChange(i, e.target.value)}
                                         onKeyDown={(e) => handleKeyDown(i, e)}
@@ -154,13 +154,13 @@ const LoginView: React.FC<LoginViewProps> = ({
                                 ))}
                             </div>
 
-                            {error && <p className="text-red-500 text-sm -mt-2 font-medium">{error}</p>}
+                            {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
 
-                            <div className="w-full space-y-4">
+                            <div className="w-full space-y-3">
                                 <button
                                     onClick={handleVerifyOtp}
                                     disabled={otp.some(d => !d) || loading}
-                                    className={`w-full h-[55px] text-base font-bold rounded-[15px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2
+                                    className={`w-full h-[50px] text-sm font-bold rounded-[12px] transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2
                                         ${!otp.some(d => !d) 
                                             ? 'bg-black text-white hover:bg-zinc-800' 
                                             : 'bg-[#DEDEDE] text-black cursor-not-allowed'
@@ -175,11 +175,11 @@ const LoginView: React.FC<LoginViewProps> = ({
                                 </button>
                                 <div className="text-center pt-1">
                                     {timeLeft && timeLeft > 0 ? (
-                                        <p className="text-[14px] text-zinc-400 font-semibold">
+                                        <p className="text-[13px] text-zinc-400 font-semibold">
                                             Resend OTP in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                                         </p>
                                     ) : (
-                                        <p className="text-[14px] text-zinc-500 font-semibold">
+                                        <p className="text-[13px] text-zinc-500 font-semibold">
                                             Didn&apos;t get the OTP?{' '}
                                             <span
                                                 onClick={handleResend}

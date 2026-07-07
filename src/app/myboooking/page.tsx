@@ -32,6 +32,8 @@ function MyBookingsContent() {
     const [bookings, setBookings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // sessionReady: true once useUserSession() has read from the cookie
+    const [sessionReady, setSessionReady] = useState(false);
 
     const fetchBookings = useCallback(async () => {
         if (!session?.id) return;
@@ -60,16 +62,21 @@ function MyBookingsContent() {
     useEffect(() => {
         if (session?.id) {
             fetchBookings();
-        } else {
+        } else if (sessionReady) {
             setLoading(false);
         }
-    }, [session?.id, fetchBookings]);
+    }, [session?.id, sessionReady, fetchBookings]);
+
+    // Mark session as ready after first cookie read
+    useEffect(() => {
+        setSessionReady(true);
+    }, [session]);
 
     useEffect(() => {
-        if (!loading && !session) {
+        if (sessionReady && !loading && !session) {
             router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         }
-    }, [loading, session, router]);
+    }, [sessionReady, loading, session, router]);
 
     const filteredBookings = (bookings || [])
         .filter(b => (b.category || b.type) === activeTab)

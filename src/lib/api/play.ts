@@ -1,7 +1,8 @@
 import type { LoginResponse, VerifyResponse, SetupPayload } from './dining';
+import { BACKEND_API_BASE } from '../backend';
 export type { LoginResponse, VerifyResponse, SetupPayload };
 
-const BASE = '/backend/api';
+const BASE = BACKEND_API_BASE;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

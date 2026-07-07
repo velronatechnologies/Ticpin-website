@@ -308,9 +308,6 @@ export default function MobileEvents({ events }: MobileEventsProps) {
             <header className="px-6 pt-4 pb-4">
                 <div className="flex justify-between items-center mb-5">
                     <div className="flex items-center gap-4">
-                        {/* <Link href="/">
-                            <Image src="/ticpin-logo-black.png" alt="TICPIN" width={90} height={20} className="h-5 w-auto object-contain" />
-                        </Link> */}
                         <button
                             className="flex items-center gap-1.5 active:opacity-75 transition-opacity"
                             onClick={() => setIsLocationOpen(true)}

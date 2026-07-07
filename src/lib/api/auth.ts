@@ -1,11 +1,12 @@
 /**
  * Centralized Authentication Service Layer
  */
+import { BACKEND_API_BASE } from '../backend';
 
 export const authApi = {
     // Organizer/User Login
     login: async (identifier: string, vertical?: string, verificationCredential?: string) => {
-        const response = await fetch('/backend/api/organizer/login', {
+        const response = await fetch(`${BACKEND_API_BASE}/organizer/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -21,7 +22,7 @@ export const authApi = {
 
     // Verify OTP for Organizer/User
     verifyOTP: async (identifier: string, otp: string, vertical?: string) => {
-        const response = await fetch('/backend/api/organizer/verify-otp', {
+        const response = await fetch(`${BACKEND_API_BASE}/organizer/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, otp, vertical }),
@@ -34,7 +35,7 @@ export const authApi = {
     // Admin Login
     adminLogin: async (identifier: string) => {
         const payload = { email: identifier }; // Backend Login expects Email field
-        const response = await fetch('/backend/api/admin/login', {
+        const response = await fetch(`${BACKEND_API_BASE}/admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -46,7 +47,7 @@ export const authApi = {
 
     // Verify Admin OTP
     verifyAdminOTP: async (identifier: string, otp: string) => {
-        const response = await fetch('/backend/api/admin/verify-otp', {
+        const response = await fetch(`${BACKEND_API_BASE}/admin/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, otp }),
@@ -58,7 +59,7 @@ export const authApi = {
 
     // Resend OTP
     resendOTP: async (identifier: string, vertical?: string) => {
-        const response = await fetch('/backend/api/organizer/resend-otp', {
+        const response = await fetch(`${BACKEND_API_BASE}/organizer/resend-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, vertical }),

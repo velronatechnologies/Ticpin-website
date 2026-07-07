@@ -2353,6 +2353,7 @@ export default function ReviewBookingPage() {
               width={159}
               height={25}
               className="h-[20px] md:h-[25px] w-auto object-contain"
+              style={{ width: "auto" }}
             />
           </div>
           <h1

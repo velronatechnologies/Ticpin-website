@@ -41,6 +41,8 @@ function BookingsContent() {
     const [bookings, setBookings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // sessionReady: true once useUserSession() has finished reading the cookie (after first effect)
+    const [sessionReady, setSessionReady] = useState(false);
 
     const tabs = [
         { id: 'events', label: 'Events' },
@@ -96,19 +98,26 @@ function BookingsContent() {
         }
     }, [session]);
 
+    // Mark session as ready after the first attempt to read it from cookie
     useEffect(() => {
-        if (!loading && !session) {
+        setSessionReady(true);
+    }, [session]);
+
+    // Only redirect if session is confirmed missing (not just unloaded yet)
+    useEffect(() => {
+        if (sessionReady && !loading && !session) {
             router.replace(`/login?redirect=${encodeURIComponent(currentPathWithQuery())}`);
         }
-    }, [loading, session, router]);
+    }, [sessionReady, loading, session, router]);
 
     useEffect(() => {
         if (session?.id) {
             fetchBookings();
-        } else {
+        } else if (sessionReady) {
+            // Only stop loading once we know for sure session doesn't exist
             setLoading(false);
         }
-    }, [session?.id, fetchBookings]);
+    }, [session?.id, sessionReady, fetchBookings]);
 
     const filteredBookings = (bookings || [])
         .filter(b => (b.category || b.type) === activeTab)

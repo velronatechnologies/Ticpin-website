@@ -1075,7 +1075,7 @@ export default function PlayReviewPage() {
                         width={159}
                         height={28}
                         className="h-5 md:h-7 w-auto object-contain"
-                        style={{ minWidth: 159, height: 28 }}
+                        style={{ width: "auto", minWidth: 159, height: 28 }}
                     />
                 </div>
 

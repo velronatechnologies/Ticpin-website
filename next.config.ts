@@ -3,7 +3,6 @@ import path from "path";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -18,6 +17,20 @@ const nextConfig: NextConfig = {
         source: "/backend/:path*",
         destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:9000"
           }/:path*`,
+      },
+    ];
+  },
+
+  async headers() {
+    return [
+      {
+        source: "/:path*\\.(avif|gif|ico|jpg|jpeg|png|svg|webp|pdf|txt|xlsx|ttf|otf|woff|woff2)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
       },
     ];
   },

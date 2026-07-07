@@ -1,0 +1,6 @@
+const LOCAL_BACKEND_ORIGIN = 'http://127.0.0.1:9000';
+
+export const BACKEND_ORIGIN =
+  process.env.NEXT_PUBLIC_BACKEND_URL || LOCAL_BACKEND_ORIGIN;
+
+export const BACKEND_API_BASE = `${BACKEND_ORIGIN}/api`;

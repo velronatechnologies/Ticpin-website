@@ -1,8 +1,5 @@
-'use cache';
-
 import { Metadata } from 'next';
 import PlayClient from './PlayClient';
-import { cacheLife, cacheTag } from 'next/cache';
 
 export const metadata: Metadata = {
     title: "Play | Ticpin",
@@ -40,8 +37,6 @@ async function getPlayVenues(): Promise<RealPlay[]> {
 }
 
 export default async function PlayPage() {
-    cacheLife('days');
-    cacheTag('play-venues-list');
     const venues = await getPlayVenues();
     return <PlayClient initialVenues={venues} />;
 }

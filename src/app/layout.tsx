@@ -4,26 +4,31 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 // Rewrite relative /backend api calls to point directly to Cloudflare backend container
-if (typeof globalThis !== "undefined") {
+if (typeof window === "undefined" && typeof globalThis !== "undefined") {
   const originalFetch = globalThis.fetch;
   if (originalFetch) {
     globalThis.fetch = function (input, init) {
       const targetBackend = "https://go-backend.itzrvm2337.workers.dev";
-      if (typeof input === "string" && input.startsWith("/backend/")) {
-        input = input.replace("/backend", targetBackend);
-      } else if (input instanceof URL && input.pathname.startsWith("/backend/")) {
-        const newUrl = new URL(input.toString());
-        newUrl.protocol = "https:";
-        newUrl.host = "go-backend.itzrvm2337.workers.dev";
-        newUrl.pathname = newUrl.pathname.replace("/backend", "");
-        input = newUrl;
+      const shouldProxyBackend =
+        (typeof input === "string" && input.startsWith("/backend/")) ||
+        (input instanceof URL && input.pathname.startsWith("/backend/"));
+
+      if (shouldProxyBackend) {
+        if (typeof input === "string") {
+          input = input.replace("/backend", targetBackend);
+        } else if (input instanceof URL) {
+          const newUrl = new URL(input.toString());
+          newUrl.protocol = "https:";
+          newUrl.host = "go-backend.itzrvm2337.workers.dev";
+          newUrl.pathname = newUrl.pathname.replace("/backend", "");
+          input = newUrl;
+        }
+
+        init = init || {};
+        init.headers = new Headers(init.headers);
+        init.headers.set("X-Ticpin-Internal", "ticpin-ssr-secret");
       }
-      
-      // Inject internal server-to-server secret header
-      init = init || {};
-      init.headers = new Headers(init.headers);
-      init.headers.set("X-Ticpin-Internal", "ticpin-ssr-secret");
-      
+
       return originalFetch(input, init);
     };
   }

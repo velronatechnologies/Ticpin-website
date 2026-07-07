@@ -29,7 +29,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
     useEffect(() => {
         const pendingEmail = sessionStorage.getItem('otp_pending_email');
         const pendingType = sessionStorage.getItem('otp_pending_type') as 'email' | 'phone';
-        
+
         if (pendingEmail && pendingType) {
             setIdentifier(pendingEmail);
             setLoginType(pendingType);
@@ -39,7 +39,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                 setPhoneVal(pendingEmail);
             }
             setOtpSent(true);
-            
+
             const syncTimer = async () => {
                 const { getRemainingCooldown } = await import('@/lib/utils/otp-state');
                 const remaining = getRemainingCooldown(pendingEmail, vertical);
@@ -86,9 +86,9 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
     }, [router, vertical, setupPath, redirect]);
 
     const handleSendOTP = async () => {
-        if (!identifier) { 
-            setError(loginType === 'email' ? 'Email is required' : 'Phone number is required'); 
-            return; 
+        if (!identifier) {
+            setError(loginType === 'email' ? 'Email is required' : 'Phone number is required');
+            return;
         }
 
         if (loginType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
@@ -175,13 +175,13 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                 setIsSending(false);
 
                 const msg = err instanceof Error ? err.message : 'Login failed';
-                
+
                 if (msg.includes('Please wait') && msg.includes('seconds')) {
                     const match = msg.match(/\d+/);
                     if (match) {
                         const seconds = parseInt(match[0], 10);
                         setTimeLeft(seconds);
-                        setOtpSent(true); 
+                        setOtpSent(true);
                         sessionStorage.setItem('otp_pending_email', identifier);
                         sessionStorage.setItem('otp_pending_type', loginType);
                         return;
@@ -200,7 +200,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
         const code = otpArr.join('');
         if (code.length !== 6) { setError('Enter all 6 digits'); return; }
         setLoading(true); setError('');
-        
+
         // Wait 1 second to show loading state
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -249,7 +249,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
     const handleResend = async () => {
         if (timeLeft > 0 || isResending) return;
         setIsResending(true); setResent(false); setError('');
-        
+
         // Wait 1 second to show loading state
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -261,7 +261,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
             setTimeLeft(120);
         } catch (e: any) {
             const msg = e instanceof Error ? e.message : 'Could not resend OTP';
-            
+
             // Handle cooldown error gracefully if synced backend timer is longer
             if (msg.includes('Please wait') && msg.includes('seconds')) {
                 const match = msg.match(/\d+/);
@@ -290,17 +290,17 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                     <h2 className="text-3xl font-medium text-black mb-4" style={{ fontSize: '30px', lineHeight: '33px', marginBottom: '24px' }}>
                         Log in Business account
                     </h2>
-                    
+
 
                     {!otpSent && (
-                        <AuthPillSwitch 
-                            value={loginType} 
+                        <AuthPillSwitch
+                            value={loginType}
                             onChange={(val) => {
                                 setLoginType(val);
                                 setIdentifier(val === 'email' ? emailVal : phoneVal);
                                 setVerificationStep('none');
                                 setVerificationCredential('');
-                            }} 
+                            }}
                         />
                     )}
 
@@ -310,7 +310,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                 {loginType === 'email' ? 'Enter your email' : 'Enter phone number'}
                             </label>
                             {otpSent && (
-                                <button 
+                                <button
                                     onClick={() => {
                                         setOtpSent(false);
                                         sessionStorage.removeItem('otp_pending_email');
@@ -332,9 +332,9 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                         <ChevronDown size={16} className="text-[#AEAEAE]" />
                                     </div>
                                 )}
-                                <input 
-                                    type={loginType === 'email' ? 'email' : 'tel'} 
-                                    placeholder={loginType === 'email' ? 'Email address' : 'Enter phone number'} 
+                                <input
+                                    type={loginType === 'email' ? 'email' : 'tel'}
+                                    placeholder={loginType === 'email' ? 'Email address' : 'Enter phone number'}
                                     value={identifier}
                                     disabled={otpSent}
                                     onChange={e => {
@@ -360,9 +360,9 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
 
                             <div className="flex items-center">
                                 {otpSent ? (
-                                    <AuthOTPInput 
-                                        otp={otpArr} 
-                                        setOtp={setOtpArr} 
+                                    <AuthOTPInput
+                                        otp={otpArr}
+                                        setOtp={setOtpArr}
                                         onComplete={handleVerify}
                                         error={!!error}
                                     />
@@ -375,8 +375,8 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                         {verificationStep !== 'none' && (
                             <div className="mt-6 animate-in fade-in duration-200">
                                 <label className="block font-medium text-[#686868] mb-4" style={{ fontSize: '20px', lineHeight: '22px' }}>
-                                    {verificationStep === 'email_required' 
-                                        ? 'Confirm registered email address (Backup Email)' 
+                                    {verificationStep === 'email_required'
+                                        ? 'Confirm registered email address (Backup Email)'
                                         : 'Confirm registered mobile number'}
                                 </label>
                                 <div className="relative flex items-center">
@@ -386,9 +386,9 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                             <ChevronDown size={16} className="text-[#AEAEAE]" />
                                         </div>
                                     )}
-                                    <input 
-                                        type={verificationStep === 'email_required' ? 'email' : 'tel'} 
-                                        placeholder={verificationStep === 'email_required' ? 'Enter registered email' : 'Enter registered mobile number'} 
+                                    <input
+                                        type={verificationStep === 'email_required' ? 'email' : 'tel'}
+                                        placeholder={verificationStep === 'email_required' ? 'Enter registered email' : 'Enter registered mobile number'}
                                         value={verificationCredential}
                                         disabled={otpSent}
                                         onChange={e => {
@@ -405,7 +405,7 @@ export default function OrganizerLoginForm({ vertical, setupPath, signinPath }: 
                                             }
                                         }}
                                         className={`w-full py-4 border-[1.5px] border-[#AEAEAE] rounded-[20px] text-zinc-800 placeholder-[#AEAEAE] focus:outline-none focus:border-black transition-colors ${verificationStep === 'phone_required' ? 'pl-24 pr-6' : 'px-6'} ${otpSent ? 'bg-zinc-50 cursor-not-allowed opacity-70' : ''}`}
-                                        style={{ height: '65px' }} 
+                                        style={{ height: '65px' }}
                                     />
                                 </div>
                             </div>

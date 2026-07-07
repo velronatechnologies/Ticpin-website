@@ -1,5 +1,6 @@
-// Base URL — all API calls go through Next.js rewrite proxy to localhost:9000
-const BASE = '/backend/api';
+import { BACKEND_API_BASE } from './backend';
+
+const BASE = BACKEND_API_BASE;
 
 // ─── Generic fetch wrapper ─────────────────────────────────────────
 async function request<T>(path: string, options?: RequestInit): Promise<T> {

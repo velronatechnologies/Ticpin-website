@@ -1,6 +1,3 @@
-'use cache';
-
-import { cacheLife, cacheTag } from 'next/cache';
 import EventCategoryClient from '../EventCategoryClient';
 
 async function getFoodDrinksEvents() {
@@ -19,8 +16,6 @@ async function getFoodDrinksEvents() {
 }
 
 export default async function FoodDrinksPage() {
-    cacheLife('days');
-    cacheTag('events-list', 'event-category-food-drinks');
     const events = await getFoodDrinksEvents();
     return (
         <EventCategoryClient

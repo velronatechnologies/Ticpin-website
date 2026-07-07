@@ -13,6 +13,7 @@ export default function TiclistsPage() {
     const { userSession, sync, logoutUser } = useIdentityStore();
     const [activeTab, setActiveTab] = useState<Category>('events');
     const [isLoading, setIsLoading] = useState(true);
+    const [sessionReady, setSessionReady] = useState(false);
     const [likedData, setLikedData] = useState<{
         events: any[];
         dining: any[];
@@ -27,11 +28,16 @@ export default function TiclistsPage() {
         sync();
     }, [sync]);
 
+    // Mark session as ready after first cookie read
     useEffect(() => {
-        if (!isLoading && !userSession) {
+        setSessionReady(true);
+    }, [userSession]);
+
+    useEffect(() => {
+        if (sessionReady && !isLoading && !userSession) {
             router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         }
-    }, [isLoading, userSession, router]);
+    }, [sessionReady, isLoading, userSession, router]);
 
     useEffect(() => {
         const fetchLikes = async () => {
@@ -82,10 +88,10 @@ export default function TiclistsPage() {
 
         if (userSession) {
             fetchLikes();
-        } else {
+        } else if (sessionReady) {
             setIsLoading(false);
         }
-    }, [userSession]);
+    }, [userSession, sessionReady]);
 
     const renderEmptyState = () => (
         <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
@@ -104,6 +110,14 @@ export default function TiclistsPage() {
             </button>
         </div>
     );
+
+    if (!sessionReady || (isLoading && !userSession)) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center p-4" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black" />
+            </div>
+        );
+    }
 
     if (!userSession && !isLoading) {
         return (

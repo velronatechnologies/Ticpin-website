@@ -33,6 +33,7 @@ function BookingDetailsContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+    const [sessionReady, setSessionReady] = useState(false);
 
     // Modal state
     const [isBillDetailsOpen, setIsBillDetailsOpen] = useState(false);
@@ -70,16 +71,20 @@ function BookingDetailsContent() {
     useEffect(() => {
         if (session?.id) {
             fetchBookingDetails();
-        } else {
+        } else if (sessionReady) {
             setLoading(false);
         }
-    }, [session?.id, fetchBookingDetails]);
+    }, [session?.id, sessionReady, fetchBookingDetails]);
 
     useEffect(() => {
-        if (!loading && !session) {
+        setSessionReady(true);
+    }, [session]);
+
+    useEffect(() => {
+        if (sessionReady && !loading && !session) {
             router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         }
-    }, [loading, session, router]);
+    }, [sessionReady, loading, session, router]);
 
     // Fetch profile photo
     useEffect(() => {

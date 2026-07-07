@@ -1,17 +1,12 @@
-'use cache';
-
 import React from 'react';
 import Image from 'next/image';
-import { cacheLife, cacheTag } from 'next/cache';
 
 export default async function RefundAndCancellationComponent() {
-    cacheLife('days');
-    cacheTag('refund-page');
     return (
         <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
             {/* Header / Logo Section */}
             <header className="w-full h-20 flex items-center justify-center border-b border-[#D9D9D9]">
-                <Image src="/ticpin-logo-black.png" alt="TICPIN" width={115} height={32} className="h-8 md:h-9 object-contain" />
+                <Image src="/ticpin-logo-black.png" alt="TICPIN" width={115} height={32} className="h-8 md:h-9 object-contain" style={{ width: "auto" }} />
             </header>
 
             <main className="max-w-[1100px] mx-auto px-6 py-16 mt-[-10px]">

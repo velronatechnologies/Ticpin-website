@@ -1,6 +1,7 @@
 import { UserSession } from "@/lib/auth/user";
+import { BACKEND_API_BASE } from '../backend';
 
-const BASE = '/backend/api';
+const BASE = BACKEND_API_BASE;
 
 export interface GPS {
     lat: number;

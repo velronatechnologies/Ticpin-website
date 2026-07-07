@@ -40,6 +40,7 @@ export default function Footer() {
                             width={120}
                             height={32}
                             className="h-6 md:h-8 w-auto invert brightness-0"
+                            style={{ width: "auto" }}
                         />
                     </div>
 

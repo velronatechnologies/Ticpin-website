@@ -64,8 +64,8 @@ Context data from our current database:`;
 export async function POST(request: NextRequest) {
     try {
         // Basic session check to prevent unauthorized use of the API
-        const sessionCookie = cookies().get('ticpin_user_session');
-        const organizerCookie = cookies().get('ticpin_organizer_session');
+        const sessionCookie = cookies().get('__Host-ticpin_user_session');
+        const organizerCookie = cookies().get('__Host-ticpin_session');
         
         if (!sessionCookie && !organizerCookie) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

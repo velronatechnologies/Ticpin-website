@@ -1,4 +1,6 @@
-const BASE = '/backend/api';
+import { BACKEND_API_BASE } from '../backend';
+
+const BASE = BACKEND_API_BASE;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

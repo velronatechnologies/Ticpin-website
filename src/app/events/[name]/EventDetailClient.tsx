@@ -480,7 +480,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
             <AuthModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/events/${id}/book`)}
+                onSuccess={() => router.push(event.is_layout_based ? `/events/${id}/book` : `/events/${id}/book/tickets/all`)}
             />
         </div>
     );

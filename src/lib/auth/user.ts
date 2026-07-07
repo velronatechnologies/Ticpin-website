@@ -28,11 +28,14 @@ function setCookieRaw(name: string, value: string, days: number) {
 function deleteCookie(name: string) {
     if (typeof document === 'undefined') return;
     document.cookie = `${name}=; path=/; SameSite=Lax; Max-Age=-1`;
+    const host = window.location.hostname;
+    document.cookie = `${name}=; path=/; domain=${host}; Max-Age=-1`;
+    document.cookie = `${name}=; path=/; domain=.${host}; Max-Age=-1`;
 }
 
-/** Read user session from ticpin_user_session cookie */
+/** Read user session from ticpin_user_session_info cookie */
 export function getUserSession(): UserSession | null {
-    const raw = getCookieRaw('ticpin_user_session');
+    const raw = getCookieRaw('ticpin_user_session_info');
     if (!raw) return null;
     try {
         const json = atob(raw);
@@ -46,7 +49,7 @@ export function getUserSession(): UserSession | null {
 export function saveUserSession(session: UserSession): void {
     if (typeof window === 'undefined') return;
     const encoded = btoa(JSON.stringify(session));
-    setCookieRaw('ticpin_user_session', encoded, 30);
+    setCookieRaw('ticpin_user_session_info', encoded, 6);
     window.dispatchEvent(new Event('user-auth-change'));
 }
 
@@ -58,8 +61,9 @@ export function clearUserSession(): void {
     fetch('/backend/api/auth/logout/user', { method: 'POST', credentials: 'include' })
         .catch(err => console.error('[Auth] User Logout API call failed:', err));
 
-    deleteCookie('ticpin_user_session');
-    deleteCookie('ticpin_user_token');
+    // Clear readable UI cookies. HttpOnly auth cookies are cleared by the backend logout endpoint.
+    deleteCookie('ticpin_user_session_info');
+    deleteCookie('active_role');
     
     // Clear user-specific storage keys
     sessionStorage.removeItem('dining_cart');
@@ -85,9 +89,14 @@ export function clearUserSession(): void {
 
 /** React hook to get and track user session */
 export function useUserSession() {
-    const [session, setSession] = useState<UserSession | null>(null);
+    // Initialize directly from cookie on the client — no null flash
+    const [session, setSession] = useState<UserSession | null>(() => {
+        if (typeof window === 'undefined') return null;
+        return getUserSession();
+    });
 
     useEffect(() => {
+        // Re-read on mount (handles SSR mismatch) and on auth changes
         const load = () => setSession(getUserSession());
         load();
         window.addEventListener('user-auth-change', load);

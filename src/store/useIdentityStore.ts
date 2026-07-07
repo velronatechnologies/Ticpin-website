@@ -84,12 +84,12 @@ export const useIdentityStore = create<IdentityState>()(
 
     logoutUser: () => {
         clearUserSession();
-        set({ userSession: null });
+        set({ userSession: null, rememberedEmail: '' });
     },
 
     logoutOrganizer: () => {
         clearOrganizerSession();
-        set({ organizerSession: null });
+        set({ organizerSession: null, rememberedEmail: '' });
     },
 
     switchRole: async (role) => {
@@ -140,7 +140,7 @@ export const useIdentityStore = create<IdentityState>()(
             
             // Check if user session still valid
             if (state.userSession) {
-                const hasCookie = document.cookie.includes('ticpin_user_token');
+                const hasCookie = document.cookie.includes('ticpin_user_session_info');
                 if (!hasCookie) {
                     console.warn('[Auth] User session expired (cookie missing)');
                     clearUserSession();
@@ -151,7 +151,7 @@ export const useIdentityStore = create<IdentityState>()(
             
             // Check if organizer session still valid
             if (state.organizerSession) {
-                const hasCookie = document.cookie.includes('ticpin_token');
+                const hasCookie = document.cookie.includes('ticpin_session_info');
                 if (!hasCookie) {
                     console.warn('[Auth] Organizer session expired (cookie missing)');
                     clearOrganizerSession();

@@ -314,7 +314,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                     view !== 'profile' && view !== 'bookings'
                         ? isMobile
                             ? {}
-                            : { width: '850px', height: '700px' }
+                            : { width: '420px', height: '580px' }
                         : {}
                 }
             >

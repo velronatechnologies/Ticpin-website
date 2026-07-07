@@ -217,7 +217,7 @@ export default function TicketSelectionPage() {
     const userSession = getUserSession();
     // Use the organizerSession already declared at component level (top-level hook)
 
-    // If user is logged in as organizer (has ticpin_session), block access
+    // If user is logged in as organizer, block access
     if (organizerSession && !userSession) {
       toast.error(
         "Only user accounts can book tickets. Please login as a user.",
