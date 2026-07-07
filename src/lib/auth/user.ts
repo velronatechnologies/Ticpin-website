@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { clearAllData } from './clearAll';
 
 // ─── User Session ──────────────────────────────────────────────────
 
@@ -33,9 +32,7 @@ function deleteCookie(name: string) {
     document.cookie = `${name}=; path=/; domain=.${host}; Max-Age=-1`;
 }
 
-/** Read user session from ticpin_user_session_info cookie */
-export function getUserSession(): UserSession | null {
-    const raw = getCookieRaw('ticpin_user_session_info');
+function decodeSessionCookie(raw: string | null): UserSession | null {
     if (!raw) return null;
     try {
         const json = atob(raw);
@@ -45,11 +42,20 @@ export function getUserSession(): UserSession | null {
     }
 }
 
+/** Read user session from the readable user session cookie */
+export function getUserSession(): UserSession | null {
+    return (
+        decodeSessionCookie(getCookieRaw('ticpin_user_session_info')) ??
+        decodeSessionCookie(getCookieRaw('ticpin_user_session'))
+    );
+}
+
 /** Save user session to cookie */
 export function saveUserSession(session: UserSession): void {
     if (typeof window === 'undefined') return;
     const encoded = btoa(JSON.stringify(session));
     setCookieRaw('ticpin_user_session_info', encoded, 6);
+    setCookieRaw('ticpin_user_session', encoded, 6);
     window.dispatchEvent(new Event('user-auth-change'));
 }
 
@@ -63,6 +69,7 @@ export function clearUserSession(): void {
 
     // Clear readable UI cookies. HttpOnly auth cookies are cleared by the backend logout endpoint.
     deleteCookie('ticpin_user_session_info');
+    deleteCookie('ticpin_user_session');
     deleteCookie('active_role');
     
     // Clear user-specific storage keys

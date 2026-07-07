@@ -140,7 +140,9 @@ export const useIdentityStore = create<IdentityState>()(
             
             // Check if user session still valid
             if (state.userSession) {
-                const hasCookie = document.cookie.includes('ticpin_user_session_info');
+                const hasCookie =
+                    document.cookie.includes('ticpin_user_session_info') ||
+                    document.cookie.includes('ticpin_user_session');
                 if (!hasCookie) {
                     console.warn('[Auth] User session expired (cookie missing)');
                     clearUserSession();

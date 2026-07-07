@@ -118,7 +118,10 @@ export function middleware(request: NextRequest) {
     const isOrganizerProtected = pathname.startsWith('/organizer');
 
     // Get the user/organizer session cookies
-    const userSession = request.cookies.get('__Host-ticpin_user_session') ?? request.cookies.get('ticpin_user_session_info');
+    const userSession =
+        request.cookies.get('__Host-ticpin_user_session') ??
+        request.cookies.get('ticpin_user_session') ??
+        request.cookies.get('ticpin_user_session_info');
     const orgSession = request.cookies.get('__Host-ticpin_session');
     const orgSessionInfo = request.cookies.get('ticpin_session_info');
     
