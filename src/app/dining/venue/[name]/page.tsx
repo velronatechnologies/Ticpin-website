@@ -3,6 +3,7 @@ import DiningVenueDetailClient from './DiningVenueDetailClient';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import MobileDiningDetails from '@/components/mobile/MobileDiningDetails';
+import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
 interface OfferRecord {
     id: string;
@@ -41,8 +42,7 @@ interface RealDining {
 
 async function getVenueData(name: string): Promise<RealDining | null> {
     try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/dining/${encodeURIComponent(name)}`, {
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/dining/${encodeURIComponent(name)}`, {
             next: { revalidate: 300 }
         });
         if (!res.ok) return null;
@@ -55,8 +55,7 @@ async function getVenueData(name: string): Promise<RealDining | null> {
 
 async function getVenueOffers(name: string): Promise<OfferRecord[]> {
     try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/dining/${encodeURIComponent(name)}/offers`, {
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/dining/${encodeURIComponent(name)}/offers`, {
             next: { revalidate: 300 }
         });
         if (!res.ok) return [];
@@ -87,8 +86,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 
 async function getMobileVenueData(id: string) {
     try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/mobile/dining/${id}`, { next: { revalidate: 300 } });
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/dining/${id}`, { next: { revalidate: 300 } });
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {

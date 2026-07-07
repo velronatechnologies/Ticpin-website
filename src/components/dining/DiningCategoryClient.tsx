@@ -33,12 +33,8 @@ export default function DiningCategoryClient({ category, title, image }: DiningC
         const fetchRestaurants = async () => {
             setLoading(true);
             try {
-                // Determine base URL, favoring environment variable if available
-                const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:9000';
-                const url = new URL(`${baseUrl}/api/dining`);
-                url.searchParams.append('category', category);
-                
-                const res = await fetch(url.toString());
+                const params = new URLSearchParams({ category });
+                const res = await fetch(`/backend/api/dining?${params.toString()}`);
                 const data = await res.json();
                 
                 if (data && data.data) {
@@ -115,7 +111,7 @@ export default function DiningCategoryClient({ category, title, image }: DiningC
                                             location={res.city}
                                             date={formatDate(res.createdAt)}
                                             image={res.portrait_image_url}
-                                            price={res.price_starts_from || '100'}
+                                            price={res.price_starts_from || 100}
                                             rating={4.5}
                                         />
                                     </Link>
@@ -123,7 +119,7 @@ export default function DiningCategoryClient({ category, title, image }: DiningC
                             ) : (
                                 <div className="w-full flex flex-col items-center justify-center py-32 text-zinc-400">
                                     <p className="text-xl font-medium mb-2">No restaurants found</p>
-                                    <p className="text-sm">We couldn't find any restaurants in the "{title}" category.</p>
+                                    <p className="text-sm">No restaurants were found in the {title} category.</p>
                                 </div>
                             )}
                         </div>

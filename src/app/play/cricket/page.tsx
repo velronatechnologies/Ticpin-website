@@ -1,24 +1,9 @@
 import CategoryClient from '../CategoryClient';
+import { fetchApprovedPlayVenues } from '../server-play';
 
-interface RealPlay {
-    id: string;
-    name: string;
-    city?: string;
-    portrait_image_url?: string;
-    landscape_image_url?: string;
-    category?: string;
-    rating?: number;
-    price_starts_from?: number;
-}
-
-async function getCricketVenues(): Promise<RealPlay[]> {
+async function getCricketVenues() {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/play?category=Cricket&limit=100`, {
-            next: { revalidate: 300 }
-        });
-        if (!res.ok) return [];
-        const data = await res.json();
-        return Array.isArray(data) ? data : (data?.data ?? []);
+        return await fetchApprovedPlayVenues('category=Cricket&limit=100');
     } catch (error) {
         console.error("Failed to fetch cricket venues:", error);
         return [];

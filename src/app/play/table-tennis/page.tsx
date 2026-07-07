@@ -1,14 +1,9 @@
 import CategoryClient from '../CategoryClient';
+import { fetchApprovedPlayVenues } from '../server-play';
 
 async function getTTVenues() {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/play?category=Table%20Tennis&limit=100`, {
-            next: { revalidate: 300 }
-        });
-        if (!res.ok) return [];
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : (data?.data ?? []);
-        return list.filter((v: any) => v.status === 'approved');
+        return await fetchApprovedPlayVenues('category=Table%20Tennis&limit=100');
     } catch (error) {
         console.error("Failed to fetch table tennis venues:", error);
         return [];

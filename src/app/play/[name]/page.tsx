@@ -1,47 +1,10 @@
 import type { Metadata } from 'next';
 import PlayDetailClient from './PlayDetailClient';
+import { fetchPlayVenue } from '../server-play';
 
-interface RealPlay {
-    id: string;
-    name: string;
-    description?: string;
-    category?: string;
-    sub_category?: string;
-    city?: string;
-    venue_name?: string;
-    venue_address?: string;
-    google_map_link?: string;
-    instagram_link?: string;
-    portrait_image_url?: string;
-    landscape_image_url?: string;
-    card_video_url?: string;
-    gallery_urls?: string[];
-    secondary_banner_url?: string;
-    time?: string;
-    opening_time?: string;
-    closing_time?: string;
-    pricing_plans?: { start_time: string; end_time: string; min_duration: string; price: number }[];
-    pricing_format?: string;
-    courts?: { id: string; name: string; type: string; price: number; image_url?: string }[];
-    guide?: { facilities: string[] | string; is_pet_friendly: boolean };
-    event_instructions?: string;
-    youtube_video_url?: string;
-    prohibited_items?: string[];
-    faqs?: { question: string; answer: string }[];
-    terms?: string;
-    price_starts_from?: number;
-    price_per_slot?: number;
-    min_duration?: string;
-}
-
-async function getVenueData(name: string): Promise<RealPlay | null> {
+async function getVenueData(name: string) {
     try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/play/${encodeURIComponent(name)}`, {
-            next: { revalidate: 300 }
-        });
-        if (!res.ok) return null;
-        return res.json();
+        return await fetchPlayVenue(name);
     } catch (error) {
         console.error("Failed to fetch venue data:", error);
         return null;
