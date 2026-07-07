@@ -1,3 +1,0 @@
-module.exports=[616884,a=>{"use strict";var b=a.i(826326),c=a.i(502669),d=a.i(927468);a.s(["default",0,function(){let a=(0,d.useRouter)();return(0,c.useEffect)(()=>{a.replace("/list-your-dining")},[a]),(0,b.jsx)("div",{className:"min-h-screen bg-zinc-50 flex items-center justify-center",children:(0,b.jsx)("div",{className:"w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"})})}])}];
-
-//# sourceMappingURL=src_app_list-your-dining_setup_bank_page_tsx_0yq8p_z._.js.map

@@ -22,7 +22,7 @@ import { useCurrentTime } from '@/hooks/use-current-time';
 import { isExpiringWithinDay } from '@/lib/event-booking';
 
 
-import { CITIES } from '@/app/events/create/data';
+import { CITIES } from '@/data/createData';
 
 const STATES = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa",

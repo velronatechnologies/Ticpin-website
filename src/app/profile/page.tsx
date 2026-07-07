@@ -203,7 +203,7 @@ function UserProfileContent() {
                     </div>
 
                     <div className="bg-white border border-[#E5E5E5] rounded-[20px] overflow-hidden">
-                        <button onClick={() => { logoutUser(); router.push('/'); }} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
+                        <button onClick={() => router.push('/logout')} className="w-full flex items-center justify-between p-4 active:bg-zinc-50">
                             <div className="flex items-center gap-3">
                                 <LogOut size={18} className="text-zinc-600" />
                                 <span className="text-[13px] font-semibold text-black">Logout</span>

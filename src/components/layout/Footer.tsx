@@ -11,17 +11,17 @@ export default function Footer() {
         if (pathname.startsWith('/dining')) {
             return {
                 name: 'List your dining',
-                href: '/list-your-dining'
+                href: 'https://events.ticpin.in'
             };
         } else if (pathname.startsWith('/play')) {
             return {
                 name: 'List your play/courts',
-                href: '/list-your-play'
+                href: 'https://play.ticpin.in'
             };
         } else {
             return {
                 name: 'List your events',
-                href: '/list-your-events'
+                href: 'https://events.ticpin.in'
             };
         }
     };
@@ -59,12 +59,14 @@ export default function Footer() {
                                 {link.name}
                             </Link>
                         ))}
-                        <Link
+                        <a
                             href={dynamicLink.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="hidden md:inline text-[16px] font-semibold text-white hover:opacity-70 transition-opacity whitespace-nowrap"
                         >
                             {dynamicLink.name}
-                        </Link>
+                        </a>
                     </div>
 
                     {/* QR Code Placeholder */}

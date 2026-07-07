@@ -1,7 +1,7 @@
 'use client';
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { CATEGORY_DATA } from '@/app/play/create/data';
+import { CATEGORY_DATA } from '@/data/createData';
 
 type FilterType = 'play' | 'events' | 'dining';
 

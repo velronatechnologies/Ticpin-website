@@ -17,7 +17,6 @@ import ProfileDrawer from './Navbar/ProfileDrawer';
 // Hooks & Utils
 import { useLocationStore } from '@/store/useLocationStore';
 import { useIdentityStore } from '@/store/useIdentityStore';
-import { clearOrganizerSession } from '@/lib/auth/organizer';
 import { clearUserSession } from '@/lib/auth/user';
 import { navItems } from '@/data/constants';
 
@@ -39,7 +38,7 @@ export default function Navbar() {
     // Custom Hooks
     // Centralized State from Stores
     const { currentLocation, setLocation, clearLocation } = useLocationStore();
-    const { userSession, organizerSession, sync: syncAuth, logoutUser, logoutOrganizer } = useIdentityStore();
+    const { userSession, sync: syncAuth, logoutUser } = useIdentityStore();
 
     useEffect(() => {
         syncAuth();
@@ -62,12 +61,10 @@ export default function Navbar() {
         }
 
         window.addEventListener('user-auth-change', handleAuthChange);
-        window.addEventListener('organizer-auth-change', handleAuthChange);
-
+        
         return () => {
             window.removeEventListener('user-auth-change', handleAuthChange);
-            window.removeEventListener('organizer-auth-change', handleAuthChange);
-        };
+                    };
     }, [syncAuth, currentLocation]);
 
     useEffect(() => {
@@ -85,9 +82,6 @@ export default function Navbar() {
     }, []);
 
     const hideNavbar =
-        pathname?.startsWith('/organizer') ||
-        pathname?.startsWith('/ticket') ||
-        pathname?.startsWith('/admin') ||
         pathname === '/contact' ||
         pathname === '/terms' ||
         pathname === '/privacy' ||
@@ -99,7 +93,7 @@ export default function Navbar() {
 
     // Use organizer session only when the organizer is actively logged in.
     // When only a user is logged in, session must be null so UserMenu shows user data.
-    const session = organizerSession ?? null;
+    const session = null;
     const profileRef = useRef<HTMLDivElement>(null);
 
     // Closing profile menu on click outside
@@ -117,11 +111,7 @@ export default function Navbar() {
     if (hideNavbar) return null;
 
     // Logout Handlers
-    const handleOrganizerLogout = () => {
-        logoutOrganizer();
-        setIsProfileMenuOpen(false);
-        router.push('/');
-    };
+    
 
     const handleUserLogout = () => {
         logoutUser();
@@ -143,11 +133,8 @@ export default function Navbar() {
         setIsProfileDrawerOpen(false);
     };
 
-    const isListingPage =
-        pathname.startsWith('/list-your-dining') ||
-        pathname.startsWith('/list-your-events') ||
-        pathname.startsWith('/list-your-play');
-    const isOrganizer = pathname.startsWith('/organizer');
+    const isListingPage = false;
+    const isOrganizer = false;
     const isPlayPage = pathname.startsWith('/play');
     const isHome = pathname === '/';
     const isEventDetail = pathname.match(/^\/events\/[^/]+$/);
@@ -251,7 +238,7 @@ export default function Navbar() {
                             isMenuOpen={isProfileMenuOpen}
                             onToggleMenu={handleProfileClick}
                             onUserLogout={handleUserLogout}
-                            onOrganizerLogout={handleOrganizerLogout}
+                            
                             onOpenProfile={() => { }} // No longer used - direct navigation instead
                         />
                     </div>
@@ -264,7 +251,7 @@ export default function Navbar() {
                 userSession={userSession}
                 session={session}
                 onUserLogout={handleUserLogout}
-                onOrganizerLogout={handleOrganizerLogout}
+                
                 router={router}
             />
 

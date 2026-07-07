@@ -1,3 +1,0 @@
-module.exports=[284604,a=>{"use strict";var b=a.i(826326),c=a.i(502669),d=a.i(927468),e=a.i(819467);a.s(["default",0,function({children:a}){let f=(0,d.useRouter)(),[g,h]=(0,c.useState)(!1),[i,j]=(0,c.useState)(!1);return((0,c.useEffect)(()=>{let a=setTimeout(()=>{j(!0)},100);return()=>clearTimeout(a)},[]),(0,c.useEffect)(()=>{i&&((0,e.getOrganizerSession)()?h(!0):f.replace("/list-your-play/Login"))},[i,f]),g&&i)?(0,b.jsx)(b.Fragment,{children:a}):(0,b.jsx)("div",{className:"h-[calc(100vh-80px)] w-full bg-zinc-50 animate-pulse"})}])}];
-
-//# sourceMappingURL=src_app_list-your-play_setup_layout_tsx_0zadpqr._.js.map

@@ -221,7 +221,7 @@ export default function MobileProfile() {
             {/* Menu Block 4: Logout */}
             <div className="bg-white rounded-[20px] border border-[#E5E5E5] overflow-hidden">
                 <button 
-                    onClick={() => { logoutUser(); router.push('/'); }} 
+                    onClick={() => router.push('/logout')}
                     className="w-full flex items-center justify-between px-5 h-[56px] active:bg-zinc-50 transition-colors"
                 >
                     <div className="flex items-center gap-4">

@@ -1,1 +1,0 @@
-(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,173408,e=>{"use strict";var t=e.i(913702),u=e.i(203092);e.s(["default",0,function(){let e=(0,u.useRouter)();return(0,t.useEffect)(()=>{e.replace("/bookings?type=events")},[e]),null}])}]);
