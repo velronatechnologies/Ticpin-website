@@ -280,6 +280,9 @@ export const bookingApi = {
         const res = await fetch(url, {
             credentials: 'include',
         });
+        if (res.status === 401) {
+            throw new Error('UNAUTHORIZED');
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to get booking details');
         return data;
@@ -311,6 +314,9 @@ export const bookingApi = {
         const res = await fetch(url, {
             credentials: 'include',
         });
+        if (res.status === 401) {
+            throw new Error('UNAUTHORIZED');
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to get booking details');
         return data;

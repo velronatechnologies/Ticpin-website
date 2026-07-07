@@ -11,7 +11,7 @@ import {
   MapPin,
   X
 } from 'lucide-react';
-import { useUserSession } from '@/lib/auth/user';
+import { useUserSession, clearUserSession } from '@/lib/auth/user';
 import { bookingApi } from '@/lib/api/booking';
 import { getBookingStatus } from '@/lib/utils/booking-status';
 
@@ -62,10 +62,16 @@ export default function EventBookingDetailPage() {
       
       bookingApi.getBookingDetails(bookingId, session?.id)
         .then((data: any) => {
+          setError(null);
           setBooking(data);
         })
         .catch((err: any) => {
           console.error('Error fetching booking details:', err);
+          if (err.message === 'UNAUTHORIZED') {
+            clearUserSession();
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            return;
+          }
           setError('Failed to load booking details');
         })
         .finally(() => {
