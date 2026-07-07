@@ -3,6 +3,7 @@ import EventDetailClient from './EventDetailClient';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import MobileEventDetails from '@/components/mobile/MobileEventDetails';
+import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
 interface Artist {
     name: string;
@@ -51,8 +52,7 @@ interface EventData {
 
 async function getEventData(name: string): Promise<EventData | null> {
     try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/events/${encodeURIComponent(name)}`, {
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
             next: { revalidate: 300 }
         });
         if (!res.ok) return null;
@@ -80,8 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 
 async function getMobileEventData(id: string) {
     try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const res = await fetch(`${base}/api/mobile/event/${id}`, { next: { revalidate: 300 } });
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, { next: { revalidate: 300 } });
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {

@@ -1,14 +1,9 @@
 import EventCategoryClient from '../EventCategoryClient';
+import { fetchApprovedEventsByCategory } from '../server-events';
 
 async function getComedyEvents() {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/events?category=Comedy`, {
-            next: { revalidate: 300 }
-        });
-        if (!res.ok) return [];
-        const data = await res.json();
-        const events = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
-        return events.filter((e: any) => e.status === 'approved');
+        return await fetchApprovedEventsByCategory('Comedy');
     } catch (error) {
         console.error("Failed to fetch comedy events:", error);
         return [];

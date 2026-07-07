@@ -1,14 +1,9 @@
 import EventCategoryClient from '../EventCategoryClient';
+import { fetchApprovedEventsByCategory } from '../server-events';
 
 async function getScreeningsEvents() {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/events?category=Screenings`, {
-            next: { revalidate: 300 }
-        });
-        if (!res.ok) return [];
-        const data = await res.json();
-        const events = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
-        return events.filter((e: any) => e.status === 'approved');
+        return await fetchApprovedEventsByCategory('Screenings');
     } catch (error) {
         console.error("Failed to fetch screenings events:", error);
         return [];

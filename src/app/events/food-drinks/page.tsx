@@ -1,14 +1,9 @@
 import EventCategoryClient from '../EventCategoryClient';
+import { fetchApprovedEventsByCategory } from '../server-events';
 
 async function getFoodDrinksEvents() {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/events?category=Food%20%26%20Drinks`, {
-            next: { revalidate: 300 }
-        });
-        if (!res.ok) return [];
-        const data = await res.json();
-        const events = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
-        return events.filter((e: any) => e.status === 'approved');
+        return await fetchApprovedEventsByCategory('Food & Drinks');
     } catch (error) {
         console.error("Failed to fetch food & drinks events:", error);
         return [];
