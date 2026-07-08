@@ -352,7 +352,7 @@ function BookingDetailsContent() {
                         {/* Rectangle 548: QR wrapper (w-[146px] h-[146px]) */}
                         <div className="w-[146px] h-[146px] bg-[#D9D9D9] rounded-[10px] p-1.5 flex items-center justify-center">
                             <img 
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(booking.booking_id || booking.id)}`} 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(booking.qr_payload || (typeof window !== 'undefined' ? `${window.location.origin}/qr-verify/${booking.booking_id || booking.id}` : ''))}`} 
                                 alt="Entry QR" 
                                 className="w-full h-full object-contain"
                             />

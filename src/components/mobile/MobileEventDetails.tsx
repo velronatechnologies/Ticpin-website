@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, Hourglass, X, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
 import { toast } from '@/components/ui/Toast';
@@ -129,6 +129,87 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const [isThingsToKnowOpen, setIsThingsToKnowOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [animateLike, setAnimateLike] = useState(false);
+
+    const thingsSheetRef = useRef<HTMLDivElement>(null);
+    const [thingsTouchStart, setThingsTouchStart] = useState<number | null>(null);
+    const [thingsTouchTranslation, setThingsTouchTranslation] = useState<number>(0);
+
+    const handleThingsTouchStart = (e: React.TouchEvent) => {
+        const isAtTop = thingsSheetRef.current ? thingsSheetRef.current.scrollTop === 0 : true;
+        if (isAtTop) {
+            setThingsTouchStart(e.targetTouches[0].clientY);
+        }
+    };
+
+    const handleThingsTouchMove = (e: React.TouchEvent) => {
+        if (thingsTouchStart === null) return;
+        const currentY = e.targetTouches[0].clientY;
+        const diff = currentY - thingsTouchStart;
+        if (diff > 0) {
+            setThingsTouchTranslation(diff);
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+        } else {
+            setThingsTouchTranslation(0);
+        }
+    };
+
+    const handleThingsTouchEnd = () => {
+        if (thingsTouchTranslation > 100) {
+            setIsThingsToKnowOpen(false);
+        }
+        setThingsTouchStart(null);
+        setThingsTouchTranslation(0);
+    };
+
+    const timelineSheetRef = useRef<HTMLDivElement>(null);
+    const [timelineTouchStart, setTimelineTouchStart] = useState<number | null>(null);
+    const [timelineTouchTranslation, setTimelineTouchTranslation] = useState<number>(0);
+
+    const handleTimelineTouchStart = (e: React.TouchEvent) => {
+        const isAtTop = timelineSheetRef.current ? timelineSheetRef.current.scrollTop === 0 : true;
+        if (isAtTop) {
+            setTimelineTouchStart(e.targetTouches[0].clientY);
+        }
+    };
+
+    const handleTimelineTouchMove = (e: React.TouchEvent) => {
+        if (timelineTouchStart === null) return;
+        const currentY = e.targetTouches[0].clientY;
+        const diff = currentY - timelineTouchStart;
+        if (diff > 0) {
+            setTimelineTouchTranslation(diff);
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+        } else {
+            setTimelineTouchTranslation(0);
+        }
+    };
+
+    const handleTimelineTouchEnd = () => {
+        if (timelineTouchTranslation > 100) {
+            setIsTimelineOpen(false);
+        }
+        setTimelineTouchStart(null);
+        setTimelineTouchTranslation(0);
+    };
+
+    // Prevent background scrolling when bottom sheets are open
+    useEffect(() => {
+        if (isTimelineOpen || isThingsToKnowOpen) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.height = '100vh';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.height = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.height = '';
+        };
+    }, [isTimelineOpen, isThingsToKnowOpen]);
 
     // Check if liked on mount, and handle pending like if exists
     useEffect(() => {
@@ -379,7 +460,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     return (
         <div className="md:hidden min-h-screen w-full bg-[#EAEAEA] font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* 1. Top Image Section - 10.1 1 */}
-            <div className="relative w-full h-[536px] bg-[#110D2C] shrink-0">
+            <div className="fixed top-0 left-0 w-full aspect-[3/4] bg-[#110D2C] z-0">
                 {event.portrait_image_url || event.landscape_image_url ? (
                     <img
                         src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
@@ -434,7 +515,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             </div>
 
             {/* 2. Content Section - Rectangle 320 */}
-            <div className="relative -mt-[11px] w-full bg-white rounded-t-[15px] px-6 pt-6 pb-32 min-h-[1000px]">
+            <div className="relative z-10 w-full bg-white rounded-t-[15px] px-6 pt-6 pb-[115px] mt-[calc(100vw*4/3-11px)] min-h-[calc(100vh-100vw*4/3+11px)] shadow-sm">
                 {/* Event Name & Date */}
                 <div className="mb-6">
                     <h1 className="text-[20px] font-semibold text-black mb-1 uppercase tracking-tight" style={{ lineHeight: '22px' }}>
@@ -446,7 +527,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* Venue & Gates Open */}
-                <div className="space-y-4 mb-10">
+                <div className="space-y-4 mb-6">
                     <div
                         onClick={() => googleMapUrl && window.open(googleMapUrl, '_blank')}
                         className={`flex items-start justify-between group ${googleMapUrl ? 'cursor-pointer' : ''}`}
@@ -478,7 +559,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     >
                         <div className="flex items-start gap-4 flex-1 min-w-0 pr-2">
                             <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
-                                <Clock size={20} className="text-black opacity-70" />
+                                <img src="/mobile_icons/event clicking/calender2.svg" alt="Calendar" className="w-5 h-5 object-contain" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[15px] font-medium text-black leading-tight">Gates Open: {displayGatesOpenTime}</p>
@@ -490,7 +571,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* About the event */}
-                <div className="mb-12">
+                <div className="mb-6">
                     <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
 
                     {processedDesc.plain && (
@@ -511,14 +592,12 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* Things to Know */}
-                <div className="mb-12 mt-[-15px]">
+                <div className="mb-6 mt-[-15px]">
                     <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
                     <div className="space-y-4 mb-4">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
-                                <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
+                                <img src="/mobile_icons/event clicking/ticket-shield1.svg" alt="Shield" className="w-5 h-5 object-contain" />
                             </div>
                             <p className="text-[15px] font-medium text-black">
                                 {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
@@ -537,7 +616,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* More Section */}
-                <div className="space-y-4 mb-12 mt-[-15px]">
+                <div className="space-y-4 mb-6 mt-[-15px]">
                     <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
                     <div className="space-y-4">
                         {/* FAQs Accordion */}
@@ -592,7 +671,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* Ask Anything AI */}
-                <div className="flex justify-center mb-10">
+                <div className="flex justify-center mb-6">
                     <div className="p-[1px] bg-gradient-to-r from-[#866BFF] to-[#B26BE9] rounded-full">
                         <button className="flex items-center justify-center gap-2 px-6 h-[44px] w-[170px] bg-white rounded-full active:scale-95 transition-all">
                             <img src="/mobile_icons/event clicking/Vector.svg" className="w-[20px] h-[20px]" alt="AI" />
@@ -613,8 +692,8 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                         onClick={handleBook}
                         disabled={closedBooking}
                         className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${closedBooking
-                                ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
-                                : 'bg-black text-white text-[18px] w-[138px]'
+                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
+                            : 'bg-black text-white text-[18px] w-[138px]'
                             }`}
                     >
                         {bookingStatus.text}
@@ -632,7 +711,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     />
 
                     {/* Sheet Content */}
-                    <div className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-all transform duration-300 translate-y-0 animate-in slide-in-from-bottom">
+                    <div
+                        ref={timelineSheetRef}
+                        onTouchStart={handleTimelineTouchStart}
+                        onTouchMove={handleTimelineTouchMove}
+                        onTouchEnd={handleTimelineTouchEnd}
+                        style={{
+                            transform: `translateY(${timelineTouchTranslation}px)`,
+                            transition: timelineTouchStart === null ? 'transform 0.3s ease-out' : 'none'
+                        }}
+                        className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-all animate-in slide-in-from-bottom"
+                    >
                         {/* Drag indicator / top bar */}
                         <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6" />
 
@@ -642,7 +731,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                             </h3>
                             <button
                                 onClick={() => setIsTimelineOpen(false)}
-                                className="w-[30px] h-[30px] rounded-full bg-[#E5E5E5]/50 flex items-center justify-center active:scale-90 transition-transform"
+                                className="w-[30px] h-[30px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
                             >
                                 <X size={16} className="text-black" />
                             </button>
@@ -705,7 +794,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     />
 
                     {/* Sheet Content */}
-                    <div className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-all transform duration-300 translate-y-0 animate-in slide-in-from-bottom">
+                    <div
+                        ref={thingsSheetRef}
+                        onTouchStart={handleThingsTouchStart}
+                        onTouchMove={handleThingsTouchMove}
+                        onTouchEnd={handleThingsTouchEnd}
+                        style={{
+                            transform: `translateY(${thingsTouchTranslation}px)`,
+                            transition: thingsTouchStart === null ? 'transform 0.3s ease-out' : 'none'
+                        }}
+                        className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-all animate-in slide-in-from-bottom"
+                    >
                         {/* Drag indicator / top bar */}
                         <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6" />
 
@@ -715,7 +814,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                             </h3>
                             <button
                                 onClick={() => setIsThingsToKnowOpen(false)}
-                                className="w-[30px] h-[30px] rounded-full bg-[#E5E5E5]/50 flex items-center justify-center active:scale-90 transition-transform"
+                                className="w-[30px] h-[30px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
                             >
                                 <X size={16} className="text-black" />
                             </button>
@@ -730,9 +829,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                 <div className="space-y-4">
                                     {/* Ticket Required Age */}
                                     <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
+                                        <img src="/mobile_icons/event clicking/ticket-shield1.svg" alt="Shield" className="w-5 h-5 object-contain shrink-0" />
                                         <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                             {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
                                                 ? (ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`)

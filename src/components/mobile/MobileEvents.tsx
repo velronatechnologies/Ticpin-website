@@ -448,8 +448,8 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                             >
                                 <div
                                     className={`w-[89px] h-[120px] rounded-[25px] border flex flex-col items-center pt-[15px] relative transition-all duration-150 ${isSelected
-                                            ? 'border-black ring-1 ring-black'
-                                            : ''
+                                        ? 'border-black ring-1 ring-black'
+                                        : ''
                                         }`}
                                     style={{ background: cat.bg }}
                                 >
@@ -487,7 +487,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                     {artist.image ? (
                                         <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[32px] font-semibold text-zinc-500">
+                                        <div className="w-full h-full flex items-center justify-center text-[32px] font-semibold text-zinc-500 font-[family-name:var(--font-anek-latin)]">
                                             {artist.name?.charAt(0)?.toUpperCase() || 'A'}
                                         </div>
                                     )}
@@ -526,7 +526,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                     {filteredAndSearchedEvents.map((event) => (
                         <div
                             key={event.id}
-                            className="flex flex-col bg-white rounded-[30px] border-[0.5px] border-black overflow-hidden active:scale-95 transition-all duration-150 cursor-pointer"
+                            className="flex flex-col bg-white rounded-[15px] border-[0.5px] border-black overflow-hidden active:scale-95 transition-all duration-150 cursor-pointer"
                             onClick={() => router.push(`/events/${encodeURIComponent(event.name)}`)}
                         >
                             <div className="aspect-[175/200] relative bg-[#E4E4E4] overflow-hidden">
