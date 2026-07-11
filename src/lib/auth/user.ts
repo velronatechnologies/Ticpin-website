@@ -26,10 +26,25 @@ function setCookieRaw(name: string, value: string, days: number) {
 
 function deleteCookie(name: string) {
     if (typeof document === 'undefined') return;
-    document.cookie = `${name}=; path=/; SameSite=Lax; Max-Age=-1`;
+    const expires = "; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = `${name}=${expires}; path=/; SameSite=Lax`;
+    document.cookie = `${name}=${expires}; path=/; SameSite=Lax; Secure`;
+    document.cookie = `${name}=${expires}; path=/; SameSite=Strict`;
+    document.cookie = `${name}=${expires}; path=/; SameSite=Strict; Secure`;
+    document.cookie = `${name}=${expires}; path=/`;
+
     const host = window.location.hostname;
-    document.cookie = `${name}=; path=/; domain=${host}; Max-Age=-1`;
-    document.cookie = `${name}=; path=/; domain=.${host}; Max-Age=-1`;
+    document.cookie = `${name}=${expires}; path=/; domain=${host}; SameSite=Lax`;
+    document.cookie = `${name}=${expires}; path=/; domain=${host}; SameSite=Lax; Secure`;
+    document.cookie = `${name}=${expires}; path=/; domain=.${host}; SameSite=Lax`;
+    document.cookie = `${name}=${expires}; path=/; domain=.${host}; SameSite=Lax; Secure`;
+
+    const parts = host.split('.');
+    if (parts.length > 2) {
+        const parentDomain = '.' + parts.slice(-2).join('.');
+        document.cookie = `${name}=${expires}; path=/; domain=${parentDomain}; SameSite=Lax`;
+        document.cookie = `${name}=${expires}; path=/; domain=${parentDomain}; SameSite=Lax; Secure`;
+    }
 }
 
 function decodeSessionCookie(raw: string | null): UserSession | null {
