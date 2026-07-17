@@ -233,10 +233,16 @@ export default function TicketSelectionPage() {
     }
   }, [isAuthChecking, router, organizerSession]);
 
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    // User just logged in — stay on this page so they can proceed with booking
+  };
+
   const handleAuthModalClose = () => {
     setShowAuthModal(false);
     const activeSession = getUserSession();
     if (!activeSession) {
+      // User closed the modal without logging in → go back to event detail
       router.push(`/events/${name}`);
     }
   };
@@ -588,7 +594,7 @@ export default function TicketSelectionPage() {
           <TicketSkeleton />
           <TicketSkeleton />
         </div>
-        <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} />
+        <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} onSuccess={handleAuthSuccess} />
       </div>
     );
 
@@ -664,7 +670,7 @@ export default function TicketSelectionPage() {
 
   return (
     <div className="min-h-screen bg-white font-[family-name:var(--font-anek-latin)]">
-      <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} />
+      <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} onSuccess={handleAuthSuccess} />
       <ProfileDrawer
         isOpen={isProfileDrawerOpen}
         onClose={() => setIsProfileDrawerOpen(false)}

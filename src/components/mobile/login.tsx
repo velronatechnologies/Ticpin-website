@@ -24,9 +24,17 @@ export default function MobileLogin() {
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+    const redirectAfterLogin = (targetUrl: string) => {
+        if (typeof window !== 'undefined') {
+            window.location.replace(targetUrl);
+            return;
+        }
+        router.replace(targetUrl);
+    };
+
     useEffect(() => {
         if (userSession) {
-            router.replace(redirectUrl);
+            redirectAfterLogin(redirectUrl);
         }
     }, [userSession, redirectUrl, router]);
 
@@ -187,7 +195,7 @@ export default function MobileLogin() {
             // toast.success('Logged in successfully');
             
             // Redirect back
-            router.replace(redirectUrl);
+            redirectAfterLogin(redirectUrl);
         } catch (err: any) {
             console.error('Verification Error:', err);
             setError('Verification failed');
