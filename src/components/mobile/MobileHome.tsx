@@ -406,7 +406,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
 
     return (
         <div
-            className="md:hidden min-h-screen w-full overflow-x-hidden font- selection:bg-[#866BFF]/20"
+            className="md:hidden min-h-screen w-full overflow-x-hidden font-sans selection:bg-[#866BFF]/20"
             style={{ background: 'white' }}
         >
             {/* 1. Header Section */}
@@ -662,7 +662,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             <p className="text-[11px] font-medium text-[#5331EA] mb-0.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                 {formatEventDate(scrollEvents[0].date, scrollEvents[0].time).toUpperCase()}
                                             </p>
-                                            <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                            <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2 pr-11" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                 {scrollEvents[0].name || "{EVENT NAME}"}
                                             </h3>
                                             <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
@@ -685,7 +685,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                     scrollEvents[0].city || '',
                                                     e
                                                 )}
-                                                className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-10 active:scale-90 ${likedEventIds.includes(scrollEvents[0]?.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
+                                                className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-20 active:scale-90 touch-manipulation ${likedEventIds.includes(scrollEvents[0]?.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
                                             >
                                                 <img
                                                     src="/mobile_icons/Vector 2.svg"
@@ -802,7 +802,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                     <p className="text-[11px] font-medium text-[#5331EA] mb-0.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                         {formatEventDate(event.date, event.time).toUpperCase()}
                                                     </p>
-                                                    <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2 pr-11" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                         {event.name || "{EVENT NAME}"}
                                                     </h3>
                                                     <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
@@ -825,7 +825,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                             event.city || '',
                                                             e
                                                         )}
-                                                        className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-10 active:scale-90 ${likedEventIds.includes(event.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
+                                                        className={`absolute top-3 right-3 w-8.5 h-8.5 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer z-20 active:scale-90 touch-manipulation ${likedEventIds.includes(event.id) ? 'bg-red-500' : 'bg-[#EFEFEF]'}`}
                                                     >
                                                         <img
                                                             src="/mobile_icons/Vector 2.svg"

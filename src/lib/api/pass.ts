@@ -46,7 +46,7 @@ export const passApi = {
       // Handle 401 Unauthorized (Expired Token) - Auto logout
       if (res.status === 401) {
         console.warn('[passApi.getActivePass] 401 Unauthorized - Token expired, auto-logging out');
-        clearUserSession();
+        clearUserSession(true);
         return null;
       }
       
@@ -85,7 +85,7 @@ export const passApi = {
       // Handle 401 Unauthorized (Expired Token) - Auto logout
       if (res.status === 401) {
         console.warn('[passApi.getLatestPass] 401 Unauthorized - Token expired, auto-logging out');
-        clearUserSession();
+        clearUserSession(true);
         return await passApi.getActivePass(userId);
       }
       

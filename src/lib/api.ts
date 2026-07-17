@@ -14,8 +14,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   // ─── Handle 401 Unauthorized (Expired Token) ───────────────────
   if (res.status === 401) {
     console.warn('[API] 401 Unauthorized - Token expired, logging out user');
-    // Clear session and redirect to login
-    clearUserSession();
+    clearUserSession(true);
     // The clearUserSession function handles redirect via window.location.reload()
     return Promise.reject(new Error('Session expired. Please login again.'));
   }

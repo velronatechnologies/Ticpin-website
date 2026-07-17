@@ -74,8 +74,12 @@ export function saveUserSession(session: UserSession): void {
     window.dispatchEvent(new Event('user-auth-change'));
 }
 
-/** Clear user session */
-export function clearUserSession(): void {
+/** Clear user session.
+ *  Pass `expired = true` only when the session was terminated by a 401 (token
+ *  expiry).  A normal, user-initiated logout must NOT redirect to the
+ *  session_expired page.
+ */
+export function clearUserSession(expired = false): void {
     if (typeof window === 'undefined') return;
 
     // Call backend to log out user and reset active_role
@@ -101,13 +105,19 @@ export function clearUserSession(): void {
     
     // BUG FIX #2: Clear lock key to prevent lock key replay attacks
     localStorage.removeItem('ticpin_lock_key');
+
+    // Clear liked events cache so a new user starts with a clean slate
+    localStorage.removeItem('liked_events');
     
     window.dispatchEvent(new Event('user-auth-change'));
     
-    // AUTO-LOGOUT FIX: Redirect to login page on token expiration (401 errors)
-    setTimeout(() => {
-        window.location.href = '/login?reason=session_expired';
-    }, 100);
+    // Only redirect to the "session expired" page when the logout was caused
+    // by an expired token, not by an explicit user action.
+    if (expired) {
+        setTimeout(() => {
+            window.location.href = '/login?reason=session_expired';
+        }, 100);
+    }
 }
 
 /** React hook to get and track user session */

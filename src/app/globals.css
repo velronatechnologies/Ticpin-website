@@ -222,3 +222,57 @@ option {
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* Font overrides to synchronize fonts with Design Repository */
+html,
+body {
+  font-family: var(--font-anek-latin), sans-serif;
+}
+
+.font-anek-latin {
+  font-family: var(--font-anek-latin), sans-serif !important;
+}
+
+.font-inter {
+  font-family: var(--font-inter), sans-serif !important;
+}
+
+.font-anek-tamil {
+  font-family: var(--font-anek-tamil), sans-serif !important;
+}
+
+.font-anek-tamil-condensed {
+  font-family: var(--font-anek-tamil-condensed), sans-serif !important;
+}
+
+/* Enforce font variables for elements styled with design document font names */
+[style*="fontFamily: 'Anek Latin'"],
+[style*="font-family: 'Anek Latin'"],
+[style*="fontFamily: \"Anek Latin\""],
+[style*="font-family: \"Anek Latin\""] {
+  font-family: var(--font-anek-latin), sans-serif !important;
+}
+
+[style*="fontFamily: 'Anek Tamil'"],
+[style*="font-family: 'Anek Tamil'"],
+[style*="fontFamily: \"Anek Tamil\""],
+[style*="font-family: \"Anek Tamil\""] {
+  font-family: var(--font-anek-tamil), sans-serif !important;
+}
+
+[style*="fontFamily: 'Anek Tamil Condensed'"],
+[style*="font-family: 'Anek Tamil Condensed'"],
+[style*="fontFamily: \"Anek Tamil Condensed\""],
+[style*="font-family: \"Anek Tamil Condensed\""] {
+  font-family: var(--font-anek-tamil-condensed), sans-serif !important;
+}
+
+[style*="fontFamily: 'var(--font-anek-latin)'"],
+[style*="font-family: 'var(--font-anek-latin)'"] {
+  font-family: var(--font-anek-latin), sans-serif !important;
+}
+
+[style*="fontFamily: 'var(--font-anek-tamil-condensed)'"],
+[style*="font-family: 'var(--font-anek-tamil-condensed)'"] {
+  font-family: var(--font-anek-tamil-condensed), sans-serif !important;
+}

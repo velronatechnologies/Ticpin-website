@@ -18,7 +18,7 @@ export async function fetchWithAuth<T>(
   if (res.status === 401) {
     console.warn('[FetchWithAuth] 401 Unauthorized - Token expired, auto-logging out user');
     console.warn('[FetchWithAuth] URL:', url);
-    clearUserSession(); // This will redirect to /login
+    clearUserSession(true);
     return Promise.reject(new Error('Session expired. Please login again.'));
   }
 

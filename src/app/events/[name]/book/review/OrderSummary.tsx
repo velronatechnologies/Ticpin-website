@@ -118,8 +118,8 @@ export default function OrderSummary({
                                             {ticket.quantity}
                                         </span>
                                         <span
-                                            className="text-[10px] font-medium text-[#686868]"
-                                            style={{ fontFamily: "var(--font-anek-latin), 'Anek Latin', sans-serif" }}
+                                            className="text-[15px] font-medium text-[#686868] uppercase tracking-normal"
+                                            style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
                                         >
                                             tickets
                                         </span>

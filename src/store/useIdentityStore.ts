@@ -145,7 +145,8 @@ export const useIdentityStore = create<IdentityState>()(
                     document.cookie.includes('ticpin_user_session');
                 if (!hasCookie) {
                     console.warn('[Auth] User session expired (cookie missing)');
-                    clearUserSession();
+                    // Pass expired=true so the user sees the session-expired message
+                    clearUserSession(true);
                     set({ userSession: null, activeRole: 'guest' });
                     return;
                 }

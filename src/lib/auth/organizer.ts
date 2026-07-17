@@ -8,7 +8,6 @@
 // clearOrganizerSession() calls the logout endpoint to clear the HttpOnly cookie too.
 
 import { useState, useEffect } from 'react';
-import { clearAllData } from './clearAll';
 
 export interface OrganizerSession {
   id: string;

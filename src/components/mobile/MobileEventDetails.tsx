@@ -76,6 +76,7 @@ interface MobileEventDetailsProps {
         event_end_date?: string;
         is_sales_paused?: boolean;
         is_canceled?: boolean;
+        card_video_url?: string;
     };
     offers: OfferRecord[];
 }
@@ -162,6 +163,18 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const [isThingsToKnowOpen, setIsThingsToKnowOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [animateLike, setAnimateLike] = useState(false);
+    const [activeSlide, setActiveSlide] = useState(0);
+    const topCarouselRef = useRef<HTMLDivElement>(null);
+
+    const handleCarouselScroll = () => {
+        if (topCarouselRef.current) {
+            const { scrollLeft, clientWidth } = topCarouselRef.current;
+            if (clientWidth > 0) {
+                const slideIndex = Math.round(scrollLeft / clientWidth);
+                setActiveSlide(slideIndex);
+            }
+        }
+    };
 
     const thingsSheetRef = useRef<HTMLDivElement>(null);
     const [thingsTouchStart, setThingsTouchStart] = useState<number | null>(null);
@@ -400,8 +413,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             let m = parseInt(mStr, 10);
             if (isNaN(h) || isNaN(m)) return formatTime(event.time) || 'TBA';
 
-            // Subtract gates open before value (default 30 mins)
-            const subtractMins = event.guide?.gates_open_before_value || 30;
+            let subtractMins = 0;
+            if (event.guide?.gates_open_before) {
+                const val = event.guide.gates_open_before_value ?? 0;
+                const unit = (event.guide.gates_open_before_unit || 'Minutes').toLowerCase();
+                if (unit.startsWith('hour')) {
+                    subtractMins = val * 60;
+                } else {
+                    subtractMins = val;
+                }
+            }
+
             let totalMins = h * 60 + m - subtractMins;
             if (totalMins < 0) totalMins += 24 * 60;
 
@@ -415,7 +437,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         } catch {
             return formatTime(event.time) || 'TBA';
         }
-    }, [event.time, event.guide?.gates_open_before_value]);
+    }, [event.time, event.guide?.gates_open_before, event.guide?.gates_open_before_value, event.guide?.gates_open_before_unit]);
 
     const displayEndTime = useMemo(() => {
         if (!event.time) return 'TBA';
@@ -495,11 +517,39 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             {/* 1. Top Image Section - 10.1 1 */}
             <div className="fixed top-0 left-0 w-full aspect-[3/4] bg-[#110D2C] z-0">
                 {event.portrait_image_url || event.landscape_image_url ? (
-                    <img
-                        src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
-                        alt={event.name}
-                        className="w-full h-full object-cover"
-                    />
+                    event.card_video_url ? (
+                        <div
+                            ref={topCarouselRef}
+                            onScroll={handleCarouselScroll}
+                            className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+                        >
+                            {/* Slide 1: Image */}
+                            <div className="w-full h-full flex-shrink-0 snap-center relative">
+                                <img
+                                    src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
+                                    alt={event.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            {/* Slide 2: Video */}
+                            <div className="w-full h-full flex-shrink-0 snap-center relative">
+                                <video
+                                    src={event.card_video_url.startsWith('.') ? event.card_video_url.substring(1) : event.card_video_url}
+                                    loop
+                                    muted
+                                    autoPlay
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <img
+                            src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
+                            alt={event.name}
+                            className="w-full h-full object-cover"
+                        />
+                    )
                 ) : (
                     <div className="w-full h-full p-6 flex flex-col items-center justify-center relative bg-[#110D2C]">
                         {/* Reusing the fancy background from MobileHome */}
@@ -529,7 +579,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     </button>
                 </div>
 
-                <div className="absolute top-6 right-4 flex gap-3">
+                <div className="absolute top-6 right-4 flex gap-3 z-20">
                     <button
                         onClick={handleLikeToggle}
                         className={`w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${animateLike ? 'scale-125 rotate-12 bg-red-50' : 'active:scale-90'
@@ -548,10 +598,12 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* Progress Indicators - Ellipse 32, 33 */}
-                <div className="absolute bottom-[24px] left-0 right-0 flex justify-center gap-1.5 z-20">
-                    <div className="w-1 h-1 rounded-full bg-white shadow-sm" />
-                    <div className="w-1 h-1 rounded-full bg-[#686868]" />
-                </div>
+                {event.card_video_url && (
+                    <div className="absolute bottom-[24px] left-0 right-0 flex justify-center gap-1.5 z-20">
+                        <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeSlide === 0 ? 'bg-white scale-125' : 'bg-white/50'}`} />
+                        <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeSlide === 1 ? 'bg-white scale-125' : 'bg-white/50'}`} />
+                    </div>
+                )}
             </div>
 
             {/* 2. Content Section - Rectangle 320 */}
@@ -632,28 +684,55 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* Things to Know */}
-                <div className="mb-8">
-                    <h2 className="text-[20px] font-semibold text-black mb-3" style={{ lineHeight: '22px' }}>Things to Know</h2>
-                    <div className="space-y-4 mb-2">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
-                                <Ticket size={20} className="text-black opacity-70" />
-                            </div>
-                            <p className="text-[15px] font-medium text-black">
-                                {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
-                                    ? (ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`)
-                                    : 'Ticket needed for ages 3 and above'}
-                            </p>
+                {(ticketRequiredAboveAge !== null || minAge !== null || event.guide?.is_kid_friendly !== undefined || event.guide?.is_pet_friendly !== undefined || languages || (event.guide?.facilities && event.guide.facilities.length > 0)) && (
+                    <div className="mb-8">
+                        <h2 className="text-[20px] font-semibold text-black mb-3" style={{ lineHeight: '22px' }}>Things to Know</h2>
+                        <div className="space-y-4 mb-2">
+                            {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
+                                        <Ticket size={20} className="text-black opacity-70" />
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">
+                                        {ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`}
+                                    </p>
+                                </div>
+                            )}
+                            {ticketRequiredAboveAge === null && minAge !== null && minAge !== undefined && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
+                                        <svg className="w-5 h-5 text-black opacity-70" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">
+                                        {minAge === 0 ? 'Entry allowed for all ages' : `Entry allowed for ages ${minAge}+`}
+                                    </p>
+                                </div>
+                            )}
+                            {ticketRequiredAboveAge === null && minAge === null && event.guide?.is_kid_friendly !== undefined && (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
+                                        <svg className="w-5 h-5 text-black opacity-70" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-[15px] font-medium text-black">
+                                        {event.guide.is_kid_friendly ? 'Kid friendly' : 'Not kid friendly'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
+                        <button
+                            onClick={() => setIsThingsToKnowOpen(true)}
+                            className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
+                        >
+                            Read more
+                            <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
+                        </button>
                     </div>
-                    <button
-                        onClick={() => setIsThingsToKnowOpen(true)}
-                        className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none"
-                    >
-                        Read more
-                        <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
-                    </button>
-                </div>
+                )}
 
                 {/* More Section */}
                 <div className="space-y-4 mb-6 mt-8">
@@ -862,82 +941,82 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
 
                         <div className="space-y-6">
                             {/* EVENT INFO Section */}
-                            <div>
-                                <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                    EVENT INFO
-                                </h4>
-                                <div className="space-y-4">
-                                    {/* Ticket Required Age */}
-                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                        <Ticket size={20} className="text-black shrink-0" />
-                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                            {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
-                                                ? (ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`)
-                                                : 'Ticket needed for ages 3 and above'}
-                                        </span>
-                                    </div>
+                            {(ticketRequiredAboveAge !== null || minAge !== null || event.guide?.is_kid_friendly !== undefined || event.guide?.is_pet_friendly !== undefined || languages) && (
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                        EVENT INFO
+                                    </h4>
+                                    <div className="space-y-4">
+                                        {/* Ticket Required Age */}
+                                        {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined && (
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                                <Ticket size={20} className="text-black shrink-0" />
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    {ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`}
+                                                </span>
+                                            </div>
+                                        )}
 
-                                    {/* Min Age Entry */}
-                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                                        </svg>
-                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                            {minAge !== null && minAge !== undefined
-                                                ? (minAge === 0 ? 'Entry allowed for all ages' : `Entry allowed for all ages`)
-                                                : 'Entry allowed for all ages'}
-                                        </span>
-                                    </div>
+                                        {/* Min Age Entry */}
+                                        {minAge !== null && minAge !== undefined && (
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    {minAge === 0 ? 'Entry allowed for all ages' : `Entry allowed for ages ${minAge}+`}
+                                                </span>
+                                            </div>
+                                        )}
 
-                                    {/* Kid Friendly */}
-                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
-                                        </svg>
-                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                            {event.guide?.is_kid_friendly !== undefined
-                                                ? (event.guide.is_kid_friendly ? 'Kid friendly' : 'Not kid friendly')
-                                                : 'Kid friendly'}
-                                        </span>
-                                    </div>
+                                        {/* Kid Friendly */}
+                                        {event.guide?.is_kid_friendly !== undefined && (
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    {event.guide.is_kid_friendly ? 'Kid friendly' : 'Not kid friendly'}
+                                                </span>
+                                            </div>
+                                        )}
 
-                                    {/* Pet Friendly */}
-                                    <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 8l8 8" />
-                                        </svg>
-                                        <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                            {event.guide?.is_pet_friendly !== undefined
-                                                ? (event.guide.is_pet_friendly ? 'Pets allowed' : 'Pets not allowed')
-                                                : 'Pets not allowed'}
-                                        </span>
-                                    </div>
+                                        {/* Pet Friendly */}
+                                        {event.guide?.is_pet_friendly !== undefined && (
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 8l8 8" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    {event.guide.is_pet_friendly ? 'Pets allowed' : 'Pets not allowed'}
+                                                </span>
+                                            </div>
+                                        )}
 
-                                    {/* Language */}
-                                    {languages && (
-                                        <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                            <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 0c-.439 1.891-1.357 3.598-2.622 5.053M12 20a8 8 0 100-16 8 8 0 000 16z" />
-                                            </svg>
-                                            <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                                Language: {languages}
-                                            </span>
-                                        </div>
-                                    )}
+                                        {/* Language */}
+                                        {languages && (
+                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 0c-.439 1.891-1.357 3.598-2.622 5.053M12 20a8 8 0 100-16 8 8 0 000 16z" />
+                                                </svg>
+                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    Language: {languages}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* AMENITIES Section */}
-                            <div>
-                                <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                    AMENITIES
-                                </h4>
-                                    {(event.guide?.facilities && event.guide.facilities.length > 0
-                                        ? event.guide.facilities
-                                        : ["Free water stations", "Washrooms available"]
-                                    ).map((fac, idx) => (
+                            {event.guide?.facilities && event.guide.facilities.length > 0 && (
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                        AMENITIES
+                                    </h4>
+                                    {event.guide.facilities.map((fac, idx) => (
                                         <div key={idx} className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
                                             {getAmenityIcon(fac)}
                                             <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
@@ -945,7 +1024,8 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                             </span>
                                         </div>
                                     ))}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

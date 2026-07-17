@@ -730,38 +730,27 @@ export default function TicketSelectionPage() {
       >
         {/* Header Section - Figma Exact Design Match */}
         <div className="w-full h-[68px] bg-white border-b border-[#AEAEAE] flex items-center justify-between px-[16px] relative shrink-0">
-          {/* Back button removed */}
-          <div className="w-[31px] h-[31px]" />
+          {/* Spacer on the left */}
+          <div className="w-[30px] h-[30px] shrink-0" />
 
           {/* Center Event Name & Date */}
-          <div className="flex flex-col items-center justify-center max-w-[60%]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-[60px]">
             <h1
-              className="text-[14px] font-semibold text-black uppercase leading-tight text-center truncate w-full"
+              className="text-[14px] font-semibold text-black uppercase leading-tight text-center truncate w-full pointer-events-auto"
               style={{ fontFamily: "'Anek Latin', sans-serif" }}
             >
               {event?.name || "{EVENT NAME}"}
             </h1>
             <p
-              className="text-[10px] font-medium text-[#686868] mt-[1px] uppercase leading-none text-center"
+              className="text-[10px] font-medium text-[#686868] mt-[1px] uppercase leading-none text-center pointer-events-auto"
               style={{ fontFamily: "'Anek Latin', sans-serif" }}
             >
               {formattedDateVenue}
             </p>
           </div>
 
-          {/* Right User Ellipse */}
-          <button
-            onClick={() => {
-              if (!session?.id) {
-                setShowAuthModal(true);
-              } else {
-                setIsProfileDrawerOpen(true);
-              }
-            }}
-            className="w-[30px] h-[30px] rounded-full bg-[#E1E1E1] flex items-center justify-center shrink-0"
-          >
-            <User size={14} className="text-[#686868]" />
-          </button>
+          {/* Spacer on the right */}
+          <div className="w-[30px] h-[30px] shrink-0" />
         </div>
 
         {timeRemaining > 0 && Object.values(counts).some((v) => v > 0) && (
@@ -1062,8 +1051,8 @@ export default function TicketSelectionPage() {
                             {cat.name}
                           </span>
                         </div>
-                        <div
-                          className="text-[26px] font-medium text-[#686868] leading-[30px]"
+                         <div
+                          className="text-[20px] font-semibold text-black leading-[24px]"
                           style={{ fontFamily: "'Anek Latin', sans-serif" }}
                         >
                           ₹{formatPrice(cat.price ?? 0)}

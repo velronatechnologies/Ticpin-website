@@ -69,18 +69,20 @@ export default function EventCard({
             style={{ borderRadius: '15px 15px 0px 0px' }}
           />
         </div>
-        <div className="px-3 py-5.5 flex flex-col gap-0.5 mt-[-10px]">
-          <div className="text-[15px] font-medium text-[#7B2FF7] font-[family-name:var(--font-anek-latin)]" >
-            {date}{displayTime ? ` | ${displayTime}` : ''}
+        <div className="px-3 pt-3 pb-3 flex flex-col justify-between mt-[-10px]" style={{ height: '135px' }}>
+          <div className="flex flex-col gap-0.5">
+            <div className="text-[13px] font-medium text-[#7B2FF7] font-[family-name:var(--font-anek-latin)]" >
+              {date}{displayTime ? ` | ${displayTime}` : ''}
+            </div>
+            <h3 className="font-semibold text-black leading-[1.2] font-[family-name:var(--font-anek-latin)] line-clamp-2 text-[16px]" style={{ color: 'black' }}>
+              {name}
+            </h3>
+            <p className="text-[13px] text-[#686868] font-[family-name:var(--font-anek-latin)] truncate">
+              {displayLocation}
+            </p>
           </div>
-          <h3 className="text-[23px] font-medium text-black line-clamp-1 leading-tight font-[family-name:var(--font-anek-latin)]" style={{ color: 'black' }}>
-            {name}
-          </h3>
-          <p className="text-[15px] text-[#686868] font-[family-name:var(--font-anek-latin)] pt-0.2">
-            {displayLocation}
-          </p>
-          <p className="text-[15px] text-[#aeaeae] mt-auto font-[family-name:var(--font-anek-latin)]">
-            <span className="text-[15px] text-[#686868] font-[family-name:var(--font-anek-latin)] ">{ticketPrice} onwards</span>
+          <p className="text-[13px] text-[#aeaeae] font-[family-name:var(--font-anek-latin)]">
+            <span className="text-[13px] text-[#686868] font-[family-name:var(--font-anek-latin)] ">{ticketPrice} onwards</span>
           </p>
         </div>
       </div>

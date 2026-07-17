@@ -762,48 +762,31 @@ export default function TicketSelectionPage() {
       >
         {/* Header Section */}
         <div className="w-full h-[68px] bg-white border-b border-[#AEAEAE] flex items-center justify-between px-[16px] relative shrink-0">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 z-10">
             <button
               onClick={() => router.back()}
               className="text-black p-1 hover:bg-[#F3F4F6] rounded-full"
             >
               <ChevronLeft size={20} />
             </button>
-            <span
-              className="text-[18px] font-extrabold text-black tracking-tighter"
-              style={{ fontFamily: "'Anek Tamil Condensed', sans-serif" }}
-            >
-              TICPIN
-            </span>
           </div>
 
-          <div className="flex flex-col items-center justify-center max-w-[55%]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-[60px]">
             <h1
-              className="text-[14px] font-semibold text-black uppercase leading-tight text-center truncate w-full"
+              className="text-[14px] font-semibold text-black uppercase leading-tight text-center truncate w-full pointer-events-auto"
               style={{ fontFamily: "'Anek Latin', sans-serif" }}
             >
               {event?.name || "—"}
             </h1>
             <p
-              className="text-[10px] font-medium text-[#686868] mt-[1px] uppercase leading-none text-center truncate w-full"
+              className="text-[10px] font-medium text-[#686868] mt-[1px] uppercase leading-none text-center truncate w-full pointer-events-auto"
               style={{ fontFamily: "'Anek Latin', sans-serif" }}
             >
               {formattedDateVenue}
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              if (!session?.id) {
-                setShowAuthModal(true);
-              } else {
-                setIsProfileDrawerOpen(true);
-              }
-            }}
-            className="w-[30px] h-[30px] rounded-full bg-[#E1E1E1] flex items-center justify-center shrink-0"
-          >
-            <User size={14} className="text-[#686868]" />
-          </button>
+          <div className="w-[28px] h-[28px] shrink-0 z-10" />
         </div>
 
         {/* Title */}

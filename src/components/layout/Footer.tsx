@@ -70,11 +70,11 @@ export default function Footer() {
                     </div>
 
                     {/* QR Code Placeholder */}
-                    <div className="flex-shrink-0">
+                    {/* <div className="flex-shrink-0">
                         <div className="w-[100px] h-[100px] md:w-[150px] md:h-[150px] bg-[#D9D9D9] rounded-[20px] flex items-center justify-center shadow-lg">
                             <span className="text-2xl md:text-3xl font-bold text-black tracking-tight">QR</span>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Divider Line */}
