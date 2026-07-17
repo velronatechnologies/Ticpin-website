@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import MobileLogin from '@/components/mobile/login';
 import AuthModal from '@/components/modals/AuthModal';
 import { useIdentityStore } from '@/store/useIdentityStore';
+import { getUserSession } from '@/lib/auth/user';
 
 const PROTECTED_ROUTES = [
     '/profile',
@@ -51,7 +52,7 @@ function LoginContent() {
                     isOpen={true} 
                     onClose={() => {
                         const redirectVal = searchParams.get('redirect') || '/';
-                        if (!userSession && isRouteProtected(redirectVal)) {
+                        if (!getUserSession() && isRouteProtected(redirectVal)) {
                             router.push('/');
                         } else {
                             router.push(redirectVal);

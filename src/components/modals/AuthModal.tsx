@@ -274,7 +274,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             loginUser({ id: userData.id || userData._id || number, phone: number, name: userData.name || '' });
 
             if (onSuccess) {
-                onClose();
                 onSuccess();
             } else {
                 setView('profile');
