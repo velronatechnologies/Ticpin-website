@@ -132,6 +132,7 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
     const nowMs = useCurrentTime();
     const [showAllAmenities, setShowAllAmenities] = useState(false);
     const [showFaqModal, setShowFaqModal] = useState(false);
+    const [showTermsModal, setShowTermsModal] = useState(false);
     const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
     const facilities = useMemo(() => {
@@ -428,19 +429,12 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
 
                             <div
                                 className="p-6 bg-white border border-[#AEAEAE] rounded-[10px] cursor-pointer min-h-[80px] flex flex-col justify-center"
-                                onClick={() => setActiveFaq(activeFaq === 100 ? null : 100)}
+                                onClick={() => setShowTermsModal(true)}
                             >
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-xl font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Event Terms & Conditions</h3>
-                                    <ChevronDown className={`transition-transform text-[#000000] w-6 h-6 ${activeFaq === 100 ? 'rotate-180' : ''}`} />
+                                    <ChevronRight className="text-[#000000] w-6 h-6" />
                                 </div>
-                                {activeFaq === 100 && (
-                                    <div className="mt-4 text-[#686868] text-base font-medium border-t pt-4" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                        <div className="whitespace-pre-wrap">
-                                            {event.terms || event.event_instructions || "Standard terms and conditions apply. Please check with the venue for specific rules."}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -604,6 +598,34 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                             ) : (
                                 <p className="text-zinc-400 italic text-base py-4">No FAQs available for this event.</p>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showTermsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[32px] max-w-2xl w-full p-8 relative shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-bold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                Event Terms & Conditions
+                            </h3>
+                            <button
+                                onClick={() => setShowTermsModal(false)}
+                                className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
+                            >
+                                <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="max-h-[60vh] overflow-y-auto pr-2 text-[#686868] text-[15px] font-medium leading-relaxed" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                            <div className="whitespace-pre-wrap bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+                                {event.terms || event.event_instructions || "Standard terms and conditions apply. Please check with the venue for specific rules."}
+                            </div>
                         </div>
                     </div>
                 </div>

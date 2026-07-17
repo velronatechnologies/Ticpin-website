@@ -406,8 +406,8 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
 
     return (
         <div
-            className="md:hidden min-h-screen w-full overflow-x-hidden font-sans selection:bg-[#866BFF]/20"
-            style={{ background: 'white' }}
+            className="md:hidden min-h-screen w-full overflow-x-hidden font-[family-name:var(--font-anek-latin)] selection:bg-[#866BFF]/20"
+            style={{ background: 'white', fontFamily: 'var(--font-anek-latin), sans-serif' }}
         >
             {/* 1. Header Section */}
             <header className="px-6 pt-7 pb-4">

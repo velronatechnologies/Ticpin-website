@@ -161,6 +161,8 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const [showFullDesc, setShowFullDesc] = useState(false);
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
     const [isThingsToKnowOpen, setIsThingsToKnowOpen] = useState(false);
+    const [isFaqOpen, setIsFaqOpen] = useState(false);
+    const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [animateLike, setAnimateLike] = useState(false);
     const [activeSlide, setActiveSlide] = useState(0);
@@ -242,9 +244,77 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         setTimelineTouchTranslation(0);
     };
 
+    const faqSheetRef = useRef<HTMLDivElement>(null);
+    const faqListRef = useRef<HTMLDivElement>(null);
+    const [faqTouchStart, setFaqTouchStart] = useState<number | null>(null);
+    const [faqTouchTranslation, setFaqTouchTranslation] = useState<number>(0);
+
+    const handleFaqTouchStart = (e: React.TouchEvent) => {
+        const isAtTop = faqListRef.current ? faqListRef.current.scrollTop === 0 : true;
+        if (isAtTop) {
+            setFaqTouchStart(e.targetTouches[0].clientY);
+        }
+    };
+
+    const handleFaqTouchMove = (e: React.TouchEvent) => {
+        if (faqTouchStart === null) return;
+        const currentY = e.targetTouches[0].clientY;
+        const diff = currentY - faqTouchStart;
+        if (diff > 0) {
+            setFaqTouchTranslation(diff);
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+        } else {
+            setFaqTouchTranslation(0);
+        }
+    };
+
+    const handleFaqTouchEnd = () => {
+        if (faqTouchTranslation > 100) {
+            setIsFaqOpen(false);
+        }
+        setFaqTouchStart(null);
+        setFaqTouchTranslation(0);
+    };
+
+    const termsSheetRef = useRef<HTMLDivElement>(null);
+    const termsListRef = useRef<HTMLDivElement>(null);
+    const [termsTouchStart, setTermsTouchStart] = useState<number | null>(null);
+    const [termsTouchTranslation, setTermsTouchTranslation] = useState<number>(0);
+
+    const handleTermsTouchStart = (e: React.TouchEvent) => {
+        const isAtTop = termsListRef.current ? termsListRef.current.scrollTop === 0 : true;
+        if (isAtTop) {
+            setTermsTouchStart(e.targetTouches[0].clientY);
+        }
+    };
+
+    const handleTermsTouchMove = (e: React.TouchEvent) => {
+        if (termsTouchStart === null) return;
+        const currentY = e.targetTouches[0].clientY;
+        const diff = currentY - termsTouchStart;
+        if (diff > 0) {
+            setTermsTouchTranslation(diff);
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+        } else {
+            setTermsTouchTranslation(0);
+        }
+    };
+
+    const handleTermsTouchEnd = () => {
+        if (termsTouchTranslation > 100) {
+            setIsTermsOpen(false);
+        }
+        setTermsTouchStart(null);
+        setTermsTouchTranslation(0);
+    };
+
     // Prevent background scrolling when bottom sheets are open
     useEffect(() => {
-        if (isTimelineOpen || isThingsToKnowOpen) {
+        if (isTimelineOpen || isThingsToKnowOpen || isFaqOpen || isTermsOpen) {
             document.body.style.overflow = 'hidden';
             document.body.style.height = '100vh';
         } else {
@@ -255,7 +325,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             document.body.style.overflow = '';
             document.body.style.height = '';
         };
-    }, [isTimelineOpen, isThingsToKnowOpen]);
+    }, [isTimelineOpen, isThingsToKnowOpen, isFaqOpen, isTermsOpen]);
 
     // Check if liked on mount, and handle pending like if exists
     useEffect(() => {
@@ -610,7 +680,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             <div className="relative z-10 w-full bg-white rounded-t-[15px] px-6 pt-6 pb-[115px] mt-[calc(100vw*4/3-11px)] min-h-[calc(100vh-100vw*4/3+11px)] shadow-sm">
                 {/* Event Name & Date */}
                 <div className="mb-6">
-                    <h1 className="text-[20px] font-semibold text-black mb-1 uppercase tracking-tight" style={{ lineHeight: '22px' }}>
+                    <h1 className="text-[20px] font-semibold text-black mb-1  tracking-tight" style={{ lineHeight: '22px' }}>
                         {event.name}
                     </h1>
                     <p className="text-[15px] font-medium text-[#5331EA]" style={{ lineHeight: '16px' }}>
@@ -638,7 +708,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                         return firstPart || event.city || 'Venue TBA';
                                     })()}
                                 </p>
-                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider break-words mt-1">{event.venue_address || 'Location TBA'}</p>
+                                <p className="text-[10px] font-medium text-[#686868]  tracking-wider break-words mt-1">{event.venue_address || 'Location TBA'}</p>
                             </div>
                         </div>
                         <ChevronRight size={18} className="text-[#686868] shrink-0 mt-3" />
@@ -655,7 +725,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[15px] font-medium text-black leading-tight">Gates Open: {displayGatesOpenTime}</p>
-                                <p className="text-[10px] font-medium text-[#686868] uppercase tracking-wider mt-1">View full schedule & timeline</p>
+                                <p className="text-[10px] font-medium text-[#686868]  tracking-wider mt-1">View full schedule & timeline</p>
                             </div>
                         </div>
                         <ChevronRight size={18} className="text-[#686868] shrink-0 mt-3" />
@@ -738,53 +808,26 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 <div className="space-y-4 mb-6 mt-8">
                     <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
                     <div className="space-y-4">
-                        {/* FAQs Accordion */}
+                        {/* FAQs Drawer Button */}
                         <div>
                             <button
-                                onClick={() => toggleAccordion('faqs')}
+                                onClick={() => setIsFaqOpen(true)}
                                 className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5 active:scale-[0.99] transition-all"
                             >
                                 <span className="text-[15px] font-semibold text-black">Frequently Asked Questions</span>
-                                {openAccordion === 'faqs' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                                <ChevronRight size={20} className="text-[#686868]" />
                             </button>
-                            {openAccordion === 'faqs' && (
-                                <div className="mt-2 px-2 space-y-3">
-                                    {event.faqs && event.faqs.length > 0 ? (
-                                        event.faqs.map((faq, idx) => (
-                                            <div key={idx} className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                                <p className="text-[14px] font-semibold text-black mb-1">{faq.question}</p>
-                                                <p className="text-[13px] text-zinc-600">{faq.answer}</p>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                            <p className="text-[13px] text-zinc-600">No FAQ available</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
 
-                        {/* Terms Accordion */}
+                        {/* Terms Drawer Button */}
                         <div>
                             <button
-                                onClick={() => toggleAccordion('terms')}
+                                onClick={() => setIsTermsOpen(true)}
                                 className="w-full h-[61px] border border-[#686868] rounded-[15px] flex items-center justify-between px-5 active:scale-[0.99] transition-all"
                             >
                                 <span className="text-[15px] font-semibold text-black">Event Terms & Conditions</span>
-                                {openAccordion === 'terms' ? <ChevronUp size={20} className="text-[#686868]" /> : <ChevronDown size={20} className="text-[#686868]" />}
+                                <ChevronRight size={20} className="text-[#686868]" />
                             </button>
-                            {openAccordion === 'terms' && (
-                                <div className="mt-2 px-2">
-                                    <div className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                        {event.terms || event.event_instructions ? (
-                                            <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms || event.event_instructions}</p>
-                                        ) : (
-                                            <p className="text-[13px] text-zinc-600">Event terms and conditions apply</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -801,7 +844,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             </div>
 
             {/* Sticky Footer */}
-            {!isTimelineOpen && !isThingsToKnowOpen && (
+            {!isTimelineOpen && !isThingsToKnowOpen && !isFaqOpen && !isTermsOpen && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] h-[83px] bg-[#F5F5F5] rounded-[40px] flex items-center justify-between px-8 z-[100]">
                     <div className="flex items-center gap-1.5">
                         <span className="text-[18px] font-semibold text-black uppercase">{displayPrice}</span>
@@ -1026,6 +1069,115 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. Frequently Asked Questions Bottom Sheet */}
+            {isFaqOpen && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+                        onClick={() => setIsFaqOpen(false)}
+                    />
+
+                    {/* Sheet Content */}
+                    <div
+                        ref={faqSheetRef}
+                        onTouchStart={handleFaqTouchStart}
+                        onTouchMove={handleFaqTouchMove}
+                        onTouchEnd={handleFaqTouchEnd}
+                        style={{
+                            transform: `translateY(${faqTouchTranslation}px)`,
+                            transition: faqTouchStart === null ? 'transform 0.3s ease-out' : 'none'
+                        }}
+                        className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] shadow-2xl transition-all animate-in slide-in-from-bottom"
+                    >
+                        {/* Drag indicator / top bar */}
+                        <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6" />
+
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-[20px] font-semibold text-black tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                Frequently Asked Questions
+                            </h3>
+                            <button
+                                onClick={() => setIsFaqOpen(false)}
+                                className="w-[30px] h-[30px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                                <X size={16} className="text-black" />
+                            </button>
+                        </div>
+
+                        {/* Scrollable list */}
+                        <div ref={faqListRef} className="space-y-4 overflow-y-auto max-h-[60vh] pr-1 pb-6">
+                            {event.faqs && event.faqs.length > 0 ? (
+                                event.faqs.map((faq, idx) => (
+                                    <div key={idx} className="bg-[#F5F5F5] rounded-[15px] p-5">
+                                        <p className="text-[15px] font-bold text-black mb-1.5" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{faq.question}</p>
+                                        <p className="text-[14px] font-medium text-zinc-600 leading-relaxed" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{faq.answer}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="bg-[#F5F5F5] rounded-[15px] p-5 text-center">
+                                    <p className="text-[14px] font-medium text-zinc-500" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>No FAQ available</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 4. Event Terms & Conditions Bottom Sheet */}
+            {isTermsOpen && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+                        onClick={() => setIsTermsOpen(false)}
+                    />
+
+                    {/* Sheet Content */}
+                    <div
+                        ref={termsSheetRef}
+                        onTouchStart={handleTermsTouchStart}
+                        onTouchMove={handleTermsTouchMove}
+                        onTouchEnd={handleTermsTouchEnd}
+                        style={{
+                            transform: `translateY(${termsTouchTranslation}px)`,
+                            transition: termsTouchStart === null ? 'transform 0.3s ease-out' : 'none'
+                        }}
+                        className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 max-h-[85vh] shadow-2xl transition-all animate-in slide-in-from-bottom"
+                    >
+                        {/* Drag indicator / top bar */}
+                        <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-6" />
+
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-[20px] font-semibold text-black tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                Event Terms & Conditions
+                            </h3>
+                            <button
+                                onClick={() => setIsTermsOpen(false)}
+                                className="w-[30px] h-[30px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                                <X size={16} className="text-black" />
+                            </button>
+                        </div>
+
+                        {/* Scrollable list */}
+                        <div ref={termsListRef} className="space-y-4 overflow-y-auto max-h-[60vh] pr-1 pb-6">
+                            <div className="bg-[#F5F5F5] rounded-[15px] p-5">
+                                {event.terms || event.event_instructions ? (
+                                    <p className="text-[14px] font-medium text-zinc-600 leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                        {event.terms || event.event_instructions}
+                                    </p>
+                                ) : (
+                                    <p className="text-[14px] font-medium text-zinc-600" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                        Event terms and conditions apply. Please check with the organizer or venue for specific guidelines.
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
