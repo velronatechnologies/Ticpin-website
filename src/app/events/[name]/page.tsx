@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import EventDetailClient from './EventDetailClient';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-import MobileEventDetails from '@/components/mobile/MobileEventDetails';
+import { Suspense } from 'react';
+import MobileEventDetailsClient from './MobileEventDetailsClient';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
 interface Artist {
@@ -108,7 +109,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
     if (isMobile) {
         const mobileData = await getMobileEventData(event.id);
         if (mobileData) {
-            return <MobileEventDetails event={mobileData.event} offers={mobileData.offers || []} />;
+            return (
+                <Suspense fallback={
+                    <div className="min-h-screen bg-[#EAEAEA] flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full border-4 border-[#866BFF] border-t-transparent animate-spin" />
+                    </div>
+                }>
+                    <MobileEventDetailsClient event={mobileData.event} offers={mobileData.offers || []} />
+                </Suspense>
+            );
         }
     }
 

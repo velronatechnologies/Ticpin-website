@@ -18,13 +18,19 @@ export default function AuthOTPInput({ otp, setOtp, onComplete, error }: AuthOTP
 
 
     const handleChange = (index: number, value: string) => {
-        if (!/^\d*$/.test(value)) return;
+        const cleanValue = value.replace(/\D/g, '');
+        if (cleanValue.length > 1) {
+            const digits = cleanValue.slice(0, 6);
+            setOtp(digits.split('').slice(0, 6));
+            inputRefs.current[Math.min(digits.length, 5)]?.focus();
+            return;
+        }
+
         const next = [...otp];
-        next[index] = value.slice(-1);
+        next[index] = cleanValue;
         setOtp(next);
         
-        // Auto-focus next
-        if (value && index < 5) {
+        if (cleanValue && index < 5) {
             inputRefs.current[index + 1]?.focus();
         }
     };
@@ -49,7 +55,6 @@ export default function AuthOTPInput({ otp, setOtp, onComplete, error }: AuthOTP
         });
         setOtp(next);
         
-        // Focus the appropriate box
         const nextFocus = Math.min(data.length, 5);
         inputRefs.current[nextFocus]?.focus();
     };

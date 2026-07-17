@@ -216,11 +216,27 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
     };
 
     const handleOtpChange = (index: number, value: string) => {
-        if (isNaN(Number(value))) return;
-        const newOtp = [...otp];
-        newOtp[index] = value.substring(value.length - 1);
-        setOtp(newOtp);
-        if (value && index < 5) otpRefs.current[index + 1]?.focus();
+        const cleanValue = value.replace(/\D/g, '');
+        if (cleanValue.length > 1) {
+            const digits = cleanValue.slice(0, 6);
+            setOtp(prev => {
+                const next = [...prev];
+                digits.split('').forEach((char, i) => {
+                    if (index + i < 6) next[index + i] = char;
+                });
+                return next;
+            });
+            const nextFocus = Math.min(index + digits.length, 5);
+            otpRefs.current[nextFocus]?.focus();
+            return;
+        }
+
+        setOtp(prev => {
+            const next = [...prev];
+            next[index] = cleanValue;
+            return next;
+        });
+        if (cleanValue && index < 5) otpRefs.current[index + 1]?.focus();
     };
 
     const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -234,10 +250,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         e.preventDefault();
         const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
         if (!data) return;
-        const next = [...otp];
-        data.split('').forEach((char, i) => { next[i] = char; });
-        setOtp(next);
-        otpRefs.current[Math.min(data.length, 5)]?.focus();
+        setOtp(prev => {
+            const next = [...prev];
+            data.split('').forEach((char, i) => {
+                if (i < 6) next[i] = char;
+            });
+            return next;
+        });
+        const nextFocus = Math.min(data.length, 5);
+        otpRefs.current[nextFocus]?.focus();
     };
 
     const handleOtpSubmit = async (e?: React.FormEvent) => {

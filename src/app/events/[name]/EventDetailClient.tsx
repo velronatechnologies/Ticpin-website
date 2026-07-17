@@ -12,8 +12,14 @@ import { bookingApi } from '@/lib/api/booking';
 import { toast } from '@/components/ui/Toast';
 import Footer from '@/components/layout/Footer';
 import OrganizerLogoutModal from '@/components/modals/OrganizerLogoutModal';
-import MobileEventDetails from '@/components/mobile/MobileEventDetails';
+import dynamic from 'next/dynamic';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+// Use dynamic import to prevent hydration mismatch when isMobile switches
+const MobileEventDetails = dynamic(
+    () => import('@/components/mobile/MobileEventDetails'),
+    { ssr: false }
+);
 import { useCurrentTime } from '@/hooks/use-current-time';
 import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
 

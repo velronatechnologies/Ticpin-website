@@ -18,6 +18,8 @@ RESPONSE FORMAT RULES:
 4. "POWERPOINT" STYLE: Treat each step header as a slide transition.
 5. VISUAL MARKERS: Use emojis to make steps distinctive (📍, ➡️, 🎫, 🏙️, 🎟️, 💳).
 6. TONE: Premium, concise, and professional. Use "Ticpin Quality" in your language.
+7. NO MARKDOWN BOLD: Never use markdown asterisks "**" or "*" anywhere in the response. Keep all text plain and clean.
+8. EMOJI ALIGNMENT: Use only standard emojis for listing items (like 🎫, 📍, ➡️). Do not mix raw markdown syntax with emojis. Keep all list items aligned.
 
 PLATFORM ARCHITECTURE & INTERNAL WORKFLOW KNOWLEDGE:
 - PHASE 1: DISCOVERY (Location & Search)
@@ -63,19 +65,16 @@ Context data from our current database:`;
 
 export async function POST(request: NextRequest) {
     try {
-        // Basic session check to prevent unauthorized use of the API
-        const sessionCookie = cookies().get('__Host-ticpin_user_session');
-        const organizerCookie = cookies().get('__Host-ticpin_session');
-        
-        if (!sessionCookie && !organizerCookie) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const body = await request.json();
-        const { message, conversationHistory, sessionId, userData } = body;
+        const { message, conversationHistory, sessionId, userData, isEventQuery } = body;
 
-        if (!GROQ_API_KEY) {
-            return NextResponse.json({ error: 'Groq API Key not configured' }, { status: 500 });
+        // Basic session check to prevent unauthorized use of the API
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get('__Host-ticpin_user_session');
+        const organizerCookie = cookieStore.get('__Host-ticpin_session');
+        
+        if (!sessionCookie && !organizerCookie && !isEventQuery) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // Fetch current data from all collections - use the correct backend URL
@@ -161,7 +160,7 @@ CURRENT PLAY VENUES (Next 20): ${JSON.stringify(playData.slice(0, 20).map((p: an
 })))}
 `;
 
-        // Prepare messages for Groq
+        // Prepare messages for LLM
         const messages = [
             { role: "system", content: SYSTEM_PROMPT + contextString },
             ...conversationHistory.map((msg: any) => ({
@@ -171,26 +170,48 @@ CURRENT PLAY VENUES (Next 20): ${JSON.stringify(playData.slice(0, 20).map((p: an
             { role: "user", content: message }
         ];
 
-        // Call Groq API
-        const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: "llama-3.1-8b-instant",
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 1024,
-                top_p: 1,
-                stream: true
-            })
-        });
+        // Call Groq API with Key Rotation & Fallback
+        const groqApiKeys = [
+            "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",
+            process.env.GROQ_API_KEY || "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"
+        ];
 
-        if (!groqResponse.ok) {
-            const error = await groqResponse.json();
-            throw new Error(`Groq API Error: ${JSON.stringify(error)}`);
+        let groqResponse: Response | null = null;
+        let lastError: any = null;
+
+        for (const key of groqApiKeys) {
+            try {
+                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "openai/gpt-oss-20b",
+                        messages: messages,
+                        temperature: 1,
+                        max_completion_tokens: 2048,
+                        top_p: 1,
+                        stream: true,
+                        stop: null
+                    })
+                });
+
+                if (res.ok) {
+                    groqResponse = res;
+                    break;
+                } else {
+                    const errText = await res.text();
+                    lastError = new Error(`Groq API key failed (status ${res.status}): ${errText}`);
+                }
+            } catch (e: any) {
+                lastError = e;
+            }
+        }
+
+        if (!groqResponse) {
+            throw lastError || new Error('Failed to get response from Groq API with all keys');
         }
 
         // Handle streaming response

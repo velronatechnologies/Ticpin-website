@@ -163,10 +163,193 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const [isThingsToKnowOpen, setIsThingsToKnowOpen] = useState(false);
     const [isFaqOpen, setIsFaqOpen] = useState(false);
     const [isTermsOpen, setIsTermsOpen] = useState(false);
+    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [animateLike, setAnimateLike] = useState(false);
     const [activeSlide, setActiveSlide] = useState(0);
     const topCarouselRef = useRef<HTMLDivElement>(null);
+
+    const aiChatSheetRef = useRef<HTMLDivElement>(null);
+    const aiChatListRef = useRef<HTMLDivElement>(null);
+    const [aiChatTouchStart, setAiChatTouchStart] = useState<number | null>(null);
+    const [aiChatTouchTranslation, setAiChatTouchTranslation] = useState<number>(0);
+
+    const [messages, setMessages] = useState<{ id: string; sender: 'user' | 'assistant'; text: string }[]>([
+        {
+            id: 'welcome',
+            sender: 'assistant',
+            text: `Hi! I'm your AI assistant for ${event.name}. Ask me anything about tickets, venue, timing, amenities, or guidelines!`
+        }
+    ]);
+    const [inputText, setInputText] = useState('');
+    const [isSending, setIsSending] = useState(false);
+
+    const defaultQuestions = useMemo(() => {
+        const questions = [
+            "What are the ticket prices?",
+            "Where is the venue?",
+            "What time do gates open?"
+        ];
+        if (event.guide?.is_kid_friendly !== undefined) {
+            questions.push("Is this event kid friendly?");
+        } else {
+            questions.push("Are there age limits?");
+        }
+        return questions;
+    }, [event]);
+
+    const handleAiChatTouchStart = (e: React.TouchEvent) => {
+        const isAtTop = aiChatListRef.current ? aiChatListRef.current.scrollTop === 0 : true;
+        if (isAtTop) {
+            setAiChatTouchStart(e.targetTouches[0].clientY);
+        }
+    };
+
+    const handleAiChatTouchMove = (e: React.TouchEvent) => {
+        if (aiChatTouchStart === null) return;
+        const currentY = e.targetTouches[0].clientY;
+        const diff = currentY - aiChatTouchStart;
+        if (diff > 0) {
+            setAiChatTouchTranslation(diff);
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+        } else {
+            setAiChatTouchTranslation(0);
+        }
+    };
+
+    const handleAiChatTouchEnd = () => {
+        if (aiChatTouchTranslation > 100) {
+            setIsAiChatOpen(false);
+        }
+        setAiChatTouchStart(null);
+        setAiChatTouchTranslation(0);
+    };
+
+    const handleSendMessage = async (textToSend: string) => {
+        if (!textToSend.trim() || isSending) return;
+
+        const userMsg = {
+            id: Math.random().toString(),
+            sender: 'user' as const,
+            text: textToSend
+        };
+
+        setMessages(prev => [...prev, userMsg]);
+        setInputText('');
+        setIsSending(true);
+
+        const eventContext = `
+You are the Event Information Assistant for the event "${event.name}".
+Your task is to answer user queries using the following event details:
+- Event Name: ${event.name}
+- Category: ${event.category || event.event_category || 'TBA'}
+- Description: ${event.description || 'None'}
+- Date: ${event.date || 'TBA'}
+- Time: ${displayTime}
+- Duration: ${event.duration || 'TBA'} (Event ends around ${displayEndTime})
+- Venue: ${event.venue_name || 'TBA'} (${event.venue_address || 'TBA'}, ${event.city || ''})
+- Artists Performing: ${event.artists ? event.artists.map(a => a.name).join(', ') : event.artist_details ? event.artist_details.map(a => a.name).join(', ') : 'TBA'}
+- Ticket Categories & Prices: ${event.ticket_categories ? event.ticket_categories.map(c => `${c.name}: ₹${c.price || 'TBA'}`).join(', ') : 'TBA'}
+- Ticket Sales Open: ${event.ticket_open_date || 'TBA'}
+- Ticket Sales Close: ${event.ticket_close_date || 'TBA'}
+- Language: ${event.language || 'TBA'}
+- Age Limit: ${event.age_limit || 'TBA'}
+- Guide details:
+  * Kid Friendly: ${event.guide?.is_kid_friendly ? 'Yes' : 'No'}
+  * Pet Friendly: ${event.guide?.is_pet_friendly ? 'Yes' : 'No'}
+  * Minimum Age: ${event.guide?.min_age || 'TBA'}
+  * Ticket required above age: ${event.guide?.ticket_required_above_age || 'TBA'}
+  * Gates Open: ${displayGatesOpenTime}
+  * Facilities/Amenities: ${event.guide?.facilities ? event.guide.facilities.join(', ') : 'None specified'}
+- FAQs: ${event.faqs ? event.faqs.map(f => `Q: ${f.question} A: ${f.answer}`).join(' | ') : 'None'}
+- Terms & Conditions: ${event.terms || event.event_instructions || 'Standard terms apply.'}
+
+Rules:
+1. ONLY answer questions related to this specific event.
+2. If the user asks about anything else, politely decline and say you can only help with information about this event.
+3. Be concise, polite, and helpful.
+4. CRITICAL: Never say "based on the provided details", "not specified", "TBA", or "the details do not mention". Answer directly, elegantly, and professionally.
+`;
+
+        const lastMsgs = messages.filter(m => m.id !== 'welcome').slice(-3);
+        const historyForApi = [
+            { sender: 'user' as const, text: eventContext },
+            { sender: 'assistant' as const, text: 'Understood. I will answer queries specifically about this event based on the details provided.' },
+            ...lastMsgs.map(m => ({
+                sender: m.sender,
+                text: m.text
+            }))
+        ];
+
+        try {
+            const response = await fetch('/api/chat/groq', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: textToSend,
+                    conversationHistory: historyForApi,
+                    isEventQuery: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get response');
+            }
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            
+            const assistantMsgId = Math.random().toString();
+            setMessages(prev => [...prev, { id: assistantMsgId, sender: 'assistant' as const, text: '' }]);
+
+            let accumulatedText = '';
+            
+            if (reader) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices?.[0]?.delta?.content || '';
+                                accumulatedText += content;
+                                setMessages(prev => prev.map(m => 
+                                    m.id === assistantMsgId ? { ...m, text: accumulatedText } : m
+                                ));
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } else {
+                throw new Error('No reader available');
+            }
+
+        } catch (err) {
+            console.error('AI Chat Error:', err);
+            setMessages(prev => [
+                ...prev,
+                { id: Math.random().toString(), sender: 'assistant' as const, text: 'Sorry, I encountered an error while processing your request. Please try again.' }
+            ]);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    useEffect(() => {
+        if (aiChatListRef.current) {
+            aiChatListRef.current.scrollTop = aiChatListRef.current.scrollHeight;
+        }
+    }, [messages, messages[messages.length - 1]?.text]);
 
     const handleCarouselScroll = () => {
         if (topCarouselRef.current) {
@@ -835,7 +1018,10 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 {/* Ask Anything AI */}
                 <div className="flex justify-center mb-6">
                     <div className="p-[1px] bg-gradient-to-r from-[#866BFF] to-[#B26BE9] rounded-full">
-                        <button className="flex items-center justify-center gap-2 px-6 h-[44px] w-[170px] bg-white rounded-full active:scale-95 transition-all">
+                        <button 
+                            onClick={() => setIsAiChatOpen(true)}
+                            className="flex items-center justify-center gap-2 px-6 h-[44px] w-[170px] bg-white rounded-full active:scale-95 transition-all"
+                        >
                             <img src="/mobile_icons/event clicking/Vector.svg" className="w-[20px] h-[20px]" alt="AI" />
                             <span className="text-[17px] font-semibold bg-gradient-to-r from-[#866BFF] to-[#B26BE9] bg-clip-text text-transparent whitespace-nowrap">Ask anything</span>
                         </button>
@@ -844,7 +1030,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
             </div>
 
             {/* Sticky Footer */}
-            {!isTimelineOpen && !isThingsToKnowOpen && !isFaqOpen && !isTermsOpen && (
+            {!isTimelineOpen && !isThingsToKnowOpen && !isFaqOpen && !isTermsOpen && !isAiChatOpen && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] h-[83px] bg-[#F5F5F5] rounded-[40px] flex items-center justify-between px-8 z-[100]">
                     <div className="flex items-center gap-1.5">
                         <span className="text-[18px] font-semibold text-black uppercase">{displayPrice}</span>
@@ -1176,9 +1362,130 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                     <p className="text-[14px] font-medium text-zinc-600" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                         Event terms and conditions apply. Please check with the organizer or venue for specific guidelines.
                                     </p>
-                                )}
+                                ) }
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. Ask AI Bottom Sheet */}
+            {isAiChatOpen && (
+                <div className="fixed inset-0 z-[120] flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+                        onClick={() => setIsAiChatOpen(false)}
+                    />
+
+                    {/* Sheet Content */}
+                    <div
+                        ref={aiChatSheetRef}
+                        onTouchStart={handleAiChatTouchStart}
+                        onTouchMove={handleAiChatTouchMove}
+                        onTouchEnd={handleAiChatTouchEnd}
+                        style={{
+                            transform: `translateY(${aiChatTouchTranslation}px)`,
+                            transition: aiChatTouchStart === null ? 'transform 0.3s ease-out' : 'none'
+                        }}
+                        className="relative w-full bg-white rounded-t-[30px] p-6 pb-10 z-10 h-[85vh] flex flex-col shadow-2xl transition-all animate-in slide-in-from-bottom"
+                    >
+                        {/* Drag indicator / top bar */}
+                        <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-4" />
+
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1 bg-gradient-to-r from-[#866BFF] to-[#B26BE9] rounded-full">
+                                    <div className="bg-white p-1 rounded-full">
+                                        <img src="/mobile_icons/event clicking/Vector.svg" className="w-[16px] h-[16px]" alt="AI" />
+                                    </div>
+                                </div>
+                                <h3 className="text-[18px] font-semibold text-black tracking-tight" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                    Ask AI - Event Guide
+                                </h3>
+                            </div>
+                            <button
+                                onClick={() => setIsAiChatOpen(false)}
+                                className="w-[30px] h-[30px] rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                                <X size={16} className="text-black" />
+                            </button>
+                        </div>
+
+                        {/* Scrollable message area */}
+                        <div 
+                            ref={aiChatListRef} 
+                            className="flex-1 overflow-y-auto pr-1 pb-4 space-y-4 scrollbar-hide"
+                        >
+                            {messages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div
+                                        className={`max-w-[80%] rounded-[20px] px-4 py-3 text-[14px] leading-relaxed font-medium ${
+                                            msg.sender === 'user'
+                                                ? 'bg-gradient-to-r from-[#866BFF] to-[#B26BE9] text-white rounded-tr-none'
+                                                : 'bg-[#F2F2F7] text-black rounded-tl-none'
+                                        }`}
+                                        style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}
+                                    >
+                                        {msg.text || (
+                                            <div className="flex items-center gap-1 py-1">
+                                                <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Default Suggestions pills */}
+                        {defaultQuestions.length > 0 && (
+                            <div className="mb-4">
+                                <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>Suggested Questions</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {defaultQuestions.map((q, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => handleSendMessage(q)}
+                                            className="px-3.5 py-2 bg-zinc-50 border border-zinc-200 text-zinc-700 rounded-full text-[13px] font-semibold active:scale-95 transition-all text-left"
+                                            style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}
+                                        >
+                                            {q}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Input Area */}
+                        <form 
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSendMessage(inputText);
+                            }}
+                            className="flex items-center gap-2 border border-zinc-200 rounded-full p-1 pl-4 bg-zinc-50"
+                        >
+                            <input
+                                type="text"
+                                value={inputText}
+                                onChange={(e) => setInputText(e.target.value)}
+                                placeholder="Ask about this event..."
+                                disabled={isSending}
+                                className="flex-1 bg-transparent border-0 outline-none text-[14px] font-medium text-black placeholder-zinc-400 disabled:opacity-50 py-1.5"
+                                style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}
+                            />
+                            <button
+                                type="submit"
+                                disabled={isSending || !inputText.trim()}
+                                className="w-8 h-8 rounded-full bg-gradient-to-r from-[#866BFF] to-[#B26BE9] flex items-center justify-center text-white active:scale-90 disabled:opacity-40 transition-all shrink-0"
+                            >
+                                <ChevronUp size={20} />
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
