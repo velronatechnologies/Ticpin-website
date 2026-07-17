@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import EventsClient from './EventsClient';
 import { fetchEvents, type EventListItem } from './server-events';
 
@@ -25,5 +26,9 @@ async function getEvents(): Promise<EventListItem[]> {
 
 export default async function EventsPage() {
     const events = await getEvents();
-    return <EventsClient initialEvents={events} />;
+    const headersList = await headers();
+    const userAgent = headersList.get('user-agent') || '';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+    return <EventsClient initialEvents={events} isMobileServer={isMobile} />;
 }

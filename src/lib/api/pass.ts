@@ -1,4 +1,6 @@
 import { BACKEND_API_BASE } from '../backend';
+import { fetchWithAuth, postWithAuth } from './fetchWithAuth';
+import { clearUserSession } from '../auth/user';
 
 const BASE = `${BACKEND_API_BASE}/pass`;
 
@@ -40,6 +42,14 @@ export const passApi = {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
+      
+      // Handle 401 Unauthorized (Expired Token) - Auto logout
+      if (res.status === 401) {
+        console.warn('[passApi.getActivePass] 401 Unauthorized - Token expired, auto-logging out');
+        clearUserSession();
+        return null;
+      }
+      
       if (res.status === 404) {
         return null;
       }
@@ -71,6 +81,14 @@ export const passApi = {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
+      
+      // Handle 401 Unauthorized (Expired Token) - Auto logout
+      if (res.status === 401) {
+        console.warn('[passApi.getLatestPass] 401 Unauthorized - Token expired, auto-logging out');
+        clearUserSession();
+        return await passApi.getActivePass(userId);
+      }
+      
       if (!res.ok) {
         console.warn(
           `getLatestPass failed with status ${res.status}, falling back to active pass`,
@@ -99,32 +117,20 @@ export const passApi = {
   },
 
   useTurf: async (passId: string): Promise<TicpinPass> => {
-    const res = await fetch(`${BASE}/${passId}/use-turf`, {
+    return fetchWithAuth<TicpinPass>(`${BASE}/${passId}/use-turf`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to use turf benefit");
-    return data;
   },
 
   useDining: async (passId: string): Promise<TicpinPass> => {
-    const res = await fetch(`${BASE}/${passId}/use-dining`, {
+    return fetchWithAuth<TicpinPass>(`${BASE}/${passId}/use-dining`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to use dining benefit");
-    return data;
   },
 
   createPassOrder: async (userId: string, phone: string): Promise<any> => {
-    const res = await fetch("/backend/api/payment/create-order", {
+    return fetchWithAuth<any>("/backend/api/payment/create-order", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({
         customer_id: userId,
         customer_phone: phone,
@@ -132,9 +138,6 @@ export const passApi = {
         amount: 1,
       }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to create order");
-    return data;
   },
 
   verifyPassPayment: async (verificationData: {

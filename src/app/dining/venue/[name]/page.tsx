@@ -43,7 +43,7 @@ interface RealDining {
 async function getVenueData(name: string): Promise<RealDining | null> {
     try {
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/dining/${encodeURIComponent(name)}`, {
-            next: { revalidate: 300 }
+            next: { revalidate: 10 }
         });
         if (!res.ok) return null;
         return res.json();
@@ -56,7 +56,7 @@ async function getVenueData(name: string): Promise<RealDining | null> {
 async function getVenueOffers(name: string): Promise<OfferRecord[]> {
     try {
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/dining/${encodeURIComponent(name)}/offers`, {
-            next: { revalidate: 300 }
+            next: { revalidate: 10 }
         });
         if (!res.ok) return [];
         const data = await res.json();
@@ -86,7 +86,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 
 async function getMobileVenueData(id: string) {
     try {
-        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/dining/${id}`, { next: { revalidate: 300 } });
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/dining/${id}`, { next: { revalidate: 10 } });
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {

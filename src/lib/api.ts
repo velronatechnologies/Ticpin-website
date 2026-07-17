@@ -1,14 +1,25 @@
 import { BACKEND_API_BASE } from './backend';
+import { clearUserSession } from './auth/user';
 
 const BASE = BACKEND_API_BASE;
 
-// ─── Generic fetch wrapper ─────────────────────────────────────────
+// ─── Generic fetch wrapper with 401 auto-logout ────────────────────
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     ...options,
   });
+  
+  // ─── Handle 401 Unauthorized (Expired Token) ───────────────────
+  if (res.status === 401) {
+    console.warn('[API] 401 Unauthorized - Token expired, logging out user');
+    // Clear session and redirect to login
+    clearUserSession();
+    // The clearUserSession function handles redirect via window.location.reload()
+    return Promise.reject(new Error('Session expired. Please login again.'));
+  }
+  
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Something went wrong');
   return data as T;

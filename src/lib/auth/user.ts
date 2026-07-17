@@ -104,8 +104,9 @@ export function clearUserSession(): void {
     
     window.dispatchEvent(new Event('user-auth-change'));
     
+    // AUTO-LOGOUT FIX: Redirect to login page on token expiration (401 errors)
     setTimeout(() => {
-        window.location.reload();
+        window.location.href = '/login?reason=session_expired';
     }, 100);
 }
 

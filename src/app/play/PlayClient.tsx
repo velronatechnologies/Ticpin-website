@@ -45,12 +45,12 @@ const getVenueImage = (venue: RealPlay) =>
 
 const getVenueId = (venue: RealPlay) => venue.id || venue._id || venue.name;
 
-export default function PlayClient({ initialVenues }: { initialVenues: RealPlay[] }) {
+export default function PlayClient({ initialVenues, isMobileServer }: { initialVenues: RealPlay[]; isMobileServer?: boolean }) {
     const [venues, setVenues] = useState<RealPlay[]>(initialVenues);
     const [activeFilter, setActiveFilter] = useState('All');
     const [modalFilters, setModalFilters] = useState<Record<string, string[]>>({});
     const [mounted, setMounted] = useState(false);
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobile(isMobileServer);
 
     useEffect(() => {
         setMounted(true);

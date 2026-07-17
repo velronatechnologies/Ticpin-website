@@ -33,7 +33,7 @@ interface RealEvent {
     status?: string;
 }
 
-export default function EventsClient({ initialEvents }: { initialEvents: RealEvent[] }) {
+export default function EventsClient({ initialEvents, isMobileServer }: { initialEvents: RealEvent[]; isMobileServer?: boolean }) {
     const searchParams = useSearchParams();
     const categoryFromUrl = searchParams.get('category');
     const {
@@ -46,7 +46,7 @@ export default function EventsClient({ initialEvents }: { initialEvents: RealEve
     const [events] = useState<RealEvent[]>(initialEvents);
     const selectedLocation = useLocation();
     const [mounted, setMounted] = useState(false);
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobile(isMobileServer);
 
     useEffect(() => {
         setMounted(true);

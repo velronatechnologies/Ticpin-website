@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, Hourglass, X, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, X, Check, Ticket } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -487,7 +487,14 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 )}
 
                 {/* Overlaid Buttons */}
-
+                <div className="absolute top-6 left-4 z-20">
+                    <button
+                        onClick={() => router.back()}
+                        className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                    >
+                        <ChevronLeft size={20} className="text-black" />
+                    </button>
+                </div>
 
                 <div className="absolute top-6 right-4 flex gap-3">
                     <button
@@ -559,7 +566,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     >
                         <div className="flex items-start gap-4 flex-1 min-w-0 pr-2">
                             <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
-                                <img src="/mobile_icons/event clicking/calender2.svg" alt="Calendar" className="w-5 h-5 object-contain" />
+                                <Clock size={20} className="text-black opacity-70" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[15px] font-medium text-black leading-tight">Gates Open: {displayGatesOpenTime}</p>
@@ -597,7 +604,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                     <div className="space-y-4 mb-4">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
-                                <img src="/mobile_icons/event clicking/ticket-shield1.svg" alt="Shield" className="w-5 h-5 object-contain" />
+                                <Ticket size={20} className="text-black opacity-70" />
                             </div>
                             <p className="text-[15px] font-medium text-black">
                                 {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
@@ -829,7 +836,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                 <div className="space-y-4">
                                     {/* Ticket Required Age */}
                                     <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                        <img src="/mobile_icons/event clicking/ticket-shield1.svg" alt="Shield" className="w-5 h-5 object-contain shrink-0" />
+                                        <Ticket size={20} className="text-black shrink-0" />
                                         <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                             {ticketRequiredAboveAge !== null && ticketRequiredAboveAge !== undefined
                                                 ? (ticketRequiredAboveAge === 0 ? 'Ticket required for all' : `Ticket needed for ages ${ticketRequiredAboveAge} and above`)

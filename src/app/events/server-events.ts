@@ -38,7 +38,7 @@ function parseEventList(payload: unknown): EventListItem[] {
 export async function fetchEvents(query = ''): Promise<EventListItem[]> {
     const suffix = query ? `?${query}` : '';
     const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
-        next: { revalidate: 300 }
+        next: { revalidate: 10 }
     });
 
     if (!response.ok) {

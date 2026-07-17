@@ -1,4 +1,5 @@
 import { BACKEND_API_BASE } from '../backend';
+import { fetchWithAuth, postWithAuth } from './fetchWithAuth';
 
 const BASE = BACKEND_API_BASE;
 
@@ -138,15 +139,10 @@ export interface AvailabilityResult {
 export const bookingApi = {
     /** Create a payment order (picks Cashfree or Razorpay via traffic weight) */
     createPaymentOrder: async (payload: PaymentOrderRequest): Promise<PaymentOrderResponse> => {
-        const res = await fetch(`${BASE}/payment/create-order`, {
+        return fetchWithAuth<PaymentOrderResponse>(`${BASE}/payment/create-order`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify(payload),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? 'Payment order creation failed');
-        return data as PaymentOrderResponse;
     },
 
     /** Create an event booking (no auth required) */
@@ -169,19 +165,15 @@ export const bookingApi = {
         orderAmount: number,
         userId?: string
     ): Promise<CouponValidateResult> => {
-        const res = await fetch(`${BASE}/coupons/validate`, {
+        return fetchWithAuth<CouponValidateResult>(`${BASE}/coupons/validate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({
                 code,
                 category,
                 order_amount: orderAmount,
                 user_id: userId,
             }),
-        });const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? 'Invalid coupon');
-        return data as CouponValidateResult;
+        });
     },
 
     /** Create a dining booking */
@@ -262,30 +254,28 @@ export const bookingApi = {
         if (phone) params.append('phone', phone);
         if (userId) params.append('userId', userId);
         
-        const res = await fetch(`${BASE}/bookings/user/history?${params.toString()}`, {
-            credentials: 'include',
+        return fetchWithAuth<any[]>(`${BASE}/bookings/user/history?${params.toString()}`, {
+            method: 'GET',
+        }).catch((err) => {
+            if (err.message.includes('UNAUTHORIZED')) {
+                return [];
+            }
+            throw err;
         });
-        if (res.status === 401) {
-            throw new Error('UNAUTHORIZED');
-        }
-        const data = await res.json();
-        if (!res.ok) return [];
-        return Array.isArray(data) ? data : [];
     },
     /** Get detailed booking information by ID */
     getBookingDetails: async (bookingId: string, userId?: string): Promise<any> => {
         const url = userId
             ? `${BASE}/bookings/${bookingId}?user_id=${encodeURIComponent(userId)}`
             : `${BASE}/bookings/${bookingId}`;
-        const res = await fetch(url, {
-            credentials: 'include',
+        return fetchWithAuth<any>(url, {
+            method: 'GET',
+        }).catch((err) => {
+            if (err.message.includes('UNAUTHORIZED')) {
+                throw new Error('UNAUTHORIZED');
+            }
+            throw err;
         });
-        if (res.status === 401) {
-            throw new Error('UNAUTHORIZED');
-        }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to get booking details');
-        return data;
     },
 
     /** Fetch all bookings for a user formatted for mobile */
@@ -295,15 +285,14 @@ export const bookingApi = {
         if (phone) params.append('phone', phone);
         if (userId) params.append('userId', userId);
         
-        const res = await fetch(`${BASE}/mobile/bookings?${params.toString()}`, {
-            credentials: 'include',
+        return fetchWithAuth<any[]>(`${BASE}/mobile/bookings?${params.toString()}`, {
+            method: 'GET',
+        }).catch((err) => {
+            if (err.message.includes('UNAUTHORIZED')) {
+                return [];
+            }
+            throw err;
         });
-        if (res.status === 401) {
-            throw new Error('UNAUTHORIZED');
-        }
-        const data = await res.json();
-        if (!res.ok) return [];
-        return Array.isArray(data) ? data : [];
     },
 
     /** Get detailed booking information for mobile by ID */
@@ -311,15 +300,14 @@ export const bookingApi = {
         const url = userId
             ? `${BASE}/mobile/bookings/${bookingId}?user_id=${encodeURIComponent(userId)}`
             : `${BASE}/mobile/bookings/${bookingId}`;
-        const res = await fetch(url, {
-            credentials: 'include',
+        return fetchWithAuth<any>(url, {
+            method: 'GET',
+        }).catch((err) => {
+            if (err.message.includes('UNAUTHORIZED')) {
+                throw new Error('UNAUTHORIZED');
+            }
+            throw err;
         });
-        if (res.status === 401) {
-            throw new Error('UNAUTHORIZED');
-        }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to get booking details');
-        return data;
     },
 
 
@@ -328,15 +316,13 @@ export const bookingApi = {
         if (reason) bodyData.reason = reason;
         if (donationAmount !== undefined) bodyData.donationAmount = donationAmount;
 
-        const res = await fetch(`${BASE}/bookings/${id}/cancel?category=${category}`, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: Object.keys(bodyData).length > 0 ? JSON.stringify(bodyData) : undefined,
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to cancel booking');
-        return data;
+        return fetchWithAuth<{ message: string }>(
+            `${BASE}/bookings/${id}/cancel?category=${category}`,
+            {
+                method: 'PUT',
+                body: Object.keys(bodyData).length > 0 ? JSON.stringify(bodyData) : undefined,
+            }
+        );
     },
 
     checkActiveReservation: async (eventId: string, userId: string, reservationId?: string): Promise<any> => {
@@ -344,12 +330,9 @@ export const bookingApi = {
         if (reservationId) {
             url += `&reservation_id=${encodeURIComponent(reservationId)}`;
         }
-        const res = await fetch(url, {
-            credentials: 'include',
-        });
-        const data = await res.json();
-        if (!res.ok) return { active: false };
-        return data;
+        return fetchWithAuth<any>(url, {
+            method: 'GET',
+        }).catch(() => ({ active: false }));
     },
 
     createReservation: async (eventId: string, userId: string, tickets: Array<{ category: string, quantity: number }>, previousReservationId?: string): Promise<any> => {
@@ -357,26 +340,16 @@ export const bookingApi = {
         if (previousReservationId) {
             payload.previous_reservation_id = previousReservationId;
         }
-        const res = await fetch(`${BASE}/bookings/events/reserve`, {
+        return fetchWithAuth<any>(`${BASE}/bookings/events/reserve`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify(payload),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to create reservation');
-        return data;
     },
 
     unlockReservation: async (reservationId: string): Promise<any> => {
-        const res = await fetch(`${BASE}/bookings/events/unlock-reservation`, {
+        return fetchWithAuth<any>(`${BASE}/bookings/events/unlock-reservation`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ reservation_id: reservationId }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to unlock reservation');
-        return data;
     },
 };

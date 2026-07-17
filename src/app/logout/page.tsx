@@ -5,24 +5,20 @@ import { clearAllData } from '@/lib/auth/clearAll';
 
 export default function LogoutPage() {
   useEffect(() => {
-    let cancelled = false;
-
     const logout = async () => {
-      await Promise.allSettled([
-        fetch('/backend/api/auth/logout/user', { method: 'POST', credentials: 'include' }),
-        fetch('/backend/api/auth/logout/organizer', { method: 'POST', credentials: 'include' }),
-      ]);
-
-      if (!cancelled) {
+      try {
+        await Promise.allSettled([
+          fetch('/backend/api/auth/logout/user', { method: 'POST', credentials: 'include' }),
+          fetch('/backend/api/auth/logout/organizer', { method: 'POST', credentials: 'include' }),
+        ]);
+      } catch (err) {
+        console.error('Logout API calls failed:', err);
+      } finally {
         clearAllData();
       }
     };
 
     void logout();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   return (

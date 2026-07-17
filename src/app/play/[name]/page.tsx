@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import PlayDetailClient from './PlayDetailClient';
 import { fetchPlayVenue } from '../server-play';
 
@@ -35,5 +36,9 @@ export default async function PlayDetailPage({ params }: { params: Promise<{ nam
         return <div className="min-h-screen flex items-center justify-center">Venue not found</div>;
     }
 
-    return <PlayDetailClient venue={venue} id={venue.id} />;
+    const headersList = await headers();
+    const userAgent = headersList.get('user-agent') || '';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+    return <PlayDetailClient venue={venue} id={venue.id} isMobileServer={isMobile} />;
 }

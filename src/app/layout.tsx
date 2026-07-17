@@ -8,7 +8,7 @@ if (typeof window === "undefined" && typeof globalThis !== "undefined") {
   const originalFetch = globalThis.fetch;
   if (originalFetch) {
     globalThis.fetch = function (input, init) {
-      const targetBackend = "https://go-backend.itzrvm2337.workers.dev";
+      const targetBackend = "https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io";
       const shouldProxyBackend =
         (typeof input === "string" && input.startsWith("/backend/")) ||
         (input instanceof URL && input.pathname.startsWith("/backend/"));
@@ -19,7 +19,7 @@ if (typeof window === "undefined" && typeof globalThis !== "undefined") {
         } else if (input instanceof URL) {
           const newUrl = new URL(input.toString());
           newUrl.protocol = "https:";
-          newUrl.host = "go-backend.itzrvm2337.workers.dev";
+          newUrl.host = "ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io";
           newUrl.pathname = newUrl.pathname.replace("/backend", "");
           input = newUrl;
         }

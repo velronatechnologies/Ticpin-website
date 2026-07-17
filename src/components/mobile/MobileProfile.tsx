@@ -20,10 +20,10 @@ export default function MobileProfile() {
     }, [sync]);
 
     const fetchPass = async () => {
-        if (!organizerSession?.id) return;
+        if (!userSession?.id) return;
         setPassLoading(true);
         try {
-            const res = await fetch(`/backend/api/pass/user/${organizerSession.id}`, { credentials: 'include' });
+            const res = await fetch(`/backend/api/pass/user/${userSession.id}`, { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setPass(data);
@@ -36,10 +36,10 @@ export default function MobileProfile() {
     };
 
     useEffect(() => {
-        if (organizerSession?.id) {
+        if (userSession?.id) {
             fetchPass();
         }
-    }, [organizerSession?.id]);
+    }, [userSession?.id]);
 
     useEffect(() => {
         let isMounted = true;

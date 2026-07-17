@@ -53,7 +53,7 @@ interface EventData {
 async function getEventData(name: string): Promise<EventData | null> {
     try {
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
-            next: { revalidate: 300 }
+            next: { revalidate: 10 }
         });
         if (!res.ok) return null;
         return await res.json();
@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 
 async function getMobileEventData(id: string) {
     try {
-        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, { next: { revalidate: 300 } });
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, { next: { revalidate: 10 } });
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {

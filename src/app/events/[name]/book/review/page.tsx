@@ -286,9 +286,9 @@ export default function ReviewBookingPage() {
         setIsValidating(true);
         try {
           await pendingPromise;
-        } catch (e) {
+        } catch (e: any) {
           console.error("Awaiting pending reservation failed:", e);
-          toast.error("Failed to reserve tickets. Please try again.");
+          toast.error(e?.message || "Failed to reserve tickets. Please try again.");
           reservationStore.clearReservation();
           sessionStorage.removeItem("ticpin_cart");
           router.replace(`/events/${name}/book`);

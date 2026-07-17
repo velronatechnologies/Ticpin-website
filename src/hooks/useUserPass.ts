@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getUserSession } from '@/lib/auth/user';
 
 interface UserPass {
   id: string;
@@ -35,16 +36,15 @@ export function useUserPass() {
         setError(null);
         
         // Get current user session
-        const res = await fetch('/backend/api/auth/session');
-        const sessionData = await res.json();
+        const session = getUserSession();
         
-        if (!sessionData || !sessionData.userId) {
+        if (!session || !session.id) {
           setUserPass(null);
           setLoading(false);
           return;
         }
 
-        const passRes = await fetch(`/backend/api/pass/user/${sessionData.userId}/latest`);
+        const passRes = await fetch(`/backend/api/pass/user/${session.id}/latest`);
         if (passRes.ok) {
           const passData = await passRes.json();
           if (passData && passData.status === 'active') {

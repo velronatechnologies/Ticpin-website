@@ -82,7 +82,7 @@ interface RealPlay {
     min_duration?: string;
 }
 
-export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: string }) {
+export default function PlayDetailClient({ venue, id, isMobileServer }: { venue: RealPlay; id: string; isMobileServer?: boolean }) {
     const router = useRouter();
     const [isAboutExpanded, setIsAboutExpanded] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export default function PlayDetailClient({ venue, id }: { venue: RealPlay, id: s
         window.scrollTo(0, 0);
     }, []);
 
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobile(isMobileServer);
 
     useEffect(() => {
         if (venue?.name) {

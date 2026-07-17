@@ -2,14 +2,22 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"main": ".open-next/worker.js",
 	"name": "new",
+	"minify": true,
 	"compatibility_date": "2026-06-21",
 	"compatibility_flags": [
 		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
 	"vars": {
-		"BACKEND_URL": "https://go-backend.itzrvm2337.workers.dev",
-		"NEXT_PUBLIC_BACKEND_URL": "https://go-backend.itzrvm2337.workers.dev"
+		"BACKEND_URL": "https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io",
+		"NEXT_PUBLIC_BACKEND_URL": "https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io",
+		"NEXT_PUBLIC_CASHFREE_ENV": "production",
+		"NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyAPV0uMltMrCiH2hWzWPhtSJMym650EmSE",
+		"NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "ticpin-website.firebaseapp.com",
+		"NEXT_PUBLIC_FIREBASE_PROJECT_ID": "ticpin-website",
+		"NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "ticpin-website.firebasestorage.app",
+		"NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "203643258055",
+		"NEXT_PUBLIC_FIREBASE_APP_ID": "1:203643258055:web:75e756c24d6d3e380a2ae2"
 	},
 	"assets": {
 		"directory": ".open-next/assets",

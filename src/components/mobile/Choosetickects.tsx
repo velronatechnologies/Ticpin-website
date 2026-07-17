@@ -258,9 +258,9 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
             } else {
                 throw new Error('Reservation failed');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Reservation creation error:', err);
-            toast.error('Failed to reserve tickets. Please try again.');
+            toast.error(err?.message || 'Failed to reserve tickets. Please try again.');
         } finally {
             setIsReserving(false);
         }

@@ -16,14 +16,17 @@ const PROTECTED_ROUTES = [
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    if (pathname === '/') {
-        return NextResponse.redirect(new URL('/events', request.url));
-    }
-    
     // User-agent mobile vs desktop routing redirection
     const userAgent = request.headers.get('user-agent') || '';
     const deviceCookie = request.cookies.get('device_view')?.value;
     const isMobileUA = deviceCookie === 'mobile' || (deviceCookie !== 'desktop' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent));
+
+    if (pathname === '/') {
+        if (!isMobileUA) {
+            return NextResponse.redirect(new URL('/events', request.url));
+        }
+        return NextResponse.next();
+    }
 
     // Temporary Dining Route Block - redirect to coming soon page
     const isDiningBooking = pathname.startsWith('/bookings/dining') || 

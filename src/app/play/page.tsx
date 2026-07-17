@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import PlayClient from './PlayClient';
 import { fetchApprovedPlayVenues, type PlayVenue } from './server-play';
 
@@ -18,5 +19,9 @@ async function getPlayVenues(): Promise<PlayVenue[]> {
 
 export default async function PlayPage() {
     const venues = await getPlayVenues();
-    return <PlayClient initialVenues={venues} />;
+    const headersList = await headers();
+    const userAgent = headersList.get('user-agent') || '';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+    return <PlayClient initialVenues={venues} isMobileServer={isMobile} />;
 }

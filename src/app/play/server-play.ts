@@ -53,7 +53,7 @@ function parsePlayList(payload: unknown): PlayVenue[] {
 export async function fetchPlayVenues(query = ''): Promise<PlayVenue[]> {
     const suffix = query ? `?${query}` : '';
     const response = await fetch(`${SERVER_BACKEND_API_BASE}/play${suffix}`, {
-        next: { revalidate: 300 }
+        next: { revalidate: 10 }
     });
 
     if (!response.ok) {
@@ -70,7 +70,7 @@ export async function fetchApprovedPlayVenues(query = ''): Promise<PlayVenue[]> 
 
 export async function fetchPlayVenue(name: string): Promise<PlayVenue | null> {
     const response = await fetch(`${SERVER_BACKEND_API_BASE}/play/${encodeURIComponent(name)}`, {
-        next: { revalidate: 300 }
+        next: { revalidate: 10 }
     });
 
     if (!response.ok) {
