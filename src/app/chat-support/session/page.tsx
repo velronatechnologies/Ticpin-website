@@ -60,7 +60,7 @@ const ChatSessionContent = () => {
     useEffect(() => {
         if (!hasCheckedSession) return;
         if (!userId) {
-            router.replace('/chat-support');
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
     }, [hasCheckedSession, userId, router]);
@@ -92,7 +92,7 @@ const ChatSessionContent = () => {
                     setMessages(mData);
                 } else if (messagesRes.status === 403) {
                     // Not authorized - redirect
-                    router.push('/chat-support');
+                    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
                     return;
                 }
 
@@ -105,7 +105,7 @@ const ChatSessionContent = () => {
                         setSession(currentSession);
                     } else if (!isAdmin) {
                         // Session not found for this user
-                        router.push('/chat-support');
+                        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
                         return;
                     }
                 }

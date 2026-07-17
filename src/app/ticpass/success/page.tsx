@@ -3,21 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, Ticket } from 'lucide-react';
+import { useUserSession } from '@/lib/auth/user';
 
 export default function TicpassSuccessPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const session = useUserSession();
+  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // Get user from localStorage or Firebase
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    } else {
-      // Redirect to login if no user data
-      router.push('/login');
+    setSessionReady(true);
+  }, [session]);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    if (!session?.id) {
+      router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     }
-  }, [router]);
+  }, [router, session?.id, sessionReady]);
+
+  if (!sessionReady || !session?.id) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/70"></div>
+      </div>
+    );
+  }
 
   const handleGoToDashboard = () => {
     router.push('/profile');

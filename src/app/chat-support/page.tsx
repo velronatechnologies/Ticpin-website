@@ -28,7 +28,7 @@ export default function ChatSupportPage() {
     useEffect(() => {
         if (!hasCheckedSession) return;
         if (!effectiveSession) {
-            router.replace('/');
+            router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
             return;
         }
     }, [hasCheckedSession, effectiveSession, router]);

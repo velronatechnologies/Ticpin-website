@@ -4,11 +4,13 @@ import type { NextRequest } from 'next/server';
 const PROTECTED_ROUTES = [
     '/profile',
     '/pass/buy',
+    '/ticpass/success',
     '/bookings',
     '/my-pass',
     '/logout',
     '/ticlists',
     '/myboooking',
+    '/chat-support',
 ];
 
 
@@ -126,11 +128,13 @@ export const config = {
         '/',
         '/profile/:path*',
         '/pass/buy/:path*',
+        '/ticpass/success/:path*',
         '/logout/:path*',
         '/bookings/:path*',
         '/my-pass/:path*',
         '/ticlists/:path*',
         '/myboooking/:path*',
+        '/chat-support/:path*',
         '/events/:name/book',
         '/events/:name/book/:path*',
         '/dining/venue/:name/book',
