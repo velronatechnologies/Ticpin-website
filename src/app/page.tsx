@@ -1,5 +1,7 @@
 import MobileHome from '@/components/mobile/MobileHome';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 async function getMobileHomeData() {
     try {
@@ -27,6 +29,14 @@ async function getMobileHomeData() {
 }
 
 export default async function Home() {
+    const headersList = await headers();
+    const userAgent = headersList.get('user-agent') || '';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+    if (!isMobile) {
+        redirect('/events');
+    }
+
     const { events, dinings, plays } = await getMobileHomeData();
     return <MobileHome events={events} dinings={dinings} plays={plays} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, X, Check, Ticket } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, X, Check, Ticket, Car, Droplets, Utensils, Activity, Wifi } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -70,6 +70,7 @@ interface MobileEventDetailsProps {
         };
         faqs?: { question: string; answer: string }[];
         terms?: string;
+        event_instructions?: string;
         ticket_open_date?: string;
         ticket_close_date?: string;
         event_end_date?: string;
@@ -78,6 +79,38 @@ interface MobileEventDetailsProps {
     };
     offers: OfferRecord[];
 }
+
+const getAmenityIcon = (name: string) => {
+    const normalized = name.toLowerCase();
+    const iconClass = "w-5 h-5 text-[#8E8E93] shrink-0";
+    
+    // Parking
+    if (normalized.includes('parking')) {
+        return <Car className={iconClass} />;
+    }
+    // Washrooms
+    if (normalized.includes('washroom') || normalized.includes('restroom') || normalized.includes('toilet')) {
+        return <Droplets className={iconClass} />;
+    }
+    // Water
+    if (normalized.includes('water') || normalized.includes('drinking')) {
+        return <Droplets className={iconClass} />;
+    }
+    // Food / Stalls / Dining
+    if (normalized.includes('food') || normalized.includes('stall') || normalized.includes('eat') || normalized.includes('canteen') || normalized.includes('beverage')) {
+        return <Utensils className={iconClass} />;
+    }
+    // Medical / First Aid
+    if (normalized.includes('medical') || normalized.includes('first aid') || normalized.includes('aid') || normalized.includes('doctor')) {
+        return <Activity className={iconClass} />;
+    }
+    // Wi-Fi
+    if (normalized.includes('wifi') || normalized.includes('internet') || normalized.includes('wi-fi')) {
+        return <Wifi className={iconClass} />;
+    }
+    // Default fallback icon
+    return <Check className={iconClass} />;
+};
 
 export default function MobileEventDetails({ event, offers }: MobileEventDetailsProps) {
     const router = useRouter();
@@ -578,19 +611,19 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* About the event */}
-                <div className="mb-6">
+                <div className="mb-8">
                     <h2 className="text-[20px] font-semibold text-black mb-2" style={{ lineHeight: '22px' }}>About the event</h2>
 
                     {processedDesc.plain && (
                         <div
-                            className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-4 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
+                            className={`text-[14px] text-zinc-600 font-medium leading-relaxed mb-2 ${!showFullDesc && processedDesc.isLong ? 'line-clamp-4' : ''}`}
                             dangerouslySetInnerHTML={{ __html: processedDesc.html }}
                         />
                     )}
                     {processedDesc.isLong && (
                         <button
                             onClick={() => setShowFullDesc(!showFullDesc)}
-                            className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none mt-2"
+                            className="text-[15px] font-semibold text-black flex items-center gap-1 leading-none mt-1"
                         >
                             {showFullDesc ? 'Show less' : 'Read more'}
                             <ChevronRight size={12} className="text-black transform translate-y-[0.5px]" />
@@ -599,9 +632,9 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* Things to Know */}
-                <div className="mb-6 mt-[-15px]">
-                    <h2 className="text-[20px] font-semibold text-black mb-6" style={{ lineHeight: '22px' }}>Things to Know</h2>
-                    <div className="space-y-4 mb-4">
+                <div className="mb-8">
+                    <h2 className="text-[20px] font-semibold text-black mb-3" style={{ lineHeight: '22px' }}>Things to Know</h2>
+                    <div className="space-y-4 mb-2">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-[#E4E4E4] rounded-[10px] flex items-center justify-center shrink-0">
                                 <Ticket size={20} className="text-black opacity-70" />
@@ -623,7 +656,7 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 </div>
 
                 {/* More Section */}
-                <div className="space-y-4 mb-6 mt-[-15px]">
+                <div className="space-y-4 mb-6 mt-8">
                     <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>More</h2>
                     <div className="space-y-4">
                         {/* FAQs Accordion */}
@@ -665,8 +698,8 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                             {openAccordion === 'terms' && (
                                 <div className="mt-2 px-2">
                                     <div className="bg-[#F5F5F5] rounded-[10px] p-4">
-                                        {event.terms ? (
-                                            <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms}</p>
+                                        {event.terms || event.event_instructions ? (
+                                            <p className="text-[13px] text-zinc-600 whitespace-pre-wrap">{event.terms || event.event_instructions}</p>
                                         ) : (
                                             <p className="text-[13px] text-zinc-600">Event terms and conditions apply</p>
                                         )}
@@ -901,40 +934,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                                 <h4 className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase mb-3" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                     AMENITIES
                                 </h4>
-                                <div className="space-y-4">
-                                    {event.guide?.facilities && event.guide.facilities.length > 0 ? (
-                                        event.guide.facilities.map((fac, idx) => (
-                                            <div key={idx} className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
-                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                                    {fac}
-                                                </span>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100">
-                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 3h12l-2 16a2 2 0 01-2 2h-4a2 2 0 01-2-2L6 3z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 8h12" />
-                                                </svg>
-                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                                    Free water stations
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-4 py-2.5 border-b border-zinc-100">
-                                                <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18c0-2-2-4-6-4s-6 2-6 4M12 4a2 2 0 100-4 2 2 0 000 4z" />
-                                                </svg>
-                                                <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                                    Washrooms available
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                    {(event.guide?.facilities && event.guide.facilities.length > 0
+                                        ? event.guide.facilities
+                                        : ["Free water stations", "Washrooms available"]
+                                    ).map((fac, idx) => (
+                                        <div key={idx} className="flex items-center gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                                            {getAmenityIcon(fac)}
+                                            <span className="text-[15px] font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                {fac}
+                                            </span>
+                                        </div>
+                                    ))}
                             </div>
                         </div>
                     </div>

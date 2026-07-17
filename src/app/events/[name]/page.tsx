@@ -23,6 +23,7 @@ interface EventGuide {
     audience_type?: string;
     is_kid_friendly?: boolean;
     is_pet_friendly?: boolean;
+    facilities?: string[];
 }
 
 interface EventData {
@@ -48,6 +49,7 @@ interface EventData {
     guide?: EventGuide;
     status?: string;
     terms?: string;
+    event_instructions?: string;
 }
 
 async function getEventData(name: string): Promise<EventData | null> {

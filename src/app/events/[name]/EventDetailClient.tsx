@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Share2, MapPin, ChevronDown, Ticket, Timer, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Share2, MapPin, ChevronDown, Ticket, Timer, ArrowLeft, ChevronRight, Car, Droplets, Utensils, Activity, Wifi, Check } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
@@ -43,6 +43,7 @@ interface EventGuide {
     audience_type?: string;
     is_kid_friendly?: boolean;
     is_pet_friendly?: boolean;
+    facilities?: string[];
 }
 
 interface EventData {
@@ -68,6 +69,7 @@ interface EventData {
     guide?: EventGuide;
     status?: string;
     terms?: string;
+    event_instructions?: string;
     ticket_categories?: TicketCategory[];
     ticket_open_date?: string;
     ticket_close_date?: string;
@@ -80,7 +82,44 @@ interface EventData {
 
 import { getMinPrice, formatEventDateUTCWithDay } from '@/lib/utils';
 
-export default function EventDetailClient({ event, id }: { event: EventData, id: string }) {
+const getAmenityIcon = (name: string) => {
+    const normalized = name.toLowerCase();
+    const iconClass = "w-5 h-5 text-[#8E8E93] shrink-0";
+    
+    // Parking
+    if (normalized.includes('parking')) {
+        return <Car className={iconClass} />;
+    }
+    // Washrooms
+    if (normalized.includes('washroom') || normalized.includes('restroom') || normalized.includes('toilet')) {
+        return <Droplets className={iconClass} />;
+    }
+    // Water
+    if (normalized.includes('water') || normalized.includes('drinking')) {
+        return <Droplets className={iconClass} />;
+    }
+    // Food / Stalls / Dining
+    if (normalized.includes('food') || normalized.includes('stall') || normalized.includes('eat') || normalized.includes('canteen') || normalized.includes('beverage')) {
+        return <Utensils className={iconClass} />;
+    }
+    // Medical / First Aid
+    if (normalized.includes('medical') || normalized.includes('first aid') || normalized.includes('aid') || normalized.includes('doctor')) {
+        return <Activity className={iconClass} />;
+    }
+    // Wi-Fi
+    if (normalized.includes('wifi') || normalized.includes('internet') || normalized.includes('wi-fi')) {
+        return <Wifi className={iconClass} />;
+    }
+    // Default fallback icon
+    return <Check className={iconClass} />;
+};
+
+interface EventDetailClientProps {
+    event: EventData;
+    id: string;
+}
+
+export default function EventDetailClient({ event, id }: EventDetailClientProps) {
     const router = useRouter();
     const [showFullDesc, setShowFullDesc] = useState(false);
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -91,6 +130,17 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
     const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
     const isMobile = useIsMobile();
     const nowMs = useCurrentTime();
+    const [showAllAmenities, setShowAllAmenities] = useState(false);
+
+    const facilities = useMemo(() => {
+        return event.guide?.facilities && event.guide.facilities.length > 0
+            ? event.guide.facilities
+            : ["Free water stations", "Washrooms available"];
+    }, [event.guide?.facilities]);
+
+    const displayFacilities = useMemo(() => {
+        return facilities.slice(0, 3);
+    }, [facilities]);
 
     useEffect(() => {
         const fetchAvailability = async () => {
@@ -271,6 +321,15 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                         <section className="space-y-5" style={{ marginTop: '-20px' }}>
                             <div className="flex justify-between items-center">
                                 <h2 className="text-[28px] font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Event Overview</h2>
+                                {facilities.length > 0 && (
+                                    <button
+                                        onClick={() => setShowAllAmenities(true)}
+                                        className="text-black font-bold text-lg hover:underline flex items-center gap-1"
+                                        style={{ fontFamily: 'var(--font-anek-latin)' }}
+                                    >
+                                        See All <ChevronRight size={18} />
+                                    </button>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -288,7 +347,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
 
                                 <div className="flex items-center gap-[18px]">
                                     <div className="w-[60px] h-[60px] bg-[#FAF6F6] rounded-[15px] flex items-center justify-center shrink-0">
-                                        <img src="/Duration-logo.svg" alt="Duration" className="w-[28px] h-[28px] shrink-0" />
+                                        <Timer className="w-[28px] h-[28px] text-[#8E8E93] shrink-0" />
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Duration</p>
@@ -298,7 +357,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
 
                                 <div className="flex items-center gap-[18px]">
                                     <div className="w-[60px] h-[60px] bg-[#FAF6F6] rounded-[15px] flex items-center justify-center shrink-0">
-                                        <img src="/Ticket-logo.svg" alt="Ticket" className="w-[28px] h-[28px] shrink-0" />
+                                        <Ticket className="w-[28px] h-[28px] text-[#8E8E93] shrink-0" />
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Tickets Needed For</p>
@@ -390,7 +449,7 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                                 {activeFaq === 100 && (
                                     <div className="mt-4 text-[#686868] text-base font-medium border-t pt-4" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                                         <div className="whitespace-pre-wrap">
-                                            {event.terms || "Standard terms and conditions apply. Please check with the venue for specific rules."}
+                                            {event.terms || event.event_instructions || "Standard terms and conditions apply. Please check with the venue for specific rules."}
                                         </div>
                                     </div>
                                 )}
@@ -482,6 +541,36 @@ export default function EventDetailClient({ event, id }: { event: EventData, id:
                 onClose={() => setIsLoginModalOpen(false)}
                 onSuccess={() => router.push(event.is_layout_based ? `/events/${id}/book` : `/events/${id}/book/tickets/all`)}
             />
+
+            {showAllAmenities && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                    <div className="bg-white rounded-[20px] max-w-md w-full p-6 relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setShowAllAmenities(false)}
+                            className="absolute top-4 right-4 p-2 hover:bg-zinc-100 rounded-full transition-colors"
+                        >
+                            <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <h3 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                            All Amenities
+                        </h3>
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                            {facilities.map((facility, i) => (
+                                <div key={i} className="flex items-center gap-4 py-3 border-b border-zinc-100 last:border-0">
+                                    {getAmenityIcon(facility)}
+                                    <span className="text-lg font-medium text-zinc-800" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                                        {facility}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
         </div>
     );
 }
