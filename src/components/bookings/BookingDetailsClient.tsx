@@ -55,7 +55,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
         if (Array.isArray(booking.tickets)) {
             const ticketTotal = booking.tickets.reduce((sum: number, t: any) => {
                 const qty = Number(t?.quantity ?? 1) || 1;
-                const price = Number(t?.price ?? 0) || 0;
+                const price = Number(t?.price ?? t?.ticket_price ?? 0) || 0;
                 return sum + price * qty;
             }, 0);
             if (ticketTotal > 0) return ticketTotal;
@@ -149,7 +149,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`TICPIN_Ticket_${booking.booking_id || booking.bookingId || booking.id}.pdf`);
+            pdf.save(`TICPIN_Ticket_${booking.booking_id || booking.bookingId || booking.BookingID || booking.id}.pdf`);
         } catch (err) {
             console.error('PDF generation error:', err);
             toast.error('Failed to generate PDF. Please try again.');
@@ -253,7 +253,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                             <div className="space-y-1">
                                 <p className="text-[17px] font-medium text-[#686868] leading-none">Date & Time</p>
                                 <p className="text-[20px] font-medium text-black uppercase">
-                                    {bookingDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {booking.time || booking.timeSlot || booking.time_slot || booking.slot}
+                                    {bookingDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}
                                 </p>
                             </div>
 
@@ -266,7 +266,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                                 <p className="text-[20px] font-medium text-black uppercase">
                                     {(booking.type || booking.category) === 'play' ? `${booking.duration ? (booking.duration * 30) : '60'} mins` :
                                         (booking.type || booking.category) === 'dining' ? `${booking.guests} Guests` :
-                                            `${booking.tickets?.reduce((acc: number, t: any) => acc + (t.quantity || 0), 0) || 1} tickets`}
+                                            `${(booking.tickets || []).reduce((acc: number, t: any) => acc + (t.quantity || 0), 0) || 1} tickets`}
                                 </p>
                             </div>
 
@@ -375,7 +375,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: '12px', color: '#686868', marginBottom: '4px' }}>DATE & TIME</div>
                                     <div style={{ fontSize: '16px', fontWeight: 600 }}>{bookingDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                    <div style={{ fontSize: '14px' }}>{booking.time || booking.timeSlot || booking.time_slot || booking.slot}</div>
+                                    <div style={{ fontSize: '14px' }}>{booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}</div>
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: '12px', color: '#686868', marginBottom: '4px' }}>LOCATION</div>
@@ -387,7 +387,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                                     <div style={{ fontSize: '12px', color: '#686868' }}>BOOKING ID</div>
                                     <div style={{ fontSize: '16px', fontWeight: 700 }}>{booking.booking_id || booking.bookingId || booking.id?.slice(-8).toUpperCase()}</div>
                                 </div>
-                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || booking.bookingId || booking.id} size={80} />
+                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || ''} size={80} />
                             </div>
                         </div>
                     </div>

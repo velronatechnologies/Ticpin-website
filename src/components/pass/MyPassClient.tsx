@@ -47,8 +47,9 @@ export default function MyPassClient({ initialPass, session }: MyPassClientProps
             if (pending) {
                 try {
                     const p = JSON.parse(pending);
-                    window.history.replaceState(null, '', window.location.pathname);
+                    // Remove AFTER parsing so data is safely in local variable first
                     sessionStorage.removeItem('ticpin_pending_renew');
+                    window.history.replaceState(null, '', window.location.pathname);
                     setRenewLoading(true);
                     confirmRenew(p.passId, cfOrderId);
                 } catch (e) {

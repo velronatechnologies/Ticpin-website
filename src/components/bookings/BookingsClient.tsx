@@ -78,8 +78,8 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
     }, [session, initialBookings.length, fetchBookings]);
 
     const filteredBookings = (bookings || []).filter(b => {
-        // Filter by category
-        const category = b.category || b.type;
+        // Normalize category/type to lowercase for reliable comparison
+        const category = (b.category || b.type || 'unknown').toLowerCase();
         return category === activeTab;
     });
 
@@ -170,7 +170,7 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
                                         <p className="text-[17px] font-medium text-[#686868] leading-none">Date & Time</p>
                                         <div className="text-[22px] font-medium text-black uppercase leading-[1.2]">
                                             <div>{new Date(booking.date || Date.now()).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-                                            <div>{booking.time || booking.timeSlot || booking.slot || ''}</div>
+                                            <div>{booking.time || booking.timeSlot || booking.time_slot || booking.slot || ''}</div>
                                         </div>
                                     </div>
 
@@ -193,10 +193,10 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
                                         const now = new Date();
                                         // Reset hours for simple date comparison if needed, 
                                         // but usually we want to know if it's strictly in the past.
-                                        const isPast = bookingDate.getTime() < now.getTime() - (24 * 60 * 60 * 1000); // Buffer of 24h or exact? 
-                                        // Let's use 24h buffer for "Expired" to avoid showing it while the day hasn't ended, 
-                                        // or just check if it's before today.
-                                        const isTodayOrFuture = bookingDate.setHours(0,0,0,0) >= new Date().setHours(0,0,0,0);
+                                        // Timezone-safe comparison using locale date strings
+                                        const bookingLocalDate = new Date(booking.date || booking.bookedAt || Date.now()).toLocaleDateString('en-IN');
+                                        const todayLocalDate = new Date().toLocaleDateString('en-IN');
+                                        const isTodayOrFuture = new Date(bookingLocalDate) >= new Date(todayLocalDate);
                                         
                                         let statusLabel = booking.status === 'booked' || booking.status === 'confirmed' ? 'Confirmed' : booking.status?.toUpperCase() || 'BOOKED';
                                         let statusColorClass = booking.status === 'booked' || booking.status === 'confirmed' ? 'text-[#009133]' : 'text-red-600';
@@ -217,7 +217,7 @@ export default function BookingsClient({ initialBookings }: BookingsClientProps)
                                         );
                                     })()}
                                     <Link href={`/bookings/${booking.id}`} className="flex items-center gap-1 text-black hover:opacity-70 transition-opacity">
-                                        <span className="text-[17px] font-bold mr-4">₹{booking.grandTotal || booking.orderAmount || 0}</span>
+                                        <span className="text-[17px] font-bold mr-4">₹{booking.grandTotal || booking.grand_total || booking.orderAmount || booking.order_amount || 0}</span>
                                         <span className="text-[15px] font-semibold">View details</span>
                                         <span className="text-[14px]">›</span>
                                     </Link>
