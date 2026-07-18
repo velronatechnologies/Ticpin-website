@@ -86,7 +86,7 @@ interface EventData {
     layout_json?: string;
 }
 
-import { getMinPrice, formatEventDateUTCWithDay } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTCWithDay, slugify } from '@/lib/utils';
 
 const getAmenityIcon = (name: string) => {
     const normalized = name.toLowerCase();
@@ -172,14 +172,14 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
     }, [event?.id]);
 
     useEffect(() => {
-        if (id && event) {
+        if (event) {
             if (event.is_layout_based) {
-                router.prefetch(`/events/${id}/book`);
+                router.prefetch(`/events/${slugify(event.name)}/book`);
             } else {
-                router.prefetch(`/events/${id}/book/tickets/all`);
+                router.prefetch(`/events/${slugify(event.name)}/book/tickets/all`);
             }
         }
-    }, [id, event, router]);
+    }, [event, router]);
 
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
@@ -254,9 +254,9 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
             return;
         }
         if (event.is_layout_based) {
-            router.push(`/events/${id}/book`);
+            router.push(`/events/${slugify(event.name)}/book`);
         } else {
-            router.push(`/events/${id}/book/tickets/all`);
+            router.push(`/events/${slugify(event.name)}/book/tickets/all`);
         }
     };
 
@@ -517,7 +517,7 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
             <AuthModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(event.is_layout_based ? `/events/${id}/book` : `/events/${id}/book/tickets/all`)}
+                onSuccess={() => router.push(event.is_layout_based ? `/events/${slugify(event.name)}/book` : `/events/${slugify(event.name)}/book/tickets/all`)}
             />
 
             {showAllAmenities && (

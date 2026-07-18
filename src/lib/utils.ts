@@ -109,3 +109,15 @@ export function formatEventDateUTCWithDay(iso?: string, short = false): string {
     return iso;
   }
 }
+
+export function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9 -]/g, '')     // Remove non-alphanumeric, non-space, non-hyphen
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/-+/g, '-')            // Squash multiple hyphens
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+}

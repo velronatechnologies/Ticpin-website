@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useUserSession } from '@/lib/auth/user';
 import AuthModal from '@/components/modals/AuthModal';
+import { slugify } from '@/lib/utils';
 
 export default function BookingCard({ venueName }: { venueName: string }) {
     const router = useRouter();
@@ -16,7 +17,7 @@ export default function BookingCard({ venueName }: { venueName: string }) {
             setIsLoginModalOpen(true);
             return;
         }
-        router.push(`/dining/venue/${encodeURIComponent(venueName)}/book`);
+        router.push(`/dining/venue/${slugify(venueName)}/book`);
     };
 
     const today = new Date();
@@ -74,7 +75,7 @@ export default function BookingCard({ venueName }: { venueName: string }) {
             <AuthModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/dining/venue/${encodeURIComponent(venueName)}/book`)}
+                onSuccess={() => router.push(`/dining/venue/${slugify(venueName)}/book`)}
             />
         </div>
     );

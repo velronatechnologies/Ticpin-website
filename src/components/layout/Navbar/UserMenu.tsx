@@ -80,7 +80,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
         <div className="relative">
             <div
                 onClick={onToggleMenu}
-                className="h-10 w-10 md:h-[42px] md:w-[42px] rounded-full flex items-center justify-center cursor-pointer transition-all hover:ring-2 hover:ring-offset-2 ring-[#5331EA]/50 overflow-hidden aspect-square shrink-0 bg-zinc-100"
+                className="h-10 w-10 md:h-[42px] md:w-[42px] rounded-full flex items-center justify-center cursor-pointer transition-all overflow-hidden aspect-square shrink-0 bg-zinc-100"
             >
                 {session ? (
                     organizerProfilePhoto ? (
@@ -106,8 +106,8 @@ const UserMenu: React.FC<UserMenuProps> = ({
                             className="w-full h-full rounded-full object-cover"
                         />
                     ) : (
-                        <span className="text-white text-[14px] font-bold uppercase bg-[#866BFF] w-full h-full rounded-full flex items-center justify-center">
-                            {userSession.name?.charAt(0) || <img src="/profile icon.svg" alt="Profile" className="w-[20px] h-[20px] md:w-[24px] md:h-[24px]" />}
+                        <span className="text-white text-[14px] font-bold uppercase bg-zinc-900 w-full h-full rounded-full flex items-center justify-center">
+                            {(userSession.name || 'User').charAt(0).toUpperCase()}
                         </span>
                     )
                 ) : (

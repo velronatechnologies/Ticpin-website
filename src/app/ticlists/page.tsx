@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Calendar, Utensils, PlayCircle, Loader2, Heart } from 'lucide-react';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import MobileEventCard from '@/components/mobile/MobileEventCard';
+import { slugify } from '@/lib/utils';
 
 type Category = 'events' | 'dining' | 'play';
 
@@ -188,7 +189,7 @@ export default function TiclistsPage() {
                                 {activeTab === 'dining' && likedData.dining.map((dining) => (
                                     <div 
                                         key={dining.id}
-                                        onClick={() => router.push(`/dining/venue/${encodeURIComponent(dining.name)}`)}
+                                        onClick={() => router.push(`/dining/venue/${slugify(dining.name)}`)}
                                         className="bg-white rounded-[25px] overflow-hidden border border-zinc-100 shadow-sm active:scale-[0.98] transition-all"
                                     >
                                         <div className="relative aspect-[16/9] w-full">
@@ -215,7 +216,7 @@ export default function TiclistsPage() {
                                 {activeTab === 'play' && likedData.play.map((play) => (
                                     <div 
                                         key={play.id}
-                                        onClick={() => router.push(`/play/${encodeURIComponent(play.name)}`)}
+                                        onClick={() => router.push(`/play/${slugify(play.name)}`)}
                                         className="bg-white rounded-[25px] overflow-hidden border border-zinc-100 shadow-sm active:scale-[0.98] transition-all"
                                     >
                                         <div className="relative aspect-[16/9] w-full">

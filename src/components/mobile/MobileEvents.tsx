@@ -10,6 +10,7 @@ import { useIdentityStore } from '@/store/useIdentityStore';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { toast } from '@/components/ui/Toast';
+import { slugify } from '@/lib/utils';
 
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
@@ -202,10 +203,10 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
     const handleResultClick = (result: any) => {
         const path = result.type === 'event'
-            ? `/events/${encodeURIComponent(result.name)}`
+            ? `/events/${slugify(result.name)}`
             : result.type === 'play'
-                ? `/play/${encodeURIComponent(result.name)}`
-                : `/dining/venue/${encodeURIComponent(result.name)}`;
+                ? `/play/${slugify(result.name)}`
+                : `/dining/venue/${slugify(result.name)}`;
         router.push(path);
         setSearchQuery('');
     };
@@ -329,6 +330,10 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                     >
                         {(session as any)?.profilePhoto ? (
                             <img src={(session as any).profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                        ) : session ? (
+                            <span className="text-white text-[14px] font-bold uppercase w-full h-full flex items-center justify-center bg-zinc-900">
+                                {(organizerSession?.email || userSession?.name || 'User').charAt(0).toUpperCase()}
+                            </span>
                         ) : (
                             <img src="/profile icon.svg" alt="Profile" className="w-6 h-6" />
                         )}
@@ -527,7 +532,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                         <div
                             key={event.id}
                             className="flex flex-col bg-white rounded-[15px] border-[0.5px] border-black overflow-hidden active:scale-95 transition-all duration-150 cursor-pointer"
-                            onClick={() => router.push(`/events/${encodeURIComponent(event.name)}`)}
+                            onClick={() => router.push(`/events/${slugify(event.name)}`)}
                         >
                             <div className="aspect-[175/200] relative bg-[#E4E4E4] overflow-hidden">
                                 <img

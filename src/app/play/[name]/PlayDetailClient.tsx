@@ -12,6 +12,7 @@ import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
 import MobilePlayDetails from '@/components/mobile/MobilePlayDetails';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { slugify } from '@/lib/utils';
 
 
 const AuthModal = dynamic(() => import('@/components/modals/AuthModal'), { ssr: false });
@@ -100,7 +101,7 @@ export default function PlayDetailClient({ venue, id, isMobileServer }: { venue:
 
     useEffect(() => {
         if (venue?.name) {
-            router.prefetch(`/play/${encodeURIComponent(venue.name)}/book`);
+            router.prefetch(`/play/${slugify(venue.name)}/book`);
         }
     }, [venue?.name, router]);
 
@@ -114,7 +115,7 @@ export default function PlayDetailClient({ venue, id, isMobileServer }: { venue:
         }
 
         // 2. Proceed to booking
-        router.push(`/play/${encodeURIComponent(venue.name)}/book`);
+        router.push(`/play/${slugify(venue.name)}/book`);
     };
 
     const toggleAccordion = (section: string) => {
@@ -389,7 +390,7 @@ export default function PlayDetailClient({ venue, id, isMobileServer }: { venue:
             <AuthModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
-                onSuccess={() => router.push(`/play/${encodeURIComponent(venue.name)}/book`)}
+                onSuccess={() => router.push(`/play/${slugify(venue.name)}/book`)}
             />
 
             {/* Facilities Modal */}

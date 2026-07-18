@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
     const event = await getEventData(name);
     if (!event) return { title: 'Not Found | Ticpin' };
     return {
-        title: `Book Tickects to ${event.name}`,
+        title: `Book Tickets for ${event.name} | Ticpin`,
         description: event.description ?? `Book tickets for ${event.name} on Ticpin.`,
         openGraph: {
             title: event.name,

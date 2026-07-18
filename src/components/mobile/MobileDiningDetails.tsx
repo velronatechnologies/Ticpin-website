@@ -6,6 +6,7 @@ import { useUserSession } from '@/lib/auth/user';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
+import { slugify } from '@/lib/utils';
 
 interface OfferRecord {
     id: string;
@@ -111,10 +112,10 @@ export default function MobileDiningDetails({ venue, offers }: MobileDiningDetai
 
     const handleBook = () => {
         if (!session) {
-            router.push(`/login?redirect=${encodeURIComponent(`/dining/venue/${encodeURIComponent(venue.name)}/book`)}`);
+            router.push(`/login?redirect=${encodeURIComponent(`/dining/venue/${slugify(venue.name)}/book`)}`);
             return;
         }
-        router.push(`/dining/venue/${encodeURIComponent(venue.name)}/book`);
+        router.push(`/dining/venue/${slugify(venue.name)}/book`);
     };
 
 
@@ -127,7 +128,7 @@ export default function MobileDiningDetails({ venue, offers }: MobileDiningDetai
     const galleryImages = venue.gallery_urls?.slice(0, 3) || [];
 
     return (
-        <div className="md:hidden min-h-screen w-full bg-white font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+        <div className="min-h-screen w-full bg-white font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* 1. Hero Image Section */}
             <div className="relative w-full h-[225px] shrink-0 bg-white">
                 <img

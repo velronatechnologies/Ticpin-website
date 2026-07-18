@@ -8,7 +8,7 @@ import Image from 'next/image';
 import DOMPurify from 'isomorphic-dompurify';
 import { toast } from '@/components/ui/Toast';
 import { bookingApi } from '@/lib/api/booking';
-import { getMinPrice, formatEventDateUTC, formatEventDateUTCWithDay } from '@/lib/utils';
+import { getMinPrice, formatEventDateUTC, formatEventDateUTCWithDay, slugify } from '@/lib/utils';
 
 interface OfferRecord {
     id: string;
@@ -608,15 +608,15 @@ Rules:
         }
         if (!session) {
             const redirectPath = event.is_layout_based
-                ? `/events/${encodeURIComponent(event.name)}/book`
-                : `/events/${encodeURIComponent(event.name)}/book/tickets/all`;
+                ? `/events/${slugify(event.name)}/book`
+                : `/events/${slugify(event.name)}/book/tickets/all`;
             router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
             return;
         }
         if (event.is_layout_based) {
-            router.push(`/events/${encodeURIComponent(event.name)}/book`);
+            router.push(`/events/${slugify(event.name)}/book`);
         } else {
-            router.push(`/events/${encodeURIComponent(event.name)}/book/tickets/all`);
+            router.push(`/events/${slugify(event.name)}/book/tickets/all`);
         }
     };
 
@@ -766,7 +766,7 @@ Rules:
     }, [event.category, event.event_category, event.language, event.age_limit, event.guide?.venue_type, event.guide?.audience_type]);
 
     return (
-        <div className="md:hidden min-h-screen w-full bg-[#EAEAEA] font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+        <div className="min-h-screen w-full bg-[#EAEAEA] font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* 1. Top Image Section - 10.1 1 */}
             <div className="fixed top-0 left-0 w-full aspect-[3/4] bg-[#110D2C] z-0">
                 {event.portrait_image_url || event.landscape_image_url ? (

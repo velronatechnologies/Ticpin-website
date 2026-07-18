@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
+import { slugify } from '@/lib/utils';
 
 interface EventCardProps {
     id: string;
@@ -109,7 +110,7 @@ export default function MobileEventCard({
 
     return (
         <div
-            onClick={() => router.push(`/events/${encodeURIComponent(name)}`)}
+            onClick={() => router.push(`/events/${slugify(name)}`)}
             className="w-full bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] overflow-hidden transition-all duration-150 ease-out cursor-pointer active:scale-95"
         >
             {/* Poster */}

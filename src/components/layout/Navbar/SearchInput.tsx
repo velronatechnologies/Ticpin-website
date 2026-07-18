@@ -7,6 +7,7 @@ import { eventsApi } from '@/lib/api/events';
 import { playApi } from '@/lib/api/play';
 import { diningApi } from '@/lib/api/dining';
 import { useDebounce } from '@/hooks/useDebounce';
+import { slugify } from '@/lib/utils';
 
 interface SearchInputProps {
     isVisible: boolean;
@@ -122,10 +123,10 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
 
     const handleResultClick = (result: SearchResult) => {
         const path = result.type === 'event'
-            ? `/events/${result.id}`
+            ? `/events/${slugify(result.name)}`
             : result.type === 'play'
-                ? `/play/${encodeURIComponent(result.name)}`
-                : `/dining/venue/${result.id}`;
+                ? `/play/${slugify(result.name)}`
+                : `/dining/venue/${slugify(result.name)}`;
 
         router.push(path);
         onClose();
@@ -134,7 +135,7 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
     if (!isVisible) return null;
 
     return (
-        <div ref={containerRef} className="relative flex-1 max-w-md animate-in slide-in-from-right-4 duration-300">
+        <div ref={containerRef} className="relative flex-1 max-w-md animate-in slide-in-from-right-4 duration-300 z-[9999]">
             <div className="relative z-50">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
                     {isLoading ? (
@@ -171,7 +172,7 @@ const SearchInput: React.FC<SearchInputProps> = ({ isVisible, isPlayPage, onClos
 
             {/* Results Dropdown */}
             {query.trim().length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#686868] rounded-[15px] shadow-xl overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#686868] rounded-[15px] shadow-xl overflow-hidden z-[10000] animate-in fade-in zoom-in-95 duration-200">
                     {results.length > 0 ? (
                         <div className="py-2">
                             {results.map((result) => (

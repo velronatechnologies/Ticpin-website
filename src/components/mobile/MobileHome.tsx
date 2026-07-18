@@ -10,6 +10,7 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import { toast } from '@/components/ui/Toast';
+import { slugify } from '@/lib/utils';
 
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
@@ -231,10 +232,10 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
 
     const handleResultClick = (result: any) => {
         const path = result.type === 'event'
-            ? `/events/${encodeURIComponent(result.name)}`
+            ? `/events/${slugify(result.name)}`
             : result.type === 'play'
-                ? `/play/${encodeURIComponent(result.name)}`
-                : `/dining/venue/${encodeURIComponent(result.name)}`;
+                ? `/play/${slugify(result.name)}`
+                : `/dining/venue/${slugify(result.name)}`;
         router.push(path);
         setSearchQuery('');
     };
@@ -434,7 +435,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                         ) : userSession?.profilePhoto ? (
                             <Image src={userSession.profilePhoto} alt="Profile" width={35} height={35} className="object-cover" />
                         ) : (organizerSession || userSession) ? (
-                            <span className="text-white text-[14px] font-bold uppercase bg-[#866BFF] w-full h-full rounded-full flex items-center justify-center">
+                            <span className="text-white text-[14px] font-bold uppercase bg-zinc-900 w-full h-full rounded-full flex items-center justify-center">
                                 {(organizerSession?.email || userSession?.name || userSession?.email || 'U').charAt(0).toUpperCase()}
                             </span>
                         ) : (
@@ -583,7 +584,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                             {scrollEvents.length === 1 ? (
                                 <div className="flex justify-center items-center py-8 overflow-hidden w-full">
                                     <div
-                                        onClick={() => router.push(`/events/${encodeURIComponent(scrollEvents[0].name)}`)}
+                                        onClick={() => router.push(`/events/${slugify(scrollEvents[0].name)}`)}
                                         className="flex-shrink-0 w-[280px] max-w-[85vw] bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden transition-all duration-150 ease-out cursor-pointer active:scale-95 animate-in fade-in duration-350"
                                         style={{
                                             transform: 'scale(1.1)',
@@ -721,7 +722,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                         return (
                                             <div
                                                 key={`${event.id}-${idx}`}
-                                                onClick={() => router.push(`/events/${encodeURIComponent(event.name)}`)}
+                                                    onClick={() => router.push(`/events/${slugify(event.name)}`)}
                                                 className="flex-shrink-0 w-[280px] max-w-[85vw] bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden snap-center snap-always transition-all duration-150 ease-out origin-center cursor-pointer active:scale-95"
                                                 style={{
                                                     transform: `scale(${scale})`,
@@ -883,7 +884,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                         {scrollLimelight.length === 1 ? (
                             <div className="flex justify-center items-center py-4 mt-[-30px] overflow-hidden w-full">
                                 <div
-                                    onClick={() => router.push(`/dining/venue/${encodeURIComponent(scrollLimelight[0].name)}`)}
+                                    onClick={() => router.push(`/dining/venue/${slugify(scrollLimelight[0].name)}`)}
                                     className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] overflow-hidden cursor-pointer active:scale-95 transition-all duration-150"
                                     style={{ transform: 'scale(1.05)', opacity: 1 }}
                                 >
@@ -935,7 +936,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                     return (
                                         <div
                                             key={`limelight-${idx}`}
-                                            onClick={() => router.push(`/dining/venue/${encodeURIComponent(item.name)}`)}
+                                            onClick={() => router.push(`/dining/venue/${slugify(item.name)}`)}
                                             className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden cursor-pointer active:scale-95"
                                             style={{
                                                 transform: `scale(${scale})`,
@@ -982,7 +983,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                             {scrollPlay.length === 1 ? (
                                 <div className="flex justify-center items-center py-4 overflow-hidden w-full">
                                     <div
-                                        onClick={() => router.push(`/play/${encodeURIComponent(scrollPlay[0].name)}`)}
+                                        onClick={() => router.push(`/play/${slugify(scrollPlay[0].name)}`)}
                                         className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] overflow-hidden p-[1px] cursor-pointer active:scale-95 transition-all duration-150"
                                         style={{ transform: 'scale(1.05)', opacity: 1 }}
                                     >
@@ -1017,7 +1018,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                 style={{ fontFamily: "var(--font-anek-tamil-condensed), sans-serif" }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    router.push(`/play/${encodeURIComponent(scrollPlay[0].name)}/book`);
+                                                    router.push(`/play/${slugify(scrollPlay[0].name)}/book`);
                                                 }}
                                             >
                                                 BOOK SLOTS
@@ -1049,7 +1050,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                         return (
                                             <div
                                                 key={`play-${idx}`}
-                                                onClick={() => router.push(`/play/${encodeURIComponent(item.name)}`)}
+                                                onClick={() => router.push(`/play/${slugify(item.name)}`)}
                                                 className="flex-shrink-0 w-[326px] max-w-[85vw] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] snap-center snap-always transition-all duration-150 ease-out origin-center overflow-hidden p-[1px] cursor-pointer active:scale-95"
                                                 style={{
                                                     transform: `scale(${scale})`,
@@ -1087,7 +1088,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                         style={{ fontFamily: "var(--font-anek-tamil-condensed), sans-serif" }}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            router.push(`/play/${encodeURIComponent(item.name)}/book`);
+                                                            router.push(`/play/${slugify(item.name)}/book`);
                                                         }}
                                                     >
                                                         BOOK SLOTS

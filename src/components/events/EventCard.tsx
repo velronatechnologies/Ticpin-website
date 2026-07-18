@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { slugify } from '@/lib/utils';
 
 interface EventCardProps {
   id?: string;
@@ -49,7 +50,7 @@ export default function EventCard({
   const displayTime = formatTime(time);
 
   return (
-    <Link href={`/events/${id}`} className="block">
+    <Link href={`/events/${slugify(name)}`} className="block">
       <div
         className="overflow-hidden cursor-pointer w-full sm:w-auto flex flex-col"
         style={{

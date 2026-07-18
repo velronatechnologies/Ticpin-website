@@ -7,6 +7,7 @@ import { useOrganizerSession } from '@/lib/auth/organizer';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
+import { slugify } from '@/lib/utils';
 
 interface OfferRecord {
     id: string;
@@ -125,12 +126,12 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
     const handleBook = () => {
         // 1. If no User session, show generic login
         if (!session) {
-            router.push(`/login?redirect=${encodeURIComponent(`/play/${encodeURIComponent(venue.name)}/book`)}`);
+            router.push(`/login?redirect=${encodeURIComponent(`/play/${slugify(venue.name)}/book`)}`);
             return;
         }
 
         // 2. Proceed to booking
-        router.push(`/play/${encodeURIComponent(venue.name)}/book`);
+        router.push(`/play/${slugify(venue.name)}/book`);
     };
 
     const toggleAccordion = (section: string) => {
@@ -149,7 +150,7 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
     const displayTime = venue.min_duration || venue.pricing_plans?.[0]?.min_duration || '6:00 AM - 10:00 PM';
 
     return (
-        <div className="md:hidden min-h-screen w-full bg-white font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+        <div className="min-h-screen w-full bg-white font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
             {/* 1. Hero Image Section */}
             <div className="relative w-full h-[225px] shrink-0 bg-white">
                 <img

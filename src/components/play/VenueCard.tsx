@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { slugify } from '@/lib/utils';
 
 interface VenueCardProps {
     id?: string;
@@ -11,7 +12,7 @@ interface VenueCardProps {
 
 export default function VenueCard({ id = '1', name, location, image, category }: VenueCardProps) {
     return (
-        <Link href={`/play/${id}`} className="block">
+        <Link href={`/play/${slugify(name)}`} className="block">
             <div className="group cursor-pointer mx-auto w-full max-w-[329px] h-auto">
                 <div className="bg-white rounded-[15px] border border-[#aeaeae]  overflow-hidden flex flex-col h-full">
                     <div className="relative w-full aspect-video overflow-hidden">

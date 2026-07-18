@@ -9,6 +9,7 @@ import BookingCard from '@/components/dining/venue/BookingCard';
 import Image from 'next/image';
 import MobileDiningDetails from '@/components/mobile/MobileDiningDetails';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { slugify } from '@/lib/utils';
 
 interface OfferRecord {
     id: string;
@@ -57,7 +58,7 @@ export default function DiningVenueDetailClient({ venue, id, offers }: { venue: 
 
     useEffect(() => {
         if (venue?.name) {
-            router.prefetch(`/dining/venue/${encodeURIComponent(venue.name)}/book`);
+            router.prefetch(`/dining/venue/${slugify(venue.name)}/book`);
         }
     }, [venue?.name, router]);
 

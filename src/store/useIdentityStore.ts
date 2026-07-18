@@ -70,6 +70,32 @@ export const useIdentityStore = create<IdentityState>()(
             activeRole: role,
             isLoading: false
         });
+
+        // Auto-detect and store the first booking's name as the user name
+        if (user && (!user.name || user.name.trim().toLowerCase() === 'user')) {
+            if (typeof window !== 'undefined' && !(window as any).__bookingsFetchedForNameSync) {
+                (window as any).__bookingsFetchedForNameSync = true;
+                import('@/lib/api/booking').then(({ bookingApi }) => {
+                    bookingApi.getUserBookings({
+                        email: user.email,
+                        phone: user.phone,
+                        userId: user.id
+                    }).then(bookings => {
+                        if (bookings && bookings.length > 0) {
+                            const firstWithName = bookings.find(b => b.user_name && b.user_name.trim().toLowerCase() !== 'user');
+                            const newName = firstWithName ? firstWithName.user_name : (bookings[0].user_name || '');
+                            if (newName && newName.trim().toLowerCase() !== 'user') {
+                                const updatedUser = { ...user, name: newName };
+                                saveUserSession(updatedUser);
+                                set({ userSession: updatedUser });
+                            }
+                        }
+                    }).catch(err => {
+                        console.error('Failed to sync name from bookings:', err);
+                    });
+                });
+            }
+        }
     },
 
     loginUser: (session) => {

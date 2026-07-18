@@ -10,6 +10,7 @@ import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 const FilterModal = dynamic(() => import('@/components/modals/FilterModal'), { ssr: false });
 import EventCard from '@/components/dining/Eventcard';
+import { slugify } from '@/lib/utils';
 
 interface RealDining {
     id: string;
@@ -150,7 +151,8 @@ export default function DiningClient({
                         <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4">
                             {offers.map((offer) => {
                                 const targetId = offer.entity_ids?.[0];
-                                const href = targetId ? `/dining/venue/${targetId}` : '#';
+                                const targetVenue = venues.find(v => v.id === targetId);
+                                const href = targetVenue ? `/dining/venue/${slugify(targetVenue.name)}` : '#';
                                 return (
                                     <Link key={offer.id} href={href} className="flex-shrink-0 group block overflow-hidden rounded-[8px]">
                                         <div className="relative w-[340px] h-[155.4px] rounded-[8px] overflow-hidden transition-transform duration-300 group-hover:scale-[1.02]">
@@ -215,7 +217,7 @@ export default function DiningClient({
                     ) : (
                         <div className="flex flex-wrap gap-6 justify-center sm:justify-start transition-all">
                             {filteredVenues.map((res) => (
-                                <Link key={res.id} href={`/dining/venue/${res.name}`}>
+                                <Link key={res.id} href={`/dining/venue/${slugify(res.name)}`}>
                                     <EventCard
                                         title={res.name}
                                         location={res.city ?? ''}

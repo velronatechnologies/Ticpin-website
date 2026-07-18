@@ -182,7 +182,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                 <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 scrollbar-hide">
                     {/* User Profile Section */}
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-[#866BFF] flex items-center justify-center text-white text-[24px] font-bold overflow-hidden shrink-0">
+                        <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center text-white text-[24px] font-bold overflow-hidden shrink-0">
                             {activeRole === 'organizer' ? (
                                 organizerProfile?.profilePhoto ? (
                                     <Image

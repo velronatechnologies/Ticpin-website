@@ -7,6 +7,7 @@ import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import FilterButton from '@/components/dining/FilterButton';
 import EventCard from '@/components/dining/Eventcard';
+import { slugify } from '@/lib/utils';
 
 interface Restaurant {
     id: string;
@@ -105,7 +106,7 @@ export default function DiningCategoryClient({ category, title, image }: DiningC
                         <div className="flex flex-wrap gap-6 justify-center sm:justify-start transition-all">
                             {restaurants.length > 0 ? (
                                 restaurants.map((res) => (
-                                    <Link key={res.id} href={`/dining/venue/${res.id}`} className="block">
+                                    <Link key={res.id} href={`/dining/venue/${slugify(res.name)}`} className="block">
                                         <EventCard
                                             title={res.name}
                                             location={res.city}

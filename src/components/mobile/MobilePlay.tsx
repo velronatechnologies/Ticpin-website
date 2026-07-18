@@ -8,6 +8,7 @@ import { useLocation } from '@/lib/useLocation';
 import { useLocationStore } from '@/store/useLocationStore';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import dynamic from 'next/dynamic';
+import { slugify } from '@/lib/utils';
 
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
@@ -124,10 +125,10 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
 
     const handleResultClick = (result: any) => {
         const path = result.type === 'event'
-            ? `/events/${encodeURIComponent(result.name)}`
+            ? `/events/${slugify(result.name)}`
             : result.type === 'play'
-                ? `/play/${encodeURIComponent(result.name)}`
-                : `/dining/venue/${encodeURIComponent(result.name)}`;
+                ? `/play/${slugify(result.name)}`
+                : `/dining/venue/${slugify(result.name)}`;
         router.push(path);
         setSearchQuery('');
     };
@@ -253,6 +254,10 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                     >
                         {(session as any)?.profilePhoto ? (
                             <img src={(session as any).profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                        ) : session ? (
+                            <span className="text-white text-[14px] font-bold uppercase w-full h-full flex items-center justify-center bg-zinc-900">
+                                {(organizerSession?.email || userSession?.name || 'User').charAt(0).toUpperCase()}
+                            </span>
                         ) : (
                             <img src="/profile icon.svg" alt="Profile" className="w-6 h-6" />
                         )}
@@ -418,7 +423,7 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                                 {playList.map((venue, vIdx) => (
                                     <div
                                         key={vIdx}
-                                        onClick={() => router.push(`/play/${encodeURIComponent(venue.name)}`)}
+                                        onClick={() => router.push(`/play/${slugify(venue.name)}`)}
                                         className="flex-shrink-0 w-[262px] h-[241px] bg-white rounded-[15px] border-[0.5px] border-[#AEAEAE] overflow-hidden flex flex-col active:scale-[0.98] transition-all cursor-pointer snap-start mb-1 shadow-sm"
                                     >
                                         <div className="h-[148px] w-full relative overflow-hidden">
@@ -483,7 +488,7 @@ export default function MobilePlay({ venues }: MobilePlayProps) {
                         {filteredVenues.map((venue, idx) => (
                             <div
                                 key={idx}
-                                onClick={() => router.push(`/play/${encodeURIComponent(venue.name)}`)}
+                                onClick={() => router.push(`/play/${slugify(venue.name)}`)}
                                 className="w-full max-w-[366px] h-[336px] bg-white rounded-[15px] border border-[#AEAEAE] overflow-hidden flex flex-col mx-auto active:scale-[0.98] transition-all cursor-pointer shadow-sm"
                             >
                                 <div className="h-[200px] w-full relative overflow-hidden">
