@@ -624,6 +624,8 @@ export default function TicketSelectionPage() {
       eventId: event?.id,
       eventName: event?.name,
       city: event?.city,
+      date: event?.date,
+      timeSlot: event?.time,
       landscape_image_url: event?.landscape_image_url,
       portrait_image_url: event?.portrait_image_url,
       tickets: categories

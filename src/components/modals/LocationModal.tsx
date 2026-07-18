@@ -6,7 +6,7 @@ import { toast } from '@/components/ui/Toast';
 import { useLocationStore } from '@/store/useLocationStore';
 
 
-const API_KEY = "AIzaSyC2gFDSPGY7wtSFHzYwzbPkP6tcq61Lmt8";
+const API_KEY = "google-map-key";
 
 interface LocationModalProps {
     isOpen: boolean;

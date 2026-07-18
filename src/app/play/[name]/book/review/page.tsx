@@ -326,7 +326,7 @@ export default function PlayReviewPage() {
                 try {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
-                    const API_KEY = "AIzaSyC2gFDSPGY7wtSFHzYwzbPkP6tcq61Lmt8";
+                    const API_KEY = "google-map-key";
                     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`;
 
                     const res = await fetch(url);

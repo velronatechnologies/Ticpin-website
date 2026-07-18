@@ -55,7 +55,7 @@ export const useLocationStore = create<LocationState>()(
                 if (!navigator.geolocation) return;
                 set({ isLoading: true });
 
-                const API_KEY = "AIzaSyC2gFDSPGY7wtSFHzYwzbPkP6tcq61Lmt8";
+                const API_KEY = "google-map-key";
 
                 return new Promise<void>((resolve) => {
                     navigator.geolocation.getCurrentPosition(
