@@ -202,7 +202,7 @@ export default function EventBookingDetailPage() {
                 {/* Compact QR Code */}
                 <div className="flex flex-col items-center justify-center p-1.5 md:p-2 bg-white border border-[#686868]/30 rounded-[8px] md:rounded-[12px] shadow-sm shrink-0 w-[65px] h-[65px] md:w-[110px] md:h-[110px] select-none">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(booking.qr_payload || (typeof window !== 'undefined' ? `${window.location.origin}/qr-verify/${booking.booking_id || booking.id}` : ''))}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(booking.qr_payload || booking.booking_id || booking.id || "")}`}
                     alt="Ticket QR Code"
                     className="w-[40px] h-[40px] md:w-[75px] md:h-[75px] object-contain"
                   />

@@ -95,7 +95,7 @@ export default function PublicTicketClient({ booking, origin }: PublicTicketClie
                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
                         <div className="relative z-10">
                             <div className="inline-block p-4 bg-white rounded-3xl mb-6 shadow-[0_0_50px_rgba(255,184,0,0.3)]">
-                                <QRCodeCanvas value={ticket.qr_payload || ticketUrl} size={200} />
+                                <QRCodeCanvas value={booking.qr_payload || booking.id || ""} size={200} />
                             </div>
                             <div className="space-y-2">
                                 <p className="text-white font-black text-xl tracking-[0.2em] uppercase">VERIFIED TICKET</p>

@@ -242,7 +242,7 @@ export default function MapSelectorModal({ isOpen, onClose, onSelect, initialAdd
                                     </p>
                                 )}
                             </div>
-                            
+
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={onClose}

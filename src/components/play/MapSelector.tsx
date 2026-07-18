@@ -133,11 +133,11 @@ export default function MapSelector({ onSelect, initialAddress, className = "" }
             const lat = location.lat();
             const lng = location.lng();
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-            
+
             let city = "";
             if (components) {
-                const cityComp = components.find(c => 
-                    c.types.includes('locality') || 
+                const cityComp = components.find(c =>
+                    c.types.includes('locality') ||
                     c.types.includes('administrative_area_level_2') ||
                     c.types.includes('sublocality_level_1')
                 );
@@ -166,10 +166,10 @@ export default function MapSelector({ onSelect, initialAddress, className = "" }
                 if (status === 'OK' && results[0]) {
                     const addr = results[0].formatted_address;
                     const mapsLink = `https://www.google.com/maps/search/?api=1&query=${pos.lat()},${pos.lng()}`;
-                    
+
                     let city = "";
-                    const cityComp = results[0].address_components.find((c: any) => 
-                        c.types.includes('locality') || 
+                    const cityComp = results[0].address_components.find((c: any) =>
+                        c.types.includes('locality') ||
                         c.types.includes('administrative_area_level_2') ||
                         c.types.includes('sublocality_level_1')
                     );
@@ -225,7 +225,7 @@ export default function MapSelector({ onSelect, initialAddress, className = "" }
                             {selectedPlace.address}
                         </p>
                         <div className="flex items-center gap-3 mt-1">
-                             <p className="text-[11px] font-medium text-zinc-400 font-mono">
+                            <p className="text-[11px] font-medium text-zinc-400 font-mono">
                                 {selectedPlace.lat.toFixed(6)}, {selectedPlace.lng.toFixed(6)}
                             </p>
                             <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Verified</span>

@@ -135,7 +135,7 @@ export default function PublicTicketPage() {
                     {/* QR Verification Section */}
                     <div className="text-center bg-zinc-950 rounded-[32px] p-10 shadow-2xl">
                         <div className="inline-block p-4 bg-white rounded-3xl mb-6 shadow-[0_0_50px_rgba(255,184,0,0.3)]">
-                            <QRCodeCanvas value={booking.qr_payload || `${window.location.origin}/ticket/${booking.id}`} size={200} />
+                            <QRCodeCanvas value={booking.qr_payload || booking.id || ""} size={200} />
                         </div>
                         <div className="space-y-2">
                             <p className="text-white font-black text-xl tracking-[0.2em]">VERIFIED TICKET</p>

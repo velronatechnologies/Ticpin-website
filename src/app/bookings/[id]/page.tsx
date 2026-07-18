@@ -2326,7 +2326,7 @@ export default function BookingDetailsPage() {
                 !isRefunded && (
                   <div className="flex flex-col items-center justify-center p-1.5 md:p-2.5 bg-[#EBEBEB] border border-[#686868]/30 rounded-[10px] md:rounded-[12px] shrink-0 w-[70px] h-[70px] md:w-[120px] md:h-[120px] select-none">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.qr_payload || (typeof window !== "undefined" ? `${window.location.origin}/qr-verify/${booking.booking_id || booking.id}` : ""))}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.qr_payload || booking.booking_id || booking.id || "")}`}
                       alt="Ticket QR Code"
                       className="w-[45px] h-[45px] md:w-[85px] md:h-[85px] object-contain"
                     />
