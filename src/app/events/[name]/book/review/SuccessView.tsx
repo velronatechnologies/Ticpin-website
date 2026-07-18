@@ -30,6 +30,44 @@ export default function SuccessView({
 }: SuccessViewProps) {
     const router = useRouter();
 
+    // Converts any time string to 12-hr AM/PM format with minutes
+    const formatTime12hr = (timeStr: string): string => {
+        if (!timeStr) return 'N/A';
+        const s = timeStr.trim();
+
+        // Already in 12-hr format with minutes: "6:48 PM", "06:48 AM"
+        if (/^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(s)) return s.toUpperCase();
+
+        // 24-hr with minutes: "18:48", "06:48"
+        const match24 = s.match(/^(\d{1,2}):(\d{2})$/);
+        if (match24) {
+            let h = parseInt(match24[1], 10);
+            const m = match24[2];
+            const period = h >= 12 ? 'PM' : 'AM';
+            if (h === 0) h = 12;
+            else if (h > 12) h -= 12;
+            return `${h}:${m} ${period}`;
+        }
+
+        // 12-hr without minutes: "6 PM", "6PM" → add :00
+        const match12 = s.match(/^(\d{1,2})\s*(AM|PM)$/i);
+        if (match12) {
+            return `${parseInt(match12[1], 10)}:00 ${match12[2].toUpperCase()}`;
+        }
+
+        // 24-hr hour only: "18", "6"
+        const matchHourOnly = s.match(/^(\d{1,2})$/);
+        if (matchHourOnly) {
+            let h = parseInt(matchHourOnly[1], 10);
+            const period = h >= 12 ? 'PM' : 'AM';
+            if (h === 0) h = 12;
+            else if (h > 12) h -= 12;
+            return `${h}:00 ${period}`;
+        }
+
+        return s; // fallback: return as-is
+    };
+
     return (
         <div className="h-screen w-screen overflow-hidden flex flex-col items-center bg-[#FDFDFD]">
             {/* Top Space (8vh) */}
@@ -98,7 +136,7 @@ export default function SuccessView({
                         <div className="flex flex-col gap-0.5 py-0.5">
                             <span className="text-[13px] font-medium text-[#686868]  tracking-normal" style={{ fontFamily: 'var(--font-anek-latin)' }}>Date & Time</span>
                             <span className="text-[15px] font-medium text-black " style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }) : new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {cart?.timeSlot || cart?.slot || 'N/A'}
+                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }) : new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {formatTime12hr(cart?.timeSlot || cart?.slot || '')}
                             </span>
                         </div>
 
