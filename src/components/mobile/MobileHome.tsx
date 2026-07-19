@@ -1134,7 +1134,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                 </p>
 
                 <div className="flex gap-2 items-center">
-                    <Link href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412"><img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8" /></Link>
+                    {/* <Link href="https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412"><img src="/social icons/whatsapp.svg" alt="WhatsApp" className="w-8 h-8" /></Link> */}
                     <Link href="https://www.facebook.com/profile.php?id=61579518933930#"><img src="/social icons/facebook.svg" alt="Facebook" className="w-8 h-8" /></Link>
                     <Link href="https://www.instagram.com/ticpinindia/"><img src="/social icons/instagram.svg" alt="Instagram" className="w-8 h-8" /></Link>
                     <Link href="https://x.com/ticpin"><img src="/social icons/x.svg" alt="X" className="w-8 h-8" /></Link>

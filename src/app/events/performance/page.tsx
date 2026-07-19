@@ -16,7 +16,7 @@ export default async function PerformancePage() {
         <EventCategoryClient
             events={events}
             categoryName="Performance"
-            categoryImage="/events/eventsperformance.png"
+            categoryImage="/events/eventperfomance.png"
             gradient="linear-gradient(180deg, #FFFFFF 0%, #BBF7D0 100%)"
         />
     );

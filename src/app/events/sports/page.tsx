@@ -16,7 +16,7 @@ export default async function SportsPage() {
         <EventCategoryClient
             events={events}
             categoryName="Sports"
-            categoryImage="/events/eventssports.png"
+            categoryImage="/events/Sports Icon 2.svg"
             gradient="linear-gradient(180deg, #FFFFFF 0%, #BAE6FD 100%)"
         />
     );

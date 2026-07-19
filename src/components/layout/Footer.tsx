@@ -88,11 +88,11 @@ export default function Footer() {
 
                     <div className="flex-shrink-0 flex items-center gap-4">
                         {[
-                            {
+                            /* {
                                 name: 'WhatsApp',
                                 href: 'https://whatsapp.com/channel/0029Vb8KoCH3mFY1M9gR4412',
                                 icon: <Image src="/social icons/whatsapp.svg" alt="WhatsApp" width={32} height={32} className="w-8 h-8" />
-                            },
+                            }, */
                             {
                                 name: 'Facebook',
                                 href: 'https://www.facebook.com/profile.php?id=61579518933930#',

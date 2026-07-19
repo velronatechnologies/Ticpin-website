@@ -16,7 +16,7 @@ export default async function ComedyPage() {
         <EventCategoryClient
             events={events}
             categoryName="Comedy"
-            categoryImage="/events/eventscomedy.png"
+            categoryImage="/events/eventcomdey.png"
             gradient="linear-gradient(180deg, #FFFFFF 0%, #FECACA 100%)"
         />
     );
