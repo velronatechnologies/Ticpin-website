@@ -62,6 +62,12 @@ export default function EventBookingDetailPage() {
       
       bookingApi.getBookingDetails(bookingId, session?.id)
         .then((data: any) => {
+          console.log('DEBUG: Booking details fetched from backend:', {
+            booking_id: data?.booking_id,
+            qr_token: data?.qr_token,
+            qr_payload: data?.qr_payload,
+            full_response: data
+          });
           setError(null);
           setBooking(data);
         })
@@ -202,7 +208,7 @@ export default function EventBookingDetailPage() {
                 {/* Compact QR Code */}
                 <div className="flex flex-col items-center justify-center p-1.5 md:p-2 bg-white border border-[#686868]/30 rounded-[8px] md:rounded-[12px] shadow-sm shrink-0 w-[65px] h-[65px] md:w-[110px] md:h-[110px] select-none">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(booking.qr_payload || booking.booking_id || booking.id || "")}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(booking.booking_id || booking.id || "")}&v=${Date.now()}`}
                     alt="Ticket QR Code"
                     className="w-[40px] h-[40px] md:w-[75px] md:h-[75px] object-contain"
                   />

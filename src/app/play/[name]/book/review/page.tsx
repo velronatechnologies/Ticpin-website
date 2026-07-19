@@ -481,7 +481,10 @@ export default function PlayReviewPage() {
                     ]);
 
                     const latestBooking = (Array.isArray(history) ? [...history] : [])
-                        ?.filter((b: any) => getBookingStatus(b) === 'booked' || getBookingStatus(b) === 'confirmed')
+                        ?.filter((b: any) => {
+                            const s = (b.status || '').toLowerCase();
+                            return s === 'booked' || s === 'confirmed' || s === 'checked_in' || s === 'checked_out';
+                        })
                         ?.sort((a: any, b: any) => new Date(b.booked_at).getTime() - new Date(a.booked_at).getTime())[0];
 
                     const fetchedName = latestBooking?.user_name || profile?.name || session?.name || '';

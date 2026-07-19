@@ -257,6 +257,9 @@ export default function ReviewBookingPage() {
   const timerWarningShownRef = useRef(false);
   const razorpayRef = useRef<any>(null);
   const isBookingCompletedRef = useRef(false);
+  // Tracks the current in-flight Razorpay order ID to prevent duplicate order creation
+  // when the user dismisses and immediately clicks Pay Now again.
+  const inflightOrderIdRef = useRef<string | null>(null);
 
   const reservationStore = useReservationStore();
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
@@ -618,8 +621,8 @@ export default function ReviewBookingPage() {
           // Extract and store last 3 confirmed bookings
           const confirmed = (Array.isArray(history) ? history : [])
             ?.filter((b: any) => {
-              const s = getBookingStatus(b).toLowerCase();
-              return s === "booked" || s === "confirmed";
+              const s = (b.status || "").toLowerCase();
+              return s === "booked" || s === "confirmed" || s === "checked_in" || s === "checked_out";
             })
             ?.sort(
               (a: any, b: any) =>
@@ -632,8 +635,8 @@ export default function ReviewBookingPage() {
           // Find latest successful booking
           const latestBooking = (Array.isArray(history) ? [...history] : [])
             ?.filter((b: any) => {
-              const s = getBookingStatus(b).toLowerCase();
-              return s === "booked" || s === "confirmed";
+              const s = (b.status || "").toLowerCase();
+              return s === "booked" || s === "confirmed" || s === "checked_in" || s === "checked_out";
             })
             ?.sort(
               (a: any, b: any) =>
@@ -1251,6 +1254,13 @@ export default function ReviewBookingPage() {
 
     if (!cart) return;
 
+    // Guard: if Razorpay modal is already open, just bring it back into focus.
+    // This prevents creating a second payment order when the user clicks Pay Now again.
+    if (razorpayRef.current) {
+      try { razorpayRef.current.open(); } catch (_) {}
+      return;
+    }
+
     if (isPayingRef.current) return;
     isPayingRef.current = true;
     setBookingLoading(true);
@@ -1334,6 +1344,9 @@ export default function ReviewBookingPage() {
 
       if (reservationStore.reservationId && !lockRes.ok) {
         const errorData = await lockRes.json();
+        // If start-payment fails it means the reservation already expired — reset paying state
+        isPayingRef.current = false;
+        inflightOrderIdRef.current = null;
         throw new Error(
           errorData.error ||
             "Your ticket reservation lock has expired. Please select tickets again.",
@@ -1374,6 +1387,7 @@ export default function ReviewBookingPage() {
               ? "production"
               : "sandbox",
         });
+        inflightOrderIdRef.current = orderRes.order_id;
         cashfree.checkout({
           paymentSessionId: orderRes.payment_session_id,
           redirectTarget: "_self",
@@ -1406,6 +1420,7 @@ export default function ReviewBookingPage() {
             razorpay_order_id: string;
           }) => {
             razorpayRef.current = null;
+            inflightOrderIdRef.current = null;
             showSuccessImmediately(
               response.razorpay_order_id ||
                 response.razorpay_payment_id ||
@@ -1430,6 +1445,7 @@ export default function ReviewBookingPage() {
           modal: {
             ondismiss: async () => {
               razorpayRef.current = null;
+              inflightOrderIdRef.current = null;
               sessionStorage.removeItem("ticpin_pending_payment");
               setBookingLoading(false);
               isPayingRef.current = false;
@@ -1473,6 +1489,7 @@ export default function ReviewBookingPage() {
         };
         const rzp = new (window as any).Razorpay(options);
         razorpayRef.current = rzp;
+        inflightOrderIdRef.current = orderRes.order_id;
         rzp.open();
       }
     } catch (err: unknown) {
@@ -2138,8 +2155,9 @@ export default function ReviewBookingPage() {
                   <span
                     className="text-[15px] font-semibold text-black"
                     style={{ fontFamily: "var(--font-anek-latin)" }}
+                    suppressHydrationWarning
                   >
-                    {billing.name || session?.name || "User Name"}
+                    {billing.name || session?.name || ""}
                   </span>
                 </div>
                 <button
@@ -2155,13 +2173,13 @@ export default function ReviewBookingPage() {
                 className="space-y-1 text-[13px] font-normal text-black pl-11"
                 style={{ fontFamily: "var(--font-anek-latin)" }}
               >
-                <p className="opacity-90">
+                <p className="opacity-90" suppressHydrationWarning>
                   {billing.phone || session?.phone || "Phone number"}
                 </p>
-                <p className="opacity-90">
+                <p className="opacity-90" suppressHydrationWarning>
                   {email || session?.email || "Email ID"}
                 </p>
-                <p className="opacity-90">
+                <p className="opacity-90" suppressHydrationWarning>
                   {billing.state || "State / Region"}
                 </p>
               </div>
