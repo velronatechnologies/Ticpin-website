@@ -55,7 +55,7 @@ export async function fetchPlayVenues(query = ''): Promise<PlayVenue[]> {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/play${suffix}`, {
             next: { revalidate: 10 },
-            signal: AbortSignal.timeout(5000)
+            signal: AbortSignal.timeout(15000)
         });
 
         if (!response.ok) {
@@ -77,7 +77,7 @@ export async function fetchPlayVenue(name: string): Promise<PlayVenue | null> {
     try {
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/play/${encodeURIComponent(name)}`, {
             next: { revalidate: 10 },
-            signal: AbortSignal.timeout(5000)
+            signal: AbortSignal.timeout(15000)
         });
 
         if (!response.ok) {

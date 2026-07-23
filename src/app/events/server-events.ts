@@ -40,7 +40,7 @@ export async function fetchEvents(query = ''): Promise<EventListItem[]> {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
             cache: 'no-store',
-            signal: AbortSignal.timeout(5000)
+            signal: AbortSignal.timeout(15000)
         });
 
         if (!response.ok) {

@@ -6,9 +6,9 @@ import { redirect } from 'next/navigation';
 async function getMobileHomeData() {
     try {
         const [eventsRes, diningsRes, playsRes] = await Promise.all([
-            fetch(`${SERVER_BACKEND_API_BASE}/events`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(5000) }),
-            fetch(`${SERVER_BACKEND_API_BASE}/dining`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(5000) }),
-            fetch(`${SERVER_BACKEND_API_BASE}/play`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(5000) }),
+            fetch(`${SERVER_BACKEND_API_BASE}/events`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(15000) }),
+            fetch(`${SERVER_BACKEND_API_BASE}/dining`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(15000) }),
+            fetch(`${SERVER_BACKEND_API_BASE}/play`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(15000) }),
         ]);
 
         const [eventsJson, diningsJson, playsJson] = await Promise.all([
