@@ -4,41 +4,6 @@ import { Anek_Latin, Anek_Tamil, Inter, Geist } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
-// Rewrite relative /backend api calls to point directly to Cloudflare backend container
-if (typeof window === "undefined" && typeof globalThis !== "undefined") {
-  const originalFetch = globalThis.fetch;
-  if (originalFetch) {
-    globalThis.fetch = function (input, init) {
-      const targetBackend = "https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io";
-      const shouldProxyBackend =
-        (typeof input === "string" && input.startsWith("/backend/")) ||
-        (input instanceof URL && input.pathname.startsWith("/backend/"));
-
-      if (shouldProxyBackend) {
-        if (typeof input === "string") {
-          input = input.replace("/backend", targetBackend);
-        } else if (input instanceof URL) {
-          const newUrl = new URL(input.toString());
-          newUrl.protocol = "https:";
-          newUrl.host = "ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io";
-          newUrl.pathname = newUrl.pathname.replace("/backend", "");
-          input = newUrl;
-        }
-
-        init = init || {};
-        init.headers = new Headers(init.headers);
-        init.headers.set("X-Ticpin-Internal", "ticpin-ssr-secret");
-        if (!init.signal) {
-          init.signal = AbortSignal.timeout(8000);
-        }
-      }
-
-      return originalFetch(input, init);
-    };
-  }
-}
-
-
 import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import Providers from "@/components/providers/Providers";
 import { ToastProvider } from "@/components/ui/Toast";
