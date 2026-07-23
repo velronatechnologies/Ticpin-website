@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import { bookingApi } from "@/lib/api/booking";
@@ -60,6 +60,7 @@ export default function TicketSelectionPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [initialCounts, setInitialCounts] = useState<Record<number, number>>(
     {},
@@ -199,25 +200,25 @@ export default function TicketSelectionPage() {
   };
 
   useEffect(() => {
-    // BUG FIX #4: Validate role - only users can access booking pages
-    const activeSession = getUserSession();
-    if (!activeSession) {
-      setShowAuthModal(true);
-    }
-    setIsAuthChecking(false);
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("ticpin_booking_step");
     }
   }, []);
 
-  // BUG FIX #4: Check if organizer is trying to access booking flow (enforce user-only)
   useEffect(() => {
-    if (isAuthChecking) return;
+    if (loading || isNotFound || !event) return;
+    const activeSession = getUserSession();
+    if (!activeSession) {
+      setShowAuthModal(true);
+    }
+    setIsAuthChecking(false);
+  }, [loading, isNotFound, event]);
+
+  useEffect(() => {
+    if (isAuthChecking || isNotFound || !event) return;
 
     const userSession = getUserSession();
-    // Use the organizerSession already declared at component level (top-level hook)
 
-    // If user is logged in as organizer, block access
     if (organizerSession && !userSession) {
       toast.error(
         "Only user accounts can book tickets. Please login as a user.",
@@ -225,24 +226,16 @@ export default function TicketSelectionPage() {
       router.push("/login");
       return;
     }
-
-    // If user has no session at all after auth check, show auth modal
-    if (!userSession && !organizerSession) {
-      // This is handled by the first useEffect above
-      return;
-    }
-  }, [isAuthChecking, router, organizerSession]);
+  }, [isAuthChecking, isNotFound, event, router, organizerSession]);
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
-    // User just logged in — stay on this page so they can proceed with booking
   };
 
   const handleAuthModalClose = () => {
     setShowAuthModal(false);
     const activeSession = getUserSession();
     if (!activeSession) {
-      // User closed the modal without logging in → go back to event detail
       router.push(`/events/${name}`);
     }
   };
@@ -250,16 +243,26 @@ export default function TicketSelectionPage() {
   useEffect(() => {
     if (!name) return;
     setLoading(true);
-    // BUG FIX: Clear ticket counts when navigating to a different event
-    // This prevents the -1/+ button from showing on new event before user clicks add
     setCounts({});
     setInitialCounts({});
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     fetch(`/backend/api/events/${encodeURIComponent(name)}`, {
       credentials: "include",
+      cache: "no-store",
+      signal: controller.signal,
     })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
       .then(async (eventData) => {
+        clearTimeout(timeoutId);
+        if (!eventData || eventData.error || !eventData.status || eventData.status.toLowerCase() !== "approved") {
+          setIsNotFound(true);
+          setLoading(false);
+          return;
+        }
         if (isEventBookingClosed(eventData, nowMs)) {
           toast.error("Booking for this event is closed!");
           router.push(`/events/${name}`);
@@ -443,7 +446,7 @@ export default function TicketSelectionPage() {
 
   useEffect(() => {
     fetch(`/backend/api/coupons/event`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : []))
       .then((data) => setCoupons(Array.isArray(data) ? data : []))
       .catch(() => setCoupons([]));
   }, []);
@@ -580,6 +583,10 @@ export default function TicketSelectionPage() {
       .filter(Boolean)
       .join(" | ");
   }, [event]);
+
+  if (isNotFound) {
+    notFound();
+  }
 
   if (loading || isAuthChecking || (!session?.id && !getUserSession()))
     return (

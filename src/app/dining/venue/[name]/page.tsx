@@ -5,6 +5,9 @@ import { headers } from 'next/headers';
 import MobileDiningDetails from '@/components/mobile/MobileDiningDetails';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface OfferRecord {
     id: string;
     title: string;

@@ -22,7 +22,13 @@ export async function fetchWithAuth<T>(
     return Promise.reject(new Error('Session expired. Please login again.'));
   }
 
-  const data = await res.json();
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
   if (!res.ok) {
     throw new Error(data.error ?? `Request failed with status ${res.status}`);
   }

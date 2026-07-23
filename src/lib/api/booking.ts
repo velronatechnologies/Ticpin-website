@@ -153,7 +153,8 @@ export const bookingApi = {
             credentials: 'include',
             body: JSON.stringify(payload),
         });
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch { data = {}; }
         if (!res.ok) throw new Error(data.error ?? 'Booking failed');
         return data as BookingResult;
     },
@@ -163,7 +164,8 @@ export const bookingApi = {
         code: string,
         category: string,
         orderAmount: number,
-        userId?: string
+        userId?: string,
+        entityId?: string
     ): Promise<CouponValidateResult> => {
         return fetchWithAuth<CouponValidateResult>(`${BASE}/coupons/validate`, {
             method: 'POST',
@@ -172,6 +174,7 @@ export const bookingApi = {
                 category,
                 order_amount: orderAmount,
                 user_id: userId,
+                entity_id: entityId,
             }),
         });
     },
@@ -184,7 +187,8 @@ export const bookingApi = {
             credentials: 'include',
             body: JSON.stringify(payload),
         });
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch { data = {}; }
         if (!res.ok) throw new Error(data.error ?? 'Dining booking failed');
         return data as BookingResult;
     },
@@ -197,7 +201,8 @@ export const bookingApi = {
             credentials: 'include',
             body: JSON.stringify(payload),
         });
-        const data = await res.json();
+        let data: any = {};
+        try { data = await res.json(); } catch { data = {}; }
         if (!res.ok) throw new Error(data.error ?? 'Play booking failed');
         return data as BookingResult;
     },
@@ -205,47 +210,69 @@ export const bookingApi = {
     /** Get active offers for an event */
     getEventOffers: async (eventId: string): Promise<OfferItem[]> => {
         const res = await fetch(`${BASE}/events/${eventId}/offers`);
-        const data = await res.json();
         if (!res.ok) return [];
-        return data as OfferItem[];
+        try {
+            const data = await res.json();
+            return data as OfferItem[];
+        } catch {
+            return [];
+        }
     },
 
     /** Get active offers for dining */
     getDiningOffers: async (diningId: string): Promise<OfferItem[]> => {
         const res = await fetch(`${BASE}/dining/${diningId}/offers`);
-        const data = await res.json();
         if (!res.ok) return [];
-        return data as OfferItem[];
+        try {
+            const data = await res.json();
+            return data as OfferItem[];
+        } catch {
+            return [];
+        }
     },
 
     /** Get active offers for play */
     getPlayOffers: async (playId: string): Promise<OfferItem[]> => {
         const res = await fetch(`${BASE}/play/${playId}/offers`);
-        const data = await res.json();
         if (!res.ok) return [];
-        return data as OfferItem[];
+        try {
+            const data = await res.json();
+            return data as OfferItem[];
+        } catch {
+            return [];
+        }
     },
 
     /** Get seat availability (booked counts) for an event */
     getEventAvailability: async (eventId: string): Promise<AvailabilityResult> => {
         const res = await fetch(`${BASE}/events/${eventId}/availability`);
-        const data = await res.json();
         if (!res.ok) return { booked: {} };
-        return data as AvailabilityResult;
+        try {
+            const data = await res.json();
+            return data as AvailabilityResult;
+        } catch {
+            return { booked: {} };
+        }
     },
 
     /** Get active coupons for a category.
      *  Pass userId to also receive user-specific coupons for that user;
-     *  without it only global (unrestricted) coupons are returned.
+     *  pass entityId to filter coupons applicable to that entity.
      */
-    getCouponsByCategory: async (category: string, userId?: string): Promise<any[]> => {
-        const url = userId
-            ? `${BASE}/coupons/${category}?user_id=${encodeURIComponent(userId)}`
-            : `${BASE}/coupons/${category}`;
+    getCouponsByCategory: async (category: string, userId?: string, entityId?: string): Promise<any[]> => {
+        const params = new URLSearchParams();
+        if (userId) params.append('user_id', userId);
+        if (entityId) params.append('entity_id', entityId);
+        const queryString = params.toString();
+        const url = queryString ? `${BASE}/coupons/${category}?${queryString}` : `${BASE}/coupons/${category}`;
         const res = await fetch(url);
-        const data = await res.json();
         if (!res.ok) return [];
-        return Array.isArray(data) ? data : [];
+        try {
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
+        } catch {
+            return [];
+        }
     },
     /** Fetch all bookings for a user by multiple identifiers */
     getUserBookings: async ({ email, phone, userId }: { email?: string; phone?: string; userId?: string }): Promise<any[]> => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import Image from "next/image";
 import {
   ChevronRight,
@@ -136,6 +136,8 @@ export default function ReviewBookingPage() {
   const router = useRouter();
   const params = useParams();
   const name = params?.name as string;
+  const nameRef = useRef(name);
+  nameRef.current = name;
   const session = useUserSession();
   const organizerSession = useOrganizerSession();
   const billingRef = useRef<HTMLDivElement>(null);
@@ -192,12 +194,13 @@ export default function ReviewBookingPage() {
     // If organizer is logged in (has organizerSession), block access
     if (organizerSession && !session) {
       toast.error('Only user accounts can book tickets. Please login as a user.');
-      router.push('/login');
+      router.replace(`/events/${nameRef.current}?showLogin=true`);
       return;
     }
 
     if (!session) {
-      // User not logged in - let them login
+      // User not logged in - redirect to event page and show login
+      router.replace(`/events/${nameRef.current}?showLogin=true`);
       return;
     }
   }, [session, organizerSession, router]);
@@ -264,6 +267,7 @@ export default function ReviewBookingPage() {
   const reservationStore = useReservationStore();
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isValidating, setIsValidating] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
 
   // Donation States
   const [donationAmount, setDonationAmount] = useState(5);
@@ -277,7 +281,47 @@ export default function ReviewBookingPage() {
         setIsValidating(false);
         return;
       }
+
+      setIsValidating(true);
+
+      const fetchCurrentEvent = async () => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          const eRes = await fetch(
+            `/backend/api/events/${encodeURIComponent(name)}`,
+            { credentials: "include", cache: "no-store", signal: controller.signal },
+          );
+          clearTimeout(timeoutId);
+          if (!eRes.ok) {
+            setIsNotFound(true);
+            return null;
+          }
+          const current = await eRes.json();
+          if (!current || current.error || !current.status || current.status.toLowerCase() !== "approved") {
+            setIsNotFound(true);
+            return null;
+          }
+          if (current?.id) {
+            setEventData((prev: any) => ({ ...prev, ...current }));
+          }
+          return current;
+        } catch (e) {
+          setIsNotFound(true);
+          return null;
+        }
+      };
+
+      // Check event existence and status FIRST before any session or reservation check
+      const currentEvent = await fetchCurrentEvent();
+      if (!currentEvent) {
+        setIsNotFound(true);
+        setIsValidating(false);
+        return;
+      }
+
       if (!session?.id) {
+        router.replace(`/events/${nameRef.current}?showLogin=true`);
         setIsValidating(false);
         return;
       }
@@ -301,24 +345,11 @@ export default function ReviewBookingPage() {
       }
 
       let savedCart = sessionStorage.getItem("ticpin_cart");
-      const fetchCurrentEvent = async () => {
-        const eRes = await fetch(
-          `/backend/api/events/${encodeURIComponent(name)}`,
-          { credentials: "include" },
-        );
-        if (!eRes.ok) throw new Error("Failed to fetch event");
-        const current = await eRes.json();
-        if (current?.id) {
-          setEventData((prev: any) => ({ ...prev, ...current }));
-        }
-        return current;
-      };
       
       // If cart exists in sessionStorage AND Zustand has a reservation, skip backend check
       // (User is navigating back from tickets page - reservation is still valid)
       if (savedCart && reservationStore.reservationId && reservationStore.hasActiveReservation()) {
         const parsedCart = safeJsonParse<CartData>(savedCart);
-        const currentEvent = await fetchCurrentEvent();
         if (!parsedCart || !isCurrentEventCart(parsedCart, currentEvent.id)) {
           clearEventBookingStorage();
           reservationStore.clearReservation();
@@ -340,6 +371,11 @@ export default function ReviewBookingPage() {
       if (savedCart) {
         parsedCart = safeJsonParse<CartData>(savedCart);
         const currentEvent = await fetchCurrentEvent();
+        if (!currentEvent) {
+          setIsNotFound(true);
+          setIsValidating(false);
+          return;
+        }
         if (!parsedCart || !isCurrentEventCart(parsedCart, currentEvent.id)) {
           clearEventBookingStorage();
           reservationStore.clearReservation();
@@ -354,6 +390,11 @@ export default function ReviewBookingPage() {
         // fetch the event details to get eventId and verify active reservation
         try {
           const eventData = await fetchCurrentEvent();
+          if (!eventData) {
+            setIsNotFound(true);
+            setIsValidating(false);
+            return;
+          }
 
           const activeRes = await bookingApi.checkActiveReservation(
             eventData.id,
@@ -411,6 +452,7 @@ export default function ReviewBookingPage() {
 
         // If not found or failed, redirect back to booking
         router.replace(`/events/${name}/book`);
+        setIsValidating(false);
         return;
       }
 
@@ -421,26 +463,34 @@ export default function ReviewBookingPage() {
   }, [session?.id, name, router]);
 
   useEffect(() => {
-    if (!name) return;
+    if (!name || isNotFound) return;
     fetch(`/backend/api/events/${encodeURIComponent(name)}`, {
       credentials: "include",
+      cache: "no-store",
     })
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.id) {
-          // Check if event booking is closed
-          const isClosed = isEventBookingClosed(data, nowMs, true);
-
-          if (isClosed) {
-            toast.error("Bookings for this event are closed.");
-            router.replace(`/events/${name}`);
-            return;
-          }
-          setEventData(data);
+        if (!data || data.error || !data.status || data.status.toLowerCase() !== "approved") {
+          setIsNotFound(true);
+          setIsValidating(false);
+          return;
         }
+        // Check if event booking is closed
+        const isClosed = isEventBookingClosed(data, nowMs, true);
+
+        if (isClosed) {
+          toast.error("Bookings for this event are closed.");
+          router.replace(`/events/${name}`);
+          return;
+        }
+        setEventData(data);
       })
-      .catch((err) => console.error("Error fetching event details:", err));
-  }, [name, nowMs, router]);
+      .catch((err) => {
+        console.error("Error fetching event details:", err);
+        setIsNotFound(true);
+        setIsValidating(false);
+      });
+  }, [name, nowMs, router, isNotFound]);
 
   // Timer countdown with 2-min warning for slot lock expiry (10-minute timeout)
   useEffect(() => {
@@ -577,7 +627,6 @@ export default function ReviewBookingPage() {
             if (p.cart.type === "event" && p.cart.eventId) {
               setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
             }
-            window.history.replaceState(null, "", window.location.pathname);
             showSuccessImmediately(p.orderID);
             setTimeout(() => {
               void completeBookingWithData(
@@ -814,9 +863,9 @@ export default function ReviewBookingPage() {
       })
       .catch(() => setOffers([]));
 
-    // Fetch coupons for the entity category — include userId for personalised coupons
+    // Fetch coupons for the entity category — include userId for personalised coupons and entityId for listing-specific coupons
     bookingApi
-      .getCouponsByCategory(entityType, session?.id)
+      .getCouponsByCategory(entityType, session?.id, entityId)
       .then((res) => {
         setAvailableCoupons(Array.isArray(res) ? res : []);
       })
@@ -1003,15 +1052,18 @@ export default function ReviewBookingPage() {
     const c = code ?? couponInput;
     if (!c.trim()) return;
     const amount = base ?? orderAmount;
+    const entityId = cart?.eventId;
+    const entityType = cart?.type || "event";
     setCouponLoading(true);
     setCouponError("");
     setCouponSuccess("");
     try {
       const result = await bookingApi.validateCoupon(
         c.trim(),
-        "event",
+        entityType,
         amount,
         session?.id,
+        entityId,
       );
       setCouponDiscount(Math.round(result.discount_amount));
       setAppliedCoupon(c.toUpperCase());
@@ -1519,6 +1571,18 @@ export default function ReviewBookingPage() {
   };
 
 
+
+  if (isNotFound) {
+    notFound();
+  }
+
+  if (isValidating) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <div className="w-10 h-10 rounded-full border-4 border-[#866BFF] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (showInProgressLoader) {
     const eventDateStr = eventData?.date

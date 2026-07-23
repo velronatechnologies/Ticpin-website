@@ -98,9 +98,11 @@ export default function EventsClient({ initialEvents, isMobileServer }: { initia
         const selectedSort = (modalFilters.event_sort ?? [])[0] ?? '';
         const cityFilter = mounted && selectedLocation ? selectedLocation.split(',')[0].trim().toLowerCase() : '';
 
+        const approvedEvents = events.filter(e => !e.status || e.status.toLowerCase() === 'approved');
+
         let result = activeFilter === 'All'
-            ? events
-            : events.filter(e => e.category === activeFilter);
+            ? approvedEvents
+            : approvedEvents.filter(e => e.category === activeFilter);
 
         // Partition by selected city (selected city events first, then others)
         if (cityFilter) {

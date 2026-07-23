@@ -1,12 +1,14 @@
 'use client';
 
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function ChatWithUsPage() {
+    const router = useRouter();
+
     useEffect(() => {
-        redirect('/chat-support');
-    }, []);
+        router.replace('/chat-support');
+    }, [router]);
 
     return (
         <div className="flex h-screen items-center justify-center font-sans">

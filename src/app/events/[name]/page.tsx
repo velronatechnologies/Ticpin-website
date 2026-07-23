@@ -6,6 +6,9 @@ import { Suspense } from 'react';
 import MobileEventDetailsClient from './MobileEventDetailsClient';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Artist {
     name: string;
     image_url?: string;
@@ -55,11 +58,17 @@ interface EventData {
 
 async function getEventData(name: string): Promise<EventData | null> {
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
-            next: { revalidate: 10 }
+            cache: 'no-store',
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!res.ok) return null;
-        return await res.json();
+        const data = await res.json();
+        if (!data || !data.status || data.status.toLowerCase() !== 'approved') return null;
+        return data;
     } catch (error) {
         console.error("Failed to fetch event data:", error);
         return null;
@@ -83,7 +92,13 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 
 async function getMobileEventData(id: string) {
     try {
-        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, { next: { revalidate: 10 } });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, {
+            cache: 'no-store',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {
@@ -102,13 +117,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
 
     const event = await getEventData(decodedName);
 
-    if (!event) {
+    if (!event || !event.status || event.status.toLowerCase() !== 'approved') {
         notFound();
     }
 
     if (isMobile) {
         const mobileData = await getMobileEventData(event.id);
-        if (mobileData) {
+        if (mobileData && mobileData.event && mobileData.event.status && mobileData.event.status.toLowerCase() === 'approved') {
             return (
                 <Suspense fallback={
                     <div className="min-h-screen bg-[#EAEAEA] flex items-center justify-center">
@@ -118,6 +133,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
                     <MobileEventDetailsClient event={mobileData.event} offers={mobileData.offers || []} />
                 </Suspense>
             );
+        } else {
+            notFound();
         }
     }
 

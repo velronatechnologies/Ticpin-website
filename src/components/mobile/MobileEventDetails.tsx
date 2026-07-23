@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, X, Check, Ticket, Car, Droplets, Utensils, Activity, Wifi } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
@@ -114,6 +114,9 @@ const getAmenityIcon = (name: string) => {
 };
 
 export default function MobileEventDetails({ event, offers }: MobileEventDetailsProps) {
+    if (!event || !event.status || event.status.toLowerCase() !== 'approved') {
+        notFound();
+    }
     const router = useRouter();
     const session = useUserSession();
 
@@ -306,31 +309,52 @@ Rules:
             const assistantMsgId = Math.random().toString();
             setMessages(prev => [...prev, { id: assistantMsgId, sender: 'assistant' as const, text: '' }]);
 
-            let accumulatedText = '';
-            
-            if (reader) {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+            let targetText = '';
+            let displayedText = '';
+            let streamFinished = false;
 
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') continue;
-                            try {
-                                const parsed = JSON.parse(data);
-                                const content = parsed.choices?.[0]?.delta?.content || '';
-                                accumulatedText += content;
-                                setMessages(prev => prev.map(m => 
-                                    m.id === assistantMsgId ? { ...m, text: accumulatedText } : m
-                                ));
-                            } catch (e) {}
+            const typeInterval = setInterval(() => {
+                if (displayedText.length < targetText.length) {
+                    const step = Math.min(3, targetText.length - displayedText.length);
+                    displayedText += targetText.slice(displayedText.length, displayedText.length + step);
+                    setMessages(prev => prev.map(m => 
+                        m.id === assistantMsgId ? { ...m, text: displayedText } : m
+                    ));
+                } else if (streamFinished) {
+                    clearInterval(typeInterval);
+                }
+            }, 16);
+
+            if (reader) {
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) {
+                            streamFinished = true;
+                            break;
+                        }
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    const content = parsed.choices?.[0]?.delta?.content || '';
+                                    targetText += content;
+                                } catch (e) {}
+                            }
                         }
                     }
+                } catch (readErr) {
+                    streamFinished = true;
+                    clearInterval(typeInterval);
+                    throw readErr;
                 }
             } else {
+                clearInterval(typeInterval);
                 throw new Error('No reader available');
             }
 

@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import PlayDetailClient from './PlayDetailClient';
 import { fetchPlayVenue } from '../server-play';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getVenueData(name: string) {
     try {
         return await fetchPlayVenue(name);

@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, Share2, ChevronRight, Star, ChevronDown, MapPin, Navigation, PhoneCall, Sparkles, Users, Ticket, Heart } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -37,12 +37,16 @@ interface MobileDiningDetailsProps {
         guide?: {
             facilities?: string[];
         };
+        status?: string;
         google_map_link?: string;
     };
     offers: OfferRecord[];
 }
 
 export default function MobileDiningDetails({ venue, offers }: MobileDiningDetailsProps) {
+    if (venue?.status && venue.status !== 'approved') {
+        notFound();
+    }
     const router = useRouter();
     const session = useUserSession();
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
 import { ChevronDown, MapPin, Clock, ParkingCircle, Bath, Shirt, Droplets, Wind, Wifi, X, Plus, ShowerHead, Utensils, Lock, HeartPulse, Armchair, Toilet } from 'lucide-react';
@@ -81,9 +81,13 @@ interface RealPlay {
     terms?: string;
     price_starts_from?: number;
     min_duration?: string;
+    status?: string;
 }
 
 export default function PlayDetailClient({ venue, id, isMobileServer }: { venue: RealPlay; id: string; isMobileServer?: boolean }) {
+    if (venue?.status && venue.status !== 'approved') {
+        notFound();
+    }
     const router = useRouter();
     const [isAboutExpanded, setIsAboutExpanded] = useState(false);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
@@ -93,9 +97,16 @@ export default function PlayDetailClient({ venue, id, isMobileServer }: { venue:
     const session = useUserSession();
     const organizerSession = useOrganizerSession();
 
+    // Reset state + scroll to top when navigating to a new venue (handles back/forward)
     useEffect(() => {
+        setIsAboutExpanded(false);
+        setOpenAccordion(null);
+        setIsLoginModalOpen(false);
+        setIsOrgLogoutModalOpen(false);
+        setIsFacilitiesModalOpen(false);
         window.scrollTo(0, 0);
-    }, []);
+        router.refresh();
+    }, [venue?.id, router]);
 
     const isMobile = useIsMobile(isMobileServer);
 

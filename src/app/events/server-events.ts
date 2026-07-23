@@ -38,17 +38,18 @@ function parseEventList(payload: unknown): EventListItem[] {
 export async function fetchEvents(query = ''): Promise<EventListItem[]> {
     const suffix = query ? `?${query}` : '';
     const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
-        next: { revalidate: 10 }
+        cache: 'no-store'
     });
 
     if (!response.ok) {
-        throw new Error(`Events fetch failed with status ${response.status}`);
+        return [];
     }
 
-    return parseEventList(await response.json());
+    const list = parseEventList(await response.json());
+    return list.filter((event) => !event.status || event.status.toLowerCase() === 'approved');
 }
 
 export async function fetchApprovedEventsByCategory(category: string): Promise<EventListItem[]> {
     const events = await fetchEvents(`category=${encodeURIComponent(category)}`);
-    return events.filter((event) => event.status === 'approved');
+    return events.filter((event) => !event.status || event.status.toLowerCase() === 'approved');
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { bookingApi } from "@/lib/api/booking";
@@ -85,6 +85,7 @@ export default function TicketSelectionPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -214,17 +215,29 @@ export default function TicketSelectionPage() {
 
   useEffect(() => {
     if (!name) return;
+    if (isNotFound) {
+        notFound();
+        return;
+    }
     setLoading(true);
     setCounts({});
     setSelectedCategoryIndex(null);
     setSelectedZoneName(null);
     setUsePass(false);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     fetch(`/backend/api/events/${encodeURIComponent(name)}`, {
       credentials: "include",
+      cache: "no-store",
+      signal: controller.signal,
     })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
       .then(async (eventData) => {
-        if (!eventData || eventData.error) {
+        clearTimeout(timeoutId);
+        if (!eventData || eventData.error || !eventData.status || eventData.status.toLowerCase() !== "approved") {
+          setIsNotFound(true);
           setLoading(false);
           return;
         }
@@ -693,13 +706,15 @@ export default function TicketSelectionPage() {
       if (isEditing) {
         sessionStorage.setItem("ticpin_edit_selection", "1");
       }
-
-      window.history.pushState(null, "", nextPath);
     }
 
     // Instantly transition to the review page
     router.push(`/events/${name}/book/review`);
   };
+
+  if (isNotFound) {
+    notFound();
+  }
 
   if (loading)
     return (

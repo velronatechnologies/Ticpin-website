@@ -185,7 +185,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: number }),
             });
-            const d = await res.json();
+            let d: any = {};
+            try { d = await res.json(); } catch {}
             if (!res.ok) {
                 setError(d.error || 'Failed to send OTP');
                 setLoading(false);
@@ -284,7 +285,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
                 body: JSON.stringify({ token }),
             });
 
-            const data = await res.json();
+            let data: any = {};
+            try { data = await res.json(); } catch {}
             if (!res.ok) {
                 setError(data.error || 'Verification failed');
                 setLoading(false);

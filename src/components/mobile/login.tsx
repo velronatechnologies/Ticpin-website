@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronDown, ArrowLeft } from 'lucide-react';
+import { ChevronDown, ArrowLeft, X } from 'lucide-react';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import { toast } from '@/components/ui/Toast';
 
-export default function MobileLogin() {
+export default function MobileLogin({ onClose }: { onClose?: () => void }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectUrl = searchParams.get('redirect') || '/';
@@ -204,6 +204,19 @@ export default function MobileLogin() {
         }
     };
 
+    const handleCloseClick = () => {
+        if (onClose) {
+            onClose();
+            return;
+        }
+        const eventMatch = redirectUrl.match(/^\/events\/([^/]+)/);
+        if (eventMatch && eventMatch[1] && eventMatch[1] !== 'artist') {
+            router.push(`/events/${eventMatch[1]}`);
+        } else {
+            router.push('/');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-white flex justify-center">
             <div 
@@ -223,6 +236,14 @@ export default function MobileLogin() {
                         className="object-cover"
                         priority
                     />
+                    <button
+                        type="button"
+                        onClick={handleCloseClick}
+                        className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors z-20 bg-black/30 p-2 rounded-full backdrop-blur-sm"
+                        aria-label="Close"
+                    >
+                        <X size={20} />
+                    </button>
                 </div>
 
                 {view === 'number' ? (

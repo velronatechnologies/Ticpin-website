@@ -59,13 +59,28 @@ interface MobileHomeProps {
     plays?: Play[];
 }
 
+const formatTime12h = (raw?: string): string => {
+    if (!raw) return '';
+    const trimmed = raw.trim();
+    if (/am|pm/i.test(trimmed)) return trimmed;
+    if (!trimmed.includes(':')) return trimmed;
+    const [hStr, mStr] = trimmed.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h) || isNaN(m)) return trimmed;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mm = m.toString().padStart(2, '0');
+    return `${h12}:${mm} ${ampm}`;
+};
+
 const formatEventDate = (date?: string, time?: string) => {
     if (!date) return 'Date TBA';
     try {
         const d = new Date(date);
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const tStr = time ? time : '';
-        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}${tStr ? ` | ${tStr}` : ''}`;
+        const formattedTime = formatTime12h(time);
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}${formattedTime ? ` | ${formattedTime}` : ''}`;
     } catch {
         return date;
     }
@@ -282,7 +297,8 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
     const [limelightScrollX, setLimelightScrollX] = useState(0);
     const [playScrollX, setPlayScrollX] = useState(0);
 
-    const eventItems = localEvents.slice(0, 5);
+    const approvedEvents = localEvents.filter(e => !e.status || e.status.toLowerCase() === 'approved');
+    const eventItems = approvedEvents.slice(0, 5);
     const scrollEvents = eventItems.length >= 3
         ? [...eventItems, ...eventItems, ...eventItems]
         : eventItems;
@@ -296,7 +312,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
         : playItems;
 
     const uniqueArtists = (() => {
-        const all = localEvents.flatMap(e => e.artists || []).filter(a => a.name);
+        const all = approvedEvents.flatMap(e => e.artists || []).filter(a => a.name);
         const seen = new Set<string>();
         return all.filter(a => {
             const k = a.name.toLowerCase();
@@ -858,15 +874,14 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             className="flex-shrink-0 w-[138px] snap-start cursor-pointer active:scale-95 transition-transform"
                                             onClick={() => router.push(`/events/artist/${encodeURIComponent(art.name)}`)}
                                         >
-                                            <div className="w-[138px] h-[146px] rounded-[13px] bg-[#AC9BF7] overflow-hidden group relative">
+                                            <div className="w-[138px] h-[146px] rounded-[13px] bg-zinc-100 overflow-hidden group relative">
                                                 {art.image_url ? (
-                                                    <img src={art.image_url} alt={art.name} className="w-full h-full object-cover mix-blend-multiply opacity-90" />
+                                                    <img src={art.image_url} alt={art.name} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-[#AC9BF7] mix-blend-multiply opacity-90">
+                                                    <div className="w-full h-full flex items-center justify-center bg-zinc-800">
                                                         <span className="text-[36px] font-bold text-white uppercase italic leading-none">{art.name.charAt(0).toUpperCase()}</span>
                                                     </div>
                                                 )}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                                             </div>
                                             <p className="text-[14px] font-medium text-black mt-3 text-center uppercase tracking-wider truncate max-w-[138px]" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>{art.name}</p>
                                         </div>

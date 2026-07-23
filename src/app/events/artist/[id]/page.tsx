@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import BottomBanner from '@/components/layout/BottomBanner';
@@ -43,7 +43,8 @@ export default function ArtistDetailPage() {
         fetch(`/backend/api/events?artist=${encodeURIComponent(artistNameDecoded)}`)
             .then(r => r.json())
             .then((data: any) => {
-                const list = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+                const rawList = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+                const list = rawList.filter((ev: any) => ev.status === 'approved' || !ev.status);
                 setEvents(list);
 
                 // Extract artist details from the returned events, merging info if needed
@@ -78,6 +79,10 @@ export default function ArtistDetailPage() {
                 <div className="w-10 h-10 border-4 border-[#7B2FF7] border-t-transparent rounded-full animate-spin" />
             </div>
         );
+    }
+
+    if (events.length === 0) {
+        notFound();
     }
 
     return (

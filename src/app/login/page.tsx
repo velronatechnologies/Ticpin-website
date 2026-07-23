@@ -3,29 +3,29 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MobileLogin from '@/components/mobile/login';
 import AuthModal from '@/components/modals/AuthModal';
-import { useIdentityStore } from '@/store/useIdentityStore';
 import { getUserSession } from '@/lib/auth/user';
 
-const PROTECTED_ROUTES = [
-    '/profile',
-    '/pass/buy',
-    '/bookings',
-    '/my-pass',
-    '/logout',
-    '/ticlists',
-    '/myboooking'
-];
-
-const isRouteProtected = (path: string) => {
-    const cleanPath = path.split('?')[0];
-    return PROTECTED_ROUTES.some(route => cleanPath.startsWith(route)) || cleanPath.includes('/book/');
+const getTargetOnCloseWithoutAuth = (redirectVal: string): string => {
+    const cleanPath = redirectVal.split('?')[0];
+    const eventMatch = cleanPath.match(/^\/events\/([^/]+)/);
+    if (eventMatch && eventMatch[1] && eventMatch[1] !== 'artist') {
+        return `/events/${eventMatch[1]}`;
+    }
+    const diningMatch = cleanPath.match(/^\/dining\/venue\/([^/]+)/);
+    if (diningMatch && diningMatch[1]) {
+        return `/dining`;
+    }
+    const playMatch = cleanPath.match(/^\/play\/([^/]+)/);
+    if (playMatch && playMatch[1]) {
+        return `/play`;
+    }
+    return '/';
 };
 
 function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isMobile, setIsMobile] = useState<boolean | null>(null);
-    const { userSession } = useIdentityStore();
 
     useEffect(() => {
         const handleResize = () => {
@@ -35,6 +35,17 @@ function LoginContent() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    const handleClose = () => {
+        const redirectVal = searchParams.get('redirect') || '/';
+        const userSession = getUserSession();
+        if (!userSession) {
+            const target = getTargetOnCloseWithoutAuth(redirectVal);
+            router.push(target);
+        } else {
+            router.push(redirectVal);
+        }
+    };
 
     if (isMobile === null) {
         return (
@@ -50,14 +61,7 @@ function LoginContent() {
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#5331EA]/10 via-[#866BFF]/5 to-transparent pointer-events-none" />
                 <AuthModal 
                     isOpen={true} 
-                    onClose={() => {
-                        const redirectVal = searchParams.get('redirect') || '/';
-                        if (!getUserSession() && isRouteProtected(redirectVal)) {
-                            router.push('/');
-                        } else {
-                            router.push(redirectVal);
-                        }
-                    }}
+                    onClose={handleClose}
                     onSuccess={() => {
                         const redirectVal = searchParams.get('redirect') || '/';
                         router.push(redirectVal);
@@ -67,7 +71,7 @@ function LoginContent() {
         );
     }
 
-    return <MobileLogin />;
+    return <MobileLogin onClose={handleClose} />;
 }
 
 export default function MobileLoginPage() {

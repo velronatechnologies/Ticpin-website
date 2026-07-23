@@ -57,7 +57,7 @@ export async function fetchPlayVenues(query = ''): Promise<PlayVenue[]> {
     });
 
     if (!response.ok) {
-        throw new Error(`Play fetch failed with status ${response.status}`);
+        return [];
     }
 
     return parsePlayList(await response.json());

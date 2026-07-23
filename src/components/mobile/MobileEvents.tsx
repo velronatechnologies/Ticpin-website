@@ -246,7 +246,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
     // Filter events by Search Query, City/Location, and Category/Time Tabs
     const filteredAndSearchedEvents = useMemo(() => {
-        let result = events.filter(e => e.status === 'approved');
+        let result = events.filter(e => !e.status || e.status.toLowerCase() === 'approved');
 
         // Location Partitioning based on active selected city (matching city first, then others)
         if (city) {

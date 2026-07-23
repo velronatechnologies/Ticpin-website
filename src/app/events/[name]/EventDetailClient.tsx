@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { Share2, MapPin, Calendar, ChevronDown, Ticket, Timer, ArrowLeft, ChevronRight, Car, Droplets, Utensils, Activity, Wifi, Check } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
@@ -80,6 +80,8 @@ interface EventData {
     ticket_open_date?: string;
     ticket_close_date?: string;
     event_end_date?: string;
+    timezone?: string;
+    total_tickets_available?: number;
     is_sales_paused?: boolean;
     is_canceled?: boolean;
     is_layout_based?: boolean;
@@ -126,6 +128,9 @@ interface EventDetailClientProps {
 }
 
 export default function EventDetailClient({ event, id }: EventDetailClientProps) {
+    if (!event || !event.status || event.status.toLowerCase() !== 'approved') {
+        notFound();
+    }
     const router = useRouter();
     const [showFullDesc, setShowFullDesc] = useState(false);
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -208,10 +213,20 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
 
     const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
 
-    // Scroll to top when page loads
+    // Reset state + scroll to top when navigating to a new event (handles back/forward)
     useEffect(() => {
+        setShowFullDesc(false);
+        setActiveFaq(null);
+        setIsLoginModalOpen(false);
+        setAvailabilityLoaded(false);
+        setBookedMap({});
+        setShowAllAmenities(false);
+        setShowFaqModal(false);
+        setShowTermsModal(false);
+        setExpandedFaqIndex(null);
         window.scrollTo(0, 0);
-    }, []);
+        router.refresh();
+    }, [event?.id, router]);
 
     const handleBook = async () => {
         if (closedBooking) {

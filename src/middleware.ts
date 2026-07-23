@@ -101,10 +101,6 @@ export function middleware(request: NextRequest) {
     
     // Check if the route is protected
     const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-    const isBookingRoute = 
-        (/^\/events\/[^\/]+\/book(\/.*)?$/).test(pathname) ||
-        (/^\/dining\/venue\/[^\/]+\/book(\/.*)?$/).test(pathname) ||
-        (/^\/play\/[^\/]+\/book(\/.*)?$/).test(pathname);
 
     // Get the user session cookies
     const userSession =
@@ -112,8 +108,8 @@ export function middleware(request: NextRequest) {
         request.cookies.get('ticpin_user_session') ??
         request.cookies.get('ticpin_user_session_info');
     
-    // Auth logic for normal users and booking paths
-    if ((isProtected || isBookingRoute) && !userSession) {
+    // Auth logic for normal users and protected paths
+    if (isProtected && !userSession) {
         // Redirect to login page if not logged in
         const search = request.nextUrl.search || '';
         return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname + search)}`, request.url));
@@ -135,11 +131,5 @@ export const config = {
         '/ticlists/:path*',
         '/myboooking/:path*',
         '/chat-support/:path*',
-        '/events/:name/book',
-        '/events/:name/book/:path*',
-        '/dining/venue/:name/book',
-        '/dining/venue/:name/book/:path*',
-        '/play/:name/book',
-        '/play/:name/book/:path*',
     ],
 };

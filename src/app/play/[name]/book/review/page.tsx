@@ -461,7 +461,6 @@ export default function PlayReviewPage() {
                     setStep('billing');
                     setBookingLoading(true);
                     if (typeof p.grandTotal === 'number') setLockedGrandTotal(p.grandTotal);
-                    window.history.replaceState(null, '', window.location.pathname);
                     setTimeout(() => {
                         completeBooking(p.orderID, p.orderID, 'cashfree', p.cart, p.email, p.sessionId,
                             p.orderAmount, p.bookingFee, p.appliedCoupon || '', p.offerId);
@@ -564,7 +563,7 @@ export default function PlayReviewPage() {
         if (!venueName) return;
         Promise.all([
             bookingApi.getPlayOffers(venueName),
-            bookingApi.getCouponsByCategory('play', session?.id),
+            bookingApi.getCouponsByCategory('play', session?.id, venueName),
         ])
             .then(([offerList, couponList]) => {
                 setOffers(Array.isArray(offerList) ? offerList : []);
@@ -619,7 +618,7 @@ export default function PlayReviewPage() {
         setCouponError('');
         setCouponSuccess('');
         try {
-            const result = await bookingApi.validateCoupon(c, 'play', orderAmount, session?.id);
+            const result = await bookingApi.validateCoupon(c, 'play', orderAmount, session?.id, venueName);
             setCouponDiscount(Math.round(result.discount_amount));
             setAppliedCoupon(c.toUpperCase());
 
@@ -627,8 +626,8 @@ export default function PlayReviewPage() {
             const coupon = availableCoupons.find(cp => cp.code.toUpperCase() === c.toUpperCase());
             const isExpiringSoon = coupon ? isExpiringWithinDay(coupon.valid_until, nowMs) : false;
 
-            if (isExpiringSoon) {
-                const expiryDate = new Date(coupon.valid_until!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            if (isExpiringSoon && coupon?.valid_until) {
+                const expiryDate = new Date(coupon.valid_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 setCouponSuccess(`🎉 Perfect timing! Coupon applied! You save ₹${Math.round(result.discount_amount)} (Expires ${expiryDate})`);
             } else {
                 setCouponSuccess(`✓ Coupon applied! You save ₹${Math.round(result.discount_amount)}`);

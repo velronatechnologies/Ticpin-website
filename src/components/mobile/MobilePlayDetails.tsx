@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, Share2, ChevronRight, Star, ChevronDown, MapPin, Clock, PhoneCall, Sparkles, Navigation, Heart } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useOrganizerSession } from '@/lib/auth/organizer';
 import { useState, useEffect } from 'react';
@@ -51,12 +51,15 @@ interface MobilePlayDetailsProps {
         faqs?: { question: string; answer: string }[];
         terms?: string;
         price_starts_from?: number;
-        min_duration?: string;
+        status?: string;
     };
     offers?: OfferRecord[];
 }
 
 export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDetailsProps) {
+    if (venue?.status && venue.status !== 'approved') {
+        notFound();
+    }
     const router = useRouter();
     const session = useUserSession();
     const [isOrgLogoutModalOpen, setIsOrgLogoutModalOpen] = useState(false);

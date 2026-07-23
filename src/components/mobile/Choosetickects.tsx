@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, Info, Percent, Loader2 } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, notFound } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useReservationStore } from '@/store/useReservationStore';
 import { bookingApi } from '@/lib/api/booking';
@@ -72,8 +72,10 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
                 }
             })
             .then(eventData => {
-                if (!eventData || eventData.error) {
-                    throw new Error('Event not found');
+                if (!eventData || eventData.error || !eventData.status || eventData.status.toLowerCase() !== 'approved') {
+                    setLoading(false);
+                    notFound();
+                    return;
                 }
                 setEventDetails(eventData);
 

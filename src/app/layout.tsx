@@ -27,6 +27,9 @@ if (typeof window === "undefined" && typeof globalThis !== "undefined") {
         init = init || {};
         init.headers = new Headers(init.headers);
         init.headers.set("X-Ticpin-Internal", "ticpin-ssr-secret");
+        if (!init.signal) {
+          init.signal = AbortSignal.timeout(8000);
+        }
       }
 
       return originalFetch(input, init);

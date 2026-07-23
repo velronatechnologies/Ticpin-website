@@ -265,7 +265,13 @@ export default function ChatSupportClient() {
                 }
 
                 if (Array.isArray(data)) {
-                    setMessages(data);
+                    setMessages(prev => {
+                        const pendingOptimistic = prev.filter(p => p.fileUrl?.startsWith('blob:'));
+                        if (pendingOptimistic.length === 0) return data;
+                        const serverMsgMap = new Set(data.map(s => (s.message || '') + (s.createdAt || '')));
+                        const unsynced = pendingOptimistic.filter(p => !serverMsgMap.has((p.message || '') + (p.createdAt || '')));
+                        return [...data, ...unsynced];
+                    });
                 }
             }
         } catch (error) {

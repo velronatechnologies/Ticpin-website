@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import BottomBanner from '@/components/layout/BottomBanner';
 import Footer from '@/components/layout/Footer';
@@ -44,17 +44,23 @@ interface RealDining {
     guide?: {
         facilities?: string[];
     };
+    status?: string;
 }
 
 export default function DiningVenueDetailClient({ venue, id, offers }: { venue: RealDining, id: string, offers: OfferRecord[] }) {
+    if (venue?.status && venue.status !== 'approved') {
+        notFound();
+    }
     const router = useRouter();
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
     const isMobile = useIsMobile();
 
-    // Scroll to top on page load
+    // Reset state + scroll to top when navigating to a new venue (handles back/forward)
     useEffect(() => {
+        setActiveFaq(null);
         window.scrollTo(0, 0);
-    }, []);
+        router.refresh();
+    }, [venue?.id, router]);
 
     useEffect(() => {
         if (venue?.name) {

@@ -6,9 +6,9 @@ import { redirect } from 'next/navigation';
 async function getMobileHomeData() {
     try {
         const [eventsRes, diningsRes, playsRes] = await Promise.all([
-            fetch(`${SERVER_BACKEND_API_BASE}/events`, { next: { revalidate: 10 } }),
-            fetch(`${SERVER_BACKEND_API_BASE}/dining`, { next: { revalidate: 10 } }),
-            fetch(`${SERVER_BACKEND_API_BASE}/play`, { next: { revalidate: 10 } }),
+            fetch(`${SERVER_BACKEND_API_BASE}/events`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(5000) }),
+            fetch(`${SERVER_BACKEND_API_BASE}/dining`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(5000) }),
+            fetch(`${SERVER_BACKEND_API_BASE}/play`, { next: { revalidate: 10 }, signal: AbortSignal.timeout(5000) }),
         ]);
 
         const [eventsJson, diningsJson, playsJson] = await Promise.all([
@@ -17,8 +17,11 @@ async function getMobileHomeData() {
             playsRes.ok ? playsRes.json() : { data: [] },
         ]);
 
+        const rawEvents = Array.isArray(eventsJson?.data) ? eventsJson.data : (Array.isArray(eventsJson) ? eventsJson : []);
+        const approvedEvents = rawEvents.filter((e: any) => !e.status || e.status.toLowerCase() === 'approved');
+
         return {
-            events: Array.isArray(eventsJson?.data) ? eventsJson.data : (Array.isArray(eventsJson) ? eventsJson : []),
+            events: approvedEvents,
             dinings: Array.isArray(diningsJson?.data) ? diningsJson.data : (Array.isArray(diningsJson) ? diningsJson : []),
             plays: Array.isArray(playsJson?.data) ? playsJson.data : (Array.isArray(playsJson) ? playsJson : []),
         };

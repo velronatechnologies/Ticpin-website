@@ -70,13 +70,13 @@ export default function TiclistsPage() {
                 ]);
 
                 const events = (eventsRes.data || []).filter((item: any) => 
-                    (likedIds.events || likedIds.likedEventIds || []).includes(item.id)
+                    (!item.status || item.status === 'approved') && (likedIds.events || likedIds.likedEventIds || []).includes(item.id)
                 );
                 const play = (playsRes.data || []).filter((item: any) => 
-                    (likedIds.play || []).includes(item.id)
+                    (!item.status || item.status === 'approved') && (likedIds.play || []).includes(item.id)
                 );
                 const dining = (diningsRes.data || []).filter((item: any) => 
-                    (likedIds.dining || []).includes(item.id)
+                    (!item.status || item.status === 'approved') && (likedIds.dining || []).includes(item.id)
                 );
 
                 setLikedData({ events, dining, play });

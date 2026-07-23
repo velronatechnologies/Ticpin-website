@@ -41,11 +41,12 @@ export const profileApi = {
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include'
             });
-            if (!res.ok) return null;
+            if (res.status === 404) return null;
+            if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`);
             return await res.json();
         } catch (err) {
             console.error('Failed to fetch profile:', err);
-            return null;
+            throw err;
         }
     },
 
