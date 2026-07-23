@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
 export interface EventArtist {
@@ -35,12 +36,12 @@ function parseEventList(payload: unknown): EventListItem[] {
     return [];
 }
 
-export async function fetchEvents(query = ''): Promise<EventListItem[]> {
+export const fetchEvents = cache(async (query = ''): Promise<EventListItem[]> => {
     try {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(15000)
+            next: { revalidate: 10 },
+            signal: AbortSignal.timeout(10000)
         });
 
         if (!response.ok) {
@@ -53,7 +54,7 @@ export async function fetchEvents(query = ''): Promise<EventListItem[]> {
         console.error("Failed to fetch events from backend:", err);
         return [];
     }
-}
+});
 
 export async function fetchApprovedEventsByCategory(category: string): Promise<EventListItem[]> {
     const events = await fetchEvents(`category=${encodeURIComponent(category)}`);

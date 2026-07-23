@@ -50,12 +50,14 @@ function parsePlayList(payload: unknown): PlayVenue[] {
     return [];
 }
 
-export async function fetchPlayVenues(query = ''): Promise<PlayVenue[]> {
+import { cache } from 'react';
+
+export const fetchPlayVenues = cache(async (query = ''): Promise<PlayVenue[]> => {
     try {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/play${suffix}`, {
             next: { revalidate: 10 },
-            signal: AbortSignal.timeout(15000)
+            signal: AbortSignal.timeout(10000)
         });
 
         if (!response.ok) {
@@ -66,18 +68,18 @@ export async function fetchPlayVenues(query = ''): Promise<PlayVenue[]> {
     } catch {
         return [];
     }
-}
+});
 
 export async function fetchApprovedPlayVenues(query = ''): Promise<PlayVenue[]> {
     const venues = await fetchPlayVenues(query);
     return venues.filter((venue) => venue.status === 'approved');
 }
 
-export async function fetchPlayVenue(name: string): Promise<PlayVenue | null> {
+export const fetchPlayVenue = cache(async (name: string): Promise<PlayVenue | null> => {
     try {
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/play/${encodeURIComponent(name)}`, {
             next: { revalidate: 10 },
-            signal: AbortSignal.timeout(15000)
+            signal: AbortSignal.timeout(10000)
         });
 
         if (!response.ok) {

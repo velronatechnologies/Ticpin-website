@@ -513,7 +513,7 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                                                     lineHeight: bookingStatus.notOpenedYet ? "1.2" : "2.5"
                                                 }}
                                                 className={`tracking-normal uppercase text-center ${
-                                                    bookingStatus.notOpenedYet ? 'text-[12px] font-semibold' : 'text-[25px]'
+                                                    bookingStatus.notOpenedYet ? 'text-[16px] font-semibold' : 'text-[25px]'
                                                 }`}
                                             >
                                                 {bookingStatus.text}

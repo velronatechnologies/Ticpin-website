@@ -73,17 +73,18 @@ export default function EventsClient({ initialEvents, isMobileServer }: { initia
         }
     }, [categoryFromUrl, setActiveFilter]);
 
-    // Memoized artists extraction
+    // Memoized artists extraction - use first event's artist list in the order returned by backend
     const allArtists = useMemo(() => {
-        const artistsMap = new Map<string, { name: string; image: string }>();
-        events.forEach(ev => {
-            (ev.artists ?? []).forEach(a => {
-                if (a.name && !artistsMap.has(a.name)) {
-                    artistsMap.set(a.name, { name: a.name, image: a.image_url ?? '' });
-                }
-            });
-        });
-        return Array.from(artistsMap.values());
+        for (const ev of events) {
+            const list = ev.artists ?? [];
+            if (list.length > 0) {
+                return list
+                    .filter(a => !!a.name)
+                    .map(a => ({ name: a.name, image: a.image_url ?? '' }))
+                    .slice(0, 10);
+            }
+        }
+        return [];
     }, [events]);
 
     // Memoized category filters

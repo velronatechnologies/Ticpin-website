@@ -56,12 +56,14 @@ interface EventData {
     event_instructions?: string;
 }
 
-async function getEventData(name: string): Promise<EventData | null> {
+import { cache } from 'react';
+
+const getEventData = cache(async (name: string): Promise<EventData | null> => {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
-            cache: 'no-store',
+            next: { revalidate: 10 },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -73,7 +75,7 @@ async function getEventData(name: string): Promise<EventData | null> {
         console.error("Failed to fetch event data:", error);
         return null;
     }
-}
+});
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
     const { name } = await params;
@@ -90,12 +92,12 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
     };
 }
 
-async function getMobileEventData(id: string) {
+const getMobileEventData = cache(async (id: string) => {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, {
-            cache: 'no-store',
+            next: { revalidate: 10 },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -105,7 +107,7 @@ async function getMobileEventData(id: string) {
         console.error("Failed to fetch mobile event data:", error);
         return null;
     }
-}
+});
 
 export default async function EventDetailPage({ params }: { params: Promise<{ name: string }> }) {
     const { name } = await params;

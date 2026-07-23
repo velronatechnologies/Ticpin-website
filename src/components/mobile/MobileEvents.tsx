@@ -220,15 +220,19 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
     // Extract dynamic artists from current events list
     const dynamicArtists = useMemo(() => {
-        const artistsMap = new Map<string, { name: string; image: string }>();
-        events.forEach(ev => {
-            (ev.artists ?? []).forEach(a => {
-                if (a.name && !artistsMap.has(a.name)) {
-                    artistsMap.set(a.name, { name: a.name, image: a.image_url ?? '/profile icon.svg' });
-                }
-            });
-        });
-        return Array.from(artistsMap.values()).slice(0, 10);
+        // Find the first event that has artists, and use its artist list in order.
+        // Deduplicating across all events caused wrong ordering when multiple events
+        // share artist names (earlier events would "consume" slots, skipping artists in later events).
+        for (const ev of events) {
+            const list = ev.artists ?? [];
+            if (list.length > 0) {
+                return list
+                    .filter(a => !!a.name)
+                    .map(a => ({ name: a.name, image: a.image_url ?? '/profile icon.svg' }))
+                    .slice(0, 10);
+            }
+        }
+        return [];
     }, [events]);
 
     const categories = [
