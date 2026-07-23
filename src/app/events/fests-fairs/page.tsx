@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import EventCategoryClient from '../EventCategoryClient';
 import { fetchApprovedEventsByCategory } from '../server-events';
 

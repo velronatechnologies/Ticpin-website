@@ -36,17 +36,23 @@ function parseEventList(payload: unknown): EventListItem[] {
 }
 
 export async function fetchEvents(query = ''): Promise<EventListItem[]> {
-    const suffix = query ? `?${query}` : '';
-    const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
-        cache: 'no-store'
-    });
+    try {
+        const suffix = query ? `?${query}` : '';
+        const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(5000)
+        });
 
-    if (!response.ok) {
+        if (!response.ok) {
+            return [];
+        }
+
+        const list = parseEventList(await response.json());
+        return list.filter((event) => !event.status || event.status.toLowerCase() === 'approved');
+    } catch (err) {
+        console.error("Failed to fetch events from backend:", err);
         return [];
     }
-
-    const list = parseEventList(await response.json());
-    return list.filter((event) => !event.status || event.status.toLowerCase() === 'approved');
 }
 
 export async function fetchApprovedEventsByCategory(category: string): Promise<EventListItem[]> {

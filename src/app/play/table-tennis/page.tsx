@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import CategoryClient from '../CategoryClient';
 import { fetchApprovedPlayVenues } from '../server-play';
 
