@@ -123,3 +123,46 @@ export function slugify(text: string): string {
     .replace(/^-+/, '')             // Trim - from start
     .replace(/-+$/, '');            // Trim - from end
 }
+
+export function formatTime12hr(timeStr?: string): string {
+  if (!timeStr) return '';
+  const s = timeStr.trim();
+  if (!s) return '';
+
+  // Already 12-hr format: "6:00 PM", "06:00 PM", "6:00PM"
+  if (/^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(s)) {
+    return s.toUpperCase();
+  }
+
+  // 12-hr format without minutes: "6 PM", "6PM"
+  const match12NoMin = s.match(/^(\d{1,2})\s*(AM|PM)$/i);
+  if (match12NoMin) {
+    const h = parseInt(match12NoMin[1], 10);
+    const period = match12NoMin[2].toUpperCase();
+    return `${h}:00 ${period}`;
+  }
+
+  // 24-hr format with minutes or seconds: "18:00", "18:00:00", "09:30"
+  const match24 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (match24) {
+    let h = parseInt(match24[1], 10);
+    const m = match24[2];
+    if (isNaN(h)) return s;
+    const period = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${period}`;
+  }
+
+  // 24-hr hour only: "18", "9"
+  const matchHourOnly = s.match(/^(\d{1,2})$/);
+  if (matchHourOnly) {
+    let h = parseInt(matchHourOnly[1], 10);
+    if (isNaN(h) || h < 0 || h > 23) return s;
+    const period = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:00 ${period}`;
+  }
+
+  return s;
+}
+

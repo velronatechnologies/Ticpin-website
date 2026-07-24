@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, Percent, Tag, ChevronRight, Clock, User, ChevronDown, TriangleAlert, Edit2, Info, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { formatPrice, formatEventDateUTCWithDay } from '@/lib/utils';
+import { formatPrice, formatEventDateUTCWithDay, formatTime12hr } from '@/lib/utils';
 import { useIdentityStore } from '@/store/useIdentityStore';
 
 interface CartData {
@@ -261,7 +261,7 @@ export default function MobileReviewBooking({
                             {displayDate || 'Date'}
                         </span>
                         {(cart.timeSlot || eventData?.time) && (
-                            <span className="text-[15px] font-medium text-black">{cart.timeSlot || eventData?.time}</span>
+                            <span className="text-[15px] font-medium text-black">{formatTime12hr(cart.timeSlot || eventData?.time)}</span>
                         )}
                     </div>
 
