@@ -72,7 +72,8 @@ export function formatPrice(price: number): string {
 export function formatEventDateUTC(iso?: string): string {
   if (!iso) return "";
   try {
-    const d = new Date(iso);
+    const cleanIso = iso.includes(' ') && !iso.includes('T') ? iso.replace(' ', 'T') : iso;
+    const d = new Date(cleanIso);
     if (isNaN(d.getTime())) return iso;
     const day = d.getUTCDate();
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -87,7 +88,8 @@ export function formatEventDateUTC(iso?: string): string {
 export function formatEventDateUTCWithDay(iso?: string, short = false): string {
   if (!iso) return "";
   try {
-    const d = new Date(iso);
+    const cleanIso = iso.includes(' ') && !iso.includes('T') ? iso.replace(' ', 'T') : iso;
+    const d = new Date(cleanIso);
     if (isNaN(d.getTime())) return iso;
     const day = d.getUTCDate();
     const year = d.getUTCFullYear();

@@ -11,7 +11,7 @@ export default function InteractiveVenueMap({
     getZoneStyle,
     zoneStyles
 }: {
-    layoutJson: string;
+    layoutJson: string | any; 
     selectedSectionName: string | null;
     onSelectSection: (name: string) => void;
     getZonePrice: (name: string) => string;
@@ -20,8 +20,10 @@ export default function InteractiveVenueMap({
     zoneStyles?: any;
 }) {
     const layout = useMemo(() => {
+        if (!layoutJson) return null;
+        if (typeof layoutJson === 'object') return layoutJson;
         try {
-            return JSON.parse(layoutJson);
+            return typeof layoutJson === 'string' ? JSON.parse(layoutJson) : layoutJson;
         } catch {
             return null;
         }
@@ -59,7 +61,7 @@ export default function InteractiveVenueMap({
             <div className="w-full flex justify-center">
                 <svg 
                     viewBox={`${minX} ${minY} ${width} ${height}`} 
-                    className="w-auto h-full max-h-[calc(100vh-270px)] md:max-h-[calc(100vh-230px)] max-w-full bg-white select-none block"
+                    className="w-full h-auto max-h-[calc(100vh-270px)] md:max-h-[calc(100vh-230px)] max-w-full bg-white select-none block"
                     preserveAspectRatio="xMidYMid meet"
                 >
                     {layout.elements.map((el: any, i: number) => {

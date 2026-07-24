@@ -77,6 +77,7 @@ interface MobileEventDetailsProps {
         is_sales_paused?: boolean;
         is_canceled?: boolean;
         card_video_url?: string;
+        status?: string;
     };
     offers: OfferRecord[];
 }
