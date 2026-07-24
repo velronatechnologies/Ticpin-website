@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, Percent, Tag, ChevronRight, Clock, User, ChevronDown, TriangleAlert, Edit2, Info, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatEventDateUTCWithDay } from '@/lib/utils';
 import { useIdentityStore } from '@/store/useIdentityStore';
 
 interface CartData {
@@ -16,6 +16,8 @@ interface CartData {
     type?: 'event';
     date?: string;
     timeSlot?: string;
+    portrait_image_url?: string;
+    landscape_image_url?: string;
 }
 
 interface MobileReviewBookingProps {
@@ -32,6 +34,8 @@ interface MobileReviewBookingProps {
         venue_address?: string;
         venue_name?: string;
         city?: string;
+        date?: string;
+        time?: string;
     } | null;
     offers: any[];
     expandedSection: 'none' | 'offers' | 'coupons';
@@ -170,11 +174,18 @@ export default function MobileReviewBooking({
         }
     }, [userSession, identity.rememberedBilling, setBilling, setEmail]);
 
-    const fmtDate = (iso: string) => {
-        if (!iso) return '';
-        const d = new Date(iso + 'T00:00:00');
-        return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-    };
+    const displayDate = (() => {
+        const rawDate = cart?.date || eventData?.date;
+        if (!rawDate) return '';
+        return formatEventDateUTCWithDay(rawDate, true);
+    })();
+
+    const displayImageUrl =
+        eventData?.portrait_image_url ||
+        cart?.portrait_image_url ||
+        eventData?.landscape_image_url ||
+        cart?.landscape_image_url ||
+        '';
 
     const venueFirstSegment = eventData?.venue_address
         ? eventData.venue_address.split(',')[0].trim()
@@ -220,9 +231,9 @@ export default function MobileReviewBooking({
                 <div className="px-4 mt-6 flex gap-4">
                     {/* Event Image */}
                     <div className="w-[87px] h-[98px] bg-[#110D2C] rounded-[10px] overflow-hidden shrink-0 relative">
-                        {eventData?.landscape_image_url || eventData?.portrait_image_url ? (
+                        {displayImageUrl ? (
                             <Image
-                                src={eventData.landscape_image_url || eventData.portrait_image_url || ''}
+                                src={displayImageUrl}
                                 alt={cart.eventName}
                                 fill
                                 className="object-cover"
@@ -247,10 +258,10 @@ export default function MobileReviewBooking({
                 <div className="mx-4 mt-6 border border-[#D9D9D9] rounded-[9px] p-4 bg-white">
                     <div className="flex items-center gap-2 mb-4">
                         <span className="text-[15px] font-medium text-black">
-                            {cart.date ? fmtDate(cart.date) : 'Date'}
+                            {displayDate || 'Date'}
                         </span>
-                        {cart.timeSlot && (
-                            <span className="text-[15px] font-medium text-black">{cart.timeSlot}</span>
+                        {(cart.timeSlot || eventData?.time) && (
+                            <span className="text-[15px] font-medium text-black">{cart.timeSlot || eventData?.time}</span>
                         )}
                     </div>
 
