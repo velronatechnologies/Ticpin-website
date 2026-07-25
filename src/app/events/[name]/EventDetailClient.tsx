@@ -22,6 +22,7 @@ const MobileEventDetails = dynamic(
 );
 import { useCurrentTime } from '@/hooks/use-current-time';
 import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
+import { trackMetaEvent } from '@/lib/metaPixel';
 
 interface TicketCategory {
     name: string;
@@ -157,6 +158,9 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
     }, [facilities]);
 
     useEffect(() => {
+        if (event?.name) {
+            trackMetaEvent("ViewContent", { content_name: event.name, content_category: "Event" });
+        }
         const fetchAvailability = async () => {
             setAvailabilityLoaded(false);
             setBookedMap({});

@@ -348,7 +348,7 @@ export default function BookingDetailsPage() {
       : `₹${formatPrice(Number(bookingTotal || 0))}`;
   const orderAmountValue = Number(booking.order_amount || 0);
   const bookingFeeValue = Number(booking.booking_fee || 0);
-  const basePlatformFee = bookingFeeValue > 0 ? bookingFeeValue / 1.18 : 0;
+  const basePlatformFee = bookingFeeValue > 0 ? Math.round((bookingFeeValue / 1.18) * 100) / 100 : 0;
   const gstOnFee = bookingFeeValue - basePlatformFee;
   const donationValue = Number(booking.donation_amount || 0);
   const discountValue = Number(booking.discount_amount || 0);

@@ -409,19 +409,23 @@ export default function MobileReviewBooking({
                                 </div>
                                 <span className="text-[12px] font-normal text-black">₹{formatPrice(bookingFee)}</span>
                             </div>
-                            {showGstDetails && (
-                                <div className="pl-4 pr-1 mt-2 mb-1 space-y-2 animate-in slide-in-from-top-2 duration-300 overflow-hidden">
-                                    <div className="flex justify-between text-[11px] text-[#686868] font-medium">
-                                        <span>Base Platform Fee</span>
-                                        <span>₹{formatPrice(bookingFee / 1.18)}</span>
+                            {showGstDetails && (() => {
+                                const basePlatformFee = Math.round((bookingFee / 1.18) * 100) / 100;
+                                const integratedGst = bookingFee - basePlatformFee;
+                                return (
+                                    <div className="pl-4 pr-1 mt-2 mb-1 space-y-2 animate-in slide-in-from-top-2 duration-300 overflow-hidden">
+                                        <div className="flex justify-between text-[11px] text-[#686868] font-medium">
+                                            <span>Base Platform Fee</span>
+                                            <span>₹{formatPrice(basePlatformFee)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px] text-[#686868] font-medium">
+                                            <span>Integrated GST (18%)</span>
+                                            <span>₹{formatPrice(integratedGst)}</span>
+                                        </div>
+                                        <div className="h-[0.5px] bg-[#EBEBEB] w-full" />
                                     </div>
-                                    <div className="flex justify-between text-[11px] text-[#686868] font-medium">
-                                        <span>Integrated GST (18%)</span>
-                                        <span>₹{formatPrice(bookingFee - (bookingFee / 1.18))}</span>
-                                    </div>
-                                    <div className="h-[0.5px] bg-[#EBEBEB] w-full" />
-                                </div>
-                            )}
+                                );
+                            })()}
                         </div>
 
                         {totalDiscount > 0 && (

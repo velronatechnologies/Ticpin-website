@@ -59,6 +59,7 @@ import MobileReviewBooking from "@/components/mobile/MobileReviewBooking";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentTime } from "@/hooks/use-current-time";
 import { isEventBookingClosed } from "@/lib/event-booking";
+import { trackMetaEvent } from "@/lib/metaPixel";
 
 interface CartData {
   eventId: string;
@@ -573,6 +574,11 @@ export default function ReviewBookingPage() {
       // Default to 'event' if not specified
       const cartData = { ...data, type: data.type || "event" };
       setCart(cartData);
+      trackMetaEvent("InitiateCheckout", {
+        content_name: cartData.eventName,
+        value: cartData.totalPrice,
+        currency: "INR",
+      });
 
       // Set eventData when cart is loaded for events
       if (cartData.type === "event" && cartData.eventId) {
@@ -1259,6 +1265,11 @@ export default function ReviewBookingPage() {
       sessionStorage.removeItem("ticpin_pending_payment");
       setShowInProgressLoader(false);
       setStep("success");
+      trackMetaEvent("Purchase", {
+        content_name: cartData.eventName,
+        value: gTotal,
+        currency: "INR",
+      });
     } catch (err: unknown) {
       setShowInProgressLoader(false);
       const message =

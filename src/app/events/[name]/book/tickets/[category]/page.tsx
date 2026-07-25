@@ -41,6 +41,7 @@ import {
 } from "@/lib/bookingFlow";
 import { useCurrentTime } from "@/hooks/use-current-time";
 import { isEventBookingClosed } from "@/lib/event-booking";
+import { trackMetaEvent } from "@/lib/metaPixel";
 
 
 interface TicketCategory {
@@ -543,6 +544,7 @@ export default function TicketSelectionPage() {
     if (current >= avail) return;
 
     setCounts((c) => ({ ...c, [i]: current + 1 }));
+    trackMetaEvent("AddToCart", { content_name: cat.name, value: cat.price ?? 0, currency: "INR" });
     if (!isAllRoute && selectedCategoryIndex === null) {
       setSelectedCategoryIndex(i);
     }
@@ -654,6 +656,12 @@ export default function TicketSelectionPage() {
       type: "event" as const,
     };
     sessionStorage.setItem("ticpin_cart", JSON.stringify(cart));
+    trackMetaEvent("InitiateCheckout", {
+      content_name: event?.name,
+      value: totalPrice,
+      currency: "INR",
+      num_items: totalTickets,
+    });
 
     // Start reservation creation in the background
     const reservationPromise = bookingApi

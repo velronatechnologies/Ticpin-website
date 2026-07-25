@@ -9,6 +9,7 @@ import { bookingApi } from '@/lib/api/booking';
 import AuthModal from '@/components/modals/AuthModal';
 import { toast } from '@/components/ui/Toast';
 import { TicketSkeleton } from '@/components/ui/Skeleton';
+import { trackMetaEvent } from '@/lib/metaPixel';
 
 interface TicketCategory {
     name: string;
@@ -208,6 +209,12 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
 
         if (isReserving) return;
         setIsReserving(true);
+        trackMetaEvent('InitiateCheckout', {
+            content_name: eventDetails?.name,
+            value: totalPrice,
+            currency: 'INR',
+            num_items: totalTickets,
+        });
 
         const ticketReqs = categories
             .map((cat, i) => ({
