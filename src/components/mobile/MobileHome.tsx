@@ -19,6 +19,7 @@ interface Artist {
     name: string;
     image_url?: string;
     description?: string;
+    order_number?: number;
 }
 
 interface Event {
@@ -33,6 +34,7 @@ interface Event {
     landscape_image_url?: string;
     price_starts_from?: number;
     artists?: Artist[];
+    status?: string;
 }
 
 interface Dining {
@@ -314,20 +316,33 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
     const uniqueArtists = (() => {
         const all = approvedEvents.flatMap(e => e.artists || []).filter(a => a.name);
         const seen = new Set<string>();
-        return all.filter(a => {
-            const k = a.name.toLowerCase();
-            if (seen.has(k)) return false;
-            seen.add(k);
-            return true;
-        });
+        const unique: Artist[] = [];
+        for (const a of all) {
+            const k = a.name.trim().toLowerCase();
+            if (!seen.has(k)) {
+                seen.add(k);
+                unique.push(a);
+            }
+        }
+        unique.sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
+        return unique;
     })();
 
     useEffect(() => {
         setWindowWidth(window.innerWidth);
-        const handleResize = () => setWindowWidth(window.innerWidth);
+        const handleResize = () => {
+            const w = window.innerWidth;
+            setWindowWidth(w);
+            if (w >= 768) {
+                router.replace('/events');
+            }
+        };
+        if (window.innerWidth >= 768) {
+            router.replace('/events');
+        }
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [router]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -423,7 +438,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
 
     return (
         <div
-            className="md:hidden min-h-screen w-full overflow-x-hidden font-[family-name:var(--font-anek-latin)] selection:bg-[#866BFF]/20"
+            className="min-h-screen w-full overflow-x-hidden font-[family-name:var(--font-anek-latin)] selection:bg-[#866BFF]/20"
             style={{ background: 'white', fontFamily: 'var(--font-anek-latin), sans-serif' }}
         >
             {/* 1. Header Section */}

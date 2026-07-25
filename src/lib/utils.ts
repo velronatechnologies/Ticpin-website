@@ -53,10 +53,19 @@ export function getMinPrice(
     }
   }
 
+  if (bookedMap && prices.length > 0) {
+    return Math.min(...prices);
+  }
+
+  // When bookedMap is not passed, respect backend's dynamically computed price_starts_from (which excludes sold out categories)
+  if (event.price_starts_from !== undefined && event.price_starts_from > 0) {
+    return event.price_starts_from;
+  }
+
   if (prices.length > 0) {
     return Math.min(...prices);
   }
-  return event.price_starts_from || 0;
+  return 0;
 }
 
 export function formatPrice(price: number): string {

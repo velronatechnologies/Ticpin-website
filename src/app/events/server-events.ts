@@ -4,6 +4,8 @@ import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 export interface EventArtist {
     name: string;
     image_url?: string;
+    description?: string;
+    order_number?: number;
 }
 
 export interface EventListItem {
@@ -40,7 +42,7 @@ export const fetchEvents = cache(async (query = ''): Promise<EventListItem[]> =>
     try {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
-            next: { revalidate: 10 },
+            cache: 'no-store',
             signal: AbortSignal.timeout(10000)
         });
 

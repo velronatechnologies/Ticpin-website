@@ -4,6 +4,7 @@ interface Artist {
     name: string;
     image_url: string;
     description: string;
+    order_number?: number;
 }
 
 interface TicketCategory {

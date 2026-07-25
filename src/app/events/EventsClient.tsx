@@ -16,6 +16,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface EventArtist {
     name: string;
     image_url?: string;
+    description?: string;
+    order_number?: number;
 }
 
 interface RealEvent {
@@ -73,18 +75,24 @@ export default function EventsClient({ initialEvents, isMobileServer }: { initia
         }
     }, [categoryFromUrl, setActiveFilter]);
 
-    // Memoized artists extraction - use first event's artist list in the order returned by backend
+    // Memoized artists extraction - collect all unique artists across events sorted by order_number
     const allArtists = useMemo(() => {
-        for (const ev of events) {
-            const list = ev.artists ?? [];
-            if (list.length > 0) {
-                return list
-                    .filter(a => !!a.name)
-                    .map(a => ({ name: a.name, image: a.image_url ?? '' }))
-                    .slice(0, 10);
+        const all = events.flatMap(e => e.artists || []).filter(a => !!a.name);
+        const seen = new Set<string>();
+        const unique: { name: string; image: string; order_number: number }[] = [];
+        for (const a of all) {
+            const key = a.name.trim().toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push({
+                    name: a.name.trim(),
+                    image: a.image_url || '',
+                    order_number: a.order_number ?? 0
+                });
             }
         }
-        return [];
+        unique.sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
+        return unique;
     }, [events]);
 
     // Memoized category filters

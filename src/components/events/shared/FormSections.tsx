@@ -8,6 +8,7 @@ interface Artist {
     name: string;
     image_url: string;
     description: string;
+    order_number?: number;
 }
 
 interface TicketCategory {
@@ -51,16 +52,31 @@ export const ArtistSection = ({
                     <span className="text-[22px] font-semibold text-black">Artist {idx + 1}</span>
                     <button onClick={() => onChange(artists.filter((_, i) => i !== idx))} className="text-red-500 text-[18px] font-medium hover:underline">Remove</button>
                 </div>
-                <div>
-                    <label className="text-[18px] font-medium text-[#686868]">Artist Name *</label>
-                    <div className="border border-[#686868] rounded-[10px] h-[56px] flex items-center px-6 mt-2 bg-white">
-                        <input
-                            type="text"
-                            placeholder="Enter artist name"
-                            value={artist.name}
-                            onChange={e => onChange(artists.map((a, i) => i === idx ? { ...a, name: e.target.value } : a))}
-                            className="w-full bg-transparent outline-none text-[20px] text-black"
-                        />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                        <label className="text-[18px] font-medium text-[#686868]">Artist Name *</label>
+                        <div className="border border-[#686868] rounded-[10px] h-[56px] flex items-center px-6 mt-2 bg-white">
+                            <input
+                                type="text"
+                                placeholder="Enter artist name"
+                                value={artist.name}
+                                onChange={e => onChange(artists.map((a, i) => i === idx ? { ...a, name: e.target.value } : a))}
+                                className="w-full bg-transparent outline-none text-[20px] text-black"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-[18px] font-medium text-[#686868]">Order Number</label>
+                        <div className="border border-[#686868] rounded-[10px] h-[56px] flex items-center px-6 mt-2 bg-white">
+                            <input
+                                type="number"
+                                min="1"
+                                placeholder="1"
+                                value={artist.order_number ?? (idx + 1)}
+                                onChange={e => onChange(artists.map((a, i) => i === idx ? { ...a, order_number: parseInt(e.target.value, 10) || 0 } : a))}
+                                className="w-full bg-transparent outline-none text-[20px] text-black"
+                            />
+                        </div>
                     </div>
                 </div>
                 <div>

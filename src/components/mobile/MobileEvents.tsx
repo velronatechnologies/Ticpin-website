@@ -19,6 +19,8 @@ const FilterModal = dynamic(() => import('@/components/modals/FilterModal'), { s
 interface EventArtist {
     name: string;
     image_url?: string;
+    description?: string;
+    order_number?: number;
 }
 
 interface RealEvent {
@@ -218,21 +220,24 @@ export default function MobileEvents({ events }: MobileEventsProps) {
         return () => clearInterval(interval);
     }, []);
 
-    // Extract dynamic artists from current events list
+    // Extract dynamic artists from current events list sorted by order_number
     const dynamicArtists = useMemo(() => {
-        // Find the first event that has artists, and use its artist list in order.
-        // Deduplicating across all events caused wrong ordering when multiple events
-        // share artist names (earlier events would "consume" slots, skipping artists in later events).
-        for (const ev of events) {
-            const list = ev.artists ?? [];
-            if (list.length > 0) {
-                return list
-                    .filter(a => !!a.name)
-                    .map(a => ({ name: a.name, image: a.image_url ?? '/profile icon.svg' }))
-                    .slice(0, 10);
+        const all = events.flatMap(e => e.artists || []).filter(a => !!a.name);
+        const seen = new Set<string>();
+        const unique: { name: string; image: string; order_number: number }[] = [];
+        for (const a of all) {
+            const k = a.name.trim().toLowerCase();
+            if (!seen.has(k)) {
+                seen.add(k);
+                unique.push({
+                    name: a.name.trim(),
+                    image: a.image_url || '/profile icon.svg',
+                    order_number: a.order_number ?? 0
+                });
             }
         }
-        return [];
+        unique.sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
+        return unique;
     }, [events]);
 
     const categories = [
