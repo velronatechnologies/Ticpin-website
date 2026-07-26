@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { toast } from '@/components/ui/Toast';
 import { slugify } from '@/lib/utils';
+import EventCardMedia from './EventCardMedia';
 
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
@@ -32,6 +33,7 @@ interface RealEvent {
     price_starts_from?: number;
     portrait_image_url?: string;
     landscape_image_url?: string;
+    card_video_url?: string;
     category?: string;
     venue_type?: string;
     artists?: EventArtist[];
@@ -544,10 +546,18 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                             onClick={() => router.push(`/events/${slugify(event.name)}`)}
                         >
                             <div className="aspect-[175/200] relative bg-[#E4E4E4] overflow-hidden">
-                                <img
-                                    src={event.portrait_image_url || event.landscape_image_url || "/login/banner.jpeg"}
-                                    alt={event.name}
-                                    className="w-full h-full object-cover"
+                                <EventCardMedia
+                                    card_video_url={event.card_video_url}
+                                    portrait_image_url={event.portrait_image_url}
+                                    landscape_image_url={event.landscape_image_url}
+                                    name={event.name}
+                                    fallbackContent={
+                                        <img
+                                            src="/login/banner.jpeg"
+                                            alt={event.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    }
                                 />
                                 <button
                                     onClick={(e) => handleLikeToggle(e, event)}

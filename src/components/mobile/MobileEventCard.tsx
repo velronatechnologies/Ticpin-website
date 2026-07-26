@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { slugify } from '@/lib/utils';
+import EventCardMedia from './EventCardMedia';
 
 interface EventCardProps {
     id: string;
@@ -14,6 +15,7 @@ interface EventCardProps {
     venue_name?: string;
     city?: string;
     portrait_image_url?: string;
+    card_video_url?: string;
     price_starts_from?: number;
     scale?: number;
     opacity?: number;
@@ -34,7 +36,7 @@ function formatTime(raw?: string): string {
 
 export default function MobileEventCard({
     id, name, date, time, location, venue_name, city,
-    portrait_image_url, price_starts_from, onUnlike
+    portrait_image_url, card_video_url, price_starts_from, onUnlike
 }: EventCardProps) {
     const router = useRouter();
     const session = useUserSession();
@@ -115,32 +117,35 @@ export default function MobileEventCard({
         >
             {/* Poster */}
             <div className="w-full aspect-[280/390] relative overflow-hidden bg-[#110D2C]">
-                {portrait_image_url ? (
-                    <img src={portrait_image_url} alt={name} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
-                        <div className="absolute inset-0 opacity-40">
-                            <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
-                        </div>
-                        <div className="relative z-10 flex flex-col items-center text-center">
-                            <h1 className="text-[24px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase"
-                                style={{
-                                    fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
-                                    transform: 'skewX(-16deg) scaleY(1.3)',
-                                    textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
-                                }}>
-                                THE TICPIN<br />PLAY<br />FESTIVAL
-                            </h1>
-                            <div className="flex items-center gap-2.5 w-full max-w-[120px] my-3 relative">
-                                <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
-                                <div className="w-[6px] h-[6px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
-                                <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                <EventCardMedia
+                    card_video_url={card_video_url}
+                    portrait_image_url={portrait_image_url}
+                    name={name}
+                    fallbackContent={
+                        <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
+                            <div className="absolute inset-0 opacity-40">
+                                <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
                             </div>
-                            <p className="text-[12px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>GET UP TO</p>
-                            <p className="text-[20px] font-bold text-white leading-[0.85] mt-1" style={{ fontFamily: 'serif' }}>50% off*</p>
+                            <div className="relative z-10 flex flex-col items-center text-center">
+                                <h1 className="text-[24px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase"
+                                    style={{
+                                        fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
+                                        transform: 'skewX(-16deg) scaleY(1.3)',
+                                        textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
+                                    }}>
+                                    THE TICPIN<br />PLAY<br />FESTIVAL
+                                </h1>
+                                <div className="flex items-center gap-2.5 w-full max-w-[120px] my-3 relative">
+                                    <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
+                                    <div className="w-[6px] h-[6px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
+                                    <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                </div>
+                                <p className="text-[12px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>GET UP TO</p>
+                                <p className="text-[20px] font-bold text-white leading-[0.85] mt-1" style={{ fontFamily: 'serif' }}>50% off*</p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    }
+                />
             </div>
 
             {/* Bottom Details */}

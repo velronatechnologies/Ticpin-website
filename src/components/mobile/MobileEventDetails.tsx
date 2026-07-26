@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, X, Check, Ticket, Car, Droplets, Utensils, Activity, Wifi } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Calendar, X, Check, Ticket, Car, Droplets, Utensils, Activity, Wifi, Volume2, VolumeX } from 'lucide-react';
 import { useRouter, notFound } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -9,6 +9,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import { toast } from '@/components/ui/Toast';
 import { bookingApi } from '@/lib/api/booking';
 import { getMinPrice, formatEventDateUTC, formatEventDateUTCWithDay, slugify } from '@/lib/utils';
+import AuthModal from '@/components/modals/AuthModal';
 
 interface OfferRecord {
     id: string;
@@ -120,6 +121,18 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     }
     const router = useRouter();
     const session = useUserSession();
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
+
+    const handleBack = () => {
+        if (typeof window !== 'undefined' && document.referrer && document.referrer.includes('/login')) {
+            router.push('/events');
+        } else if (typeof window !== 'undefined' && window.history.length <= 2) {
+            router.push('/events');
+        } else {
+            router.back();
+        }
+    };
 
     const bookingStatus = useMemo(() => {
         if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
@@ -569,7 +582,7 @@ Rules:
     const handleLikeToggle = async () => {
         if (!session?.id) {
             localStorage.setItem('pending_like_event_id', String(event.id));
-            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            setIsAuthModalOpen(true);
             return;
         }
 
@@ -632,10 +645,7 @@ Rules:
             return;
         }
         if (!session) {
-            const redirectPath = event.is_layout_based
-                ? `/events/${slugify(event.name)}/book`
-                : `/events/${slugify(event.name)}/book/tickets/all`;
-            router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+            setIsAuthModalOpen(true);
             return;
         }
         if (event.is_layout_based) {
@@ -801,22 +811,22 @@ Rules:
                             onScroll={handleCarouselScroll}
                             className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
                         >
-                            {/* Slide 1: Image */}
-                            <div className="w-full h-full flex-shrink-0 snap-center relative">
-                                <img
-                                    src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
-                                    alt={event.name}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            {/* Slide 2: Video */}
+                            {/* Slide 1: Video */}
                             <div className="w-full h-full flex-shrink-0 snap-center relative">
                                 <video
                                     src={event.card_video_url.startsWith('.') ? event.card_video_url.substring(1) : event.card_video_url}
                                     loop
-                                    muted
+                                    muted={isMuted}
                                     autoPlay
                                     playsInline
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            {/* Slide 2: Image */}
+                            <div className="w-full h-full flex-shrink-0 snap-center relative">
+                                <img
+                                    src={(event.portrait_image_url || event.landscape_image_url!).startsWith('.') ? (event.portrait_image_url || event.landscape_image_url!).substring(1) : (event.portrait_image_url || event.landscape_image_url!)}
+                                    alt={event.name}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
@@ -850,7 +860,7 @@ Rules:
                 {/* Overlaid Buttons */}
                 <div className="absolute top-6 left-4 z-20">
                     <button
-                        onClick={() => router.back()}
+                        onClick={handleBack}
                         className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
                     >
                         <ChevronLeft size={20} className="text-black" />
@@ -858,6 +868,18 @@ Rules:
                 </div>
 
                 <div className="absolute top-6 right-4 flex gap-3 z-20">
+                    {event.card_video_url && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsMuted(prev => !prev);
+                            }}
+                            className="w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                            aria-label={isMuted ? "Unmute" : "Mute"}
+                        >
+                            {isMuted ? <VolumeX size={16} className="text-black" /> : <Volume2 size={16} className="text-black" />}
+                        </button>
+                    )}
                     <button
                         onClick={handleLikeToggle}
                         className={`w-[31px] h-[31px] bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${animateLike ? 'scale-125 rotate-12 bg-red-50' : 'active:scale-90'
@@ -1514,6 +1536,19 @@ Rules:
                     </div>
                 </div>
             )}
+
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+                onSuccess={() => {
+                    setIsAuthModalOpen(false);
+                    if (event.is_layout_based) {
+                        router.push(`/events/${slugify(event.name)}/book`);
+                    } else {
+                        router.push(`/events/${slugify(event.name)}/book/tickets/all`);
+                    }
+                }}
+            />
         </div>
     );
 }

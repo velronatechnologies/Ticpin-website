@@ -317,7 +317,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         <div
             className={`fixed inset-0 z-[10000] flex transition-all duration-500 ${view === 'profile' || view === 'bookings'
                 ? 'justify-end pointer-events-none'
-                : 'items-center justify-center p-0 md:p-4 overflow-hidden'
+                : 'items-start md:items-center justify-center p-0 md:p-4 overflow-hidden'
                 }`}
             style={{ fontFamily: 'var(--font-anek-latin)' }}
         >
@@ -330,12 +330,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             <div
                 className={`bg-white relative shadow-2xl transition-all duration-500 flex flex-col pointer-events-auto z-10 overflow-hidden ${view === 'profile' || view === 'bookings'
                     ? 'h-full w-full max-w-[750px] rounded-l-[60px] translate-x-0'
-                    : 'w-full h-auto md:w-[500px] rounded-none md:rounded-[30px]'
+                    : 'w-full h-full min-h-screen md:min-h-0 md:h-auto md:w-[500px] rounded-none md:rounded-[30px]'
                     }`}
                 style={
                     view !== 'profile' && view !== 'bookings'
                         ? isMobile
-                            ? {}
+                            ? { width: '100vw', height: '100vh' }
                             : { width: '420px', height: '580px' }
                         : {}
                 }

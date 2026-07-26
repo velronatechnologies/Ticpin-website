@@ -404,20 +404,7 @@ function BookingDetailsContent() {
                     </div>
                 </div>
 
-                {/* 6. Cancel Booking Option */}
-                {!isCancelled && !isExpired && (
-                    <div className="text-center pt-2">
-                        <button 
-                            onClick={() => {
-                                setSelectedReason(null);
-                                setIsCancelModalOpen(true);
-                            }}
-                            className="text-[15px] font-semibold text-[#ED4D1B] underline leading-[16px] uppercase tracking-wide"
-                        >
-                            Cancel booking
-                        </button>
-                    </div>
-                )}
+                {/* 6. Cancel Booking Option (Disabled) */}
 
                 {/* 7. Rectangle 550: NEED HELP WITH BOOKING Box (w-[334px] h-[114px]) */}
                 <div className="space-y-2.5">

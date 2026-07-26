@@ -41,9 +41,9 @@ function LoginContent() {
         const userSession = getUserSession();
         if (!userSession) {
             const target = getTargetOnCloseWithoutAuth(redirectVal);
-            router.push(target);
+            router.replace(target);
         } else {
-            router.push(redirectVal);
+            router.replace(redirectVal);
         }
     };
 

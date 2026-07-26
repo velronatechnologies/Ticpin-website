@@ -613,17 +613,7 @@ export default function BookingDetailsPage() {
                 </p>
               </div>
 
-              {/* Cancel Link */}
-              {!isCancelled && !isExpired && (
-                <div className="pt-1">
-                  <button
-                    onClick={openCancelModal}
-                    className="text-[14px] md:text-[18px] font-semibold text-[#ED4D1B] border-b border-dotted border-[#ED4D1B] leading-none"
-                  >
-                    Cancel booking
-                  </button>
-                </div>
-              )}
+              {/* Cancel Link (Disabled) */}
             </div>
 
           </div>

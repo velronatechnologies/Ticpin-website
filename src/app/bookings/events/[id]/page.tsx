@@ -268,19 +268,7 @@ export default function EventBookingDetailPage() {
                     </p>
                   </div>
 
-                  {getBookingStatus(booking) === 'CONFIRMED' && (
-                    <>
-                      <div className="border-b border-[#686868]/40 w-full" />
-                      {/* Cancel Booking */}
-                      <button
-                        onClick={() => setShowCancelModal(true)}
-                        className="text-[16px] md:text-[22px] font-semibold underline text-[#ED4D1B] block pt-1 md:pt-2"
-                        style={{ fontFamily: 'Anek Latin', lineHeight: '18px md:lineHeight:24px' }}
-                      >
-                        Cancel booking
-                      </button>
-                    </>
-                  )}
+                  {/* Cancel Booking (Disabled) */}
                 </div>
 
 

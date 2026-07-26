@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import { toast } from '@/components/ui/Toast';
 import { slugify } from '@/lib/utils';
+import EventCardMedia from './EventCardMedia';
 
 const LocationModal = dynamic(() => import('@/components/modals/LocationModal'), { ssr: false });
 const ProfileDrawer = dynamic(() => import('@/components/layout/Navbar/ProfileDrawer'), { ssr: false });
@@ -32,6 +33,7 @@ interface Event {
     city?: string;
     portrait_image_url?: string;
     landscape_image_url?: string;
+    card_video_url?: string;
     price_starts_from?: number;
     artists?: Artist[];
     status?: string;
@@ -624,69 +626,66 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                     >
                                         {/* Top Poster Section */}
                                         <div className="w-full aspect-[280/390] relative overflow-hidden bg-[#110D2C]">
-                                            {scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url ? (
-                                                <img
-                                                    src={(scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url)!.startsWith('.') ? (scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url)!.substring(1) : (scrollEvents[0].portrait_image_url || scrollEvents[0].landscape_image_url)}
-                                                    alt={scrollEvents[0].name}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
-                                                    {/* Abstract Wavy Background Effect */}
-                                                    <div className="absolute inset-0 opacity-40">
-                                                        <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
-                                                    </div>
-
-                                                    {/* Sparkles */}
-                                                    <div className="absolute top-[25%] left-[20%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse" />
-                                                    <div className="absolute top-[18%] right-[25%] w-0.5 h-0.5 bg-[#DFFF00] rounded-full blur-[0.5px] animate-pulse delay-700" />
-                                                    <div className="absolute bottom-[35%] left-[30%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse delay-[1500ms]" />
-                                                    <div className="absolute top-[45%] right-[15%] w-1 h-1 bg-[#DFFF00] rounded-full blur-[1px] animate-pulse delay-300" />
-
-                                                    {/* Main Content */}
-                                                    <div className="relative z-10 flex flex-col items-center">
-                                                        <h1 className="text-[36px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase text-center"
-                                                            style={{
-                                                                fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
-                                                                transform: 'skewX(-16deg) scaleY(1.3)',
-                                                                textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
-                                                            }}>
-                                                            THE TICPIN<br />PLAY<br />FESTIVAL
-                                                        </h1>
-
-                                                        {/* Divider */}
-                                                        <div className="flex items-center gap-2.5 w-full max-w-[180px] my-6 relative">
-                                                            <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
-                                                            <div className="w-[8px] h-[8px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
-                                                            <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                            <EventCardMedia
+                                                card_video_url={scrollEvents[0].card_video_url}
+                                                portrait_image_url={scrollEvents[0].portrait_image_url}
+                                                landscape_image_url={scrollEvents[0].landscape_image_url}
+                                                name={scrollEvents[0].name}
+                                                fallbackContent={
+                                                    <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
+                                                        {/* Abstract Wavy Background Effect */}
+                                                        <div className="absolute inset-0 opacity-40">
+                                                            <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
                                                         </div>
 
-                                                        {/* Offer Text */}
-                                                        <div className="text-center group">
-                                                            <p className="text-[20px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>
-                                                                GET UP TO
-                                                            </p>
-                                                            <p className="text-[34px] font-bold text-white leading-[0.85] mt-1 group-hover:scale-105 transition-transform duration-500" style={{ fontFamily: 'serif' }}>
-                                                                50% off*
-                                                            </p>
-                                                        </div>
+                                                        {/* Sparkles */}
+                                                        <div className="absolute top-[25%] left-[20%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse" />
+                                                        <div className="absolute top-[18%] right-[25%] w-0.5 h-0.5 bg-[#DFFF00] rounded-full blur-[0.5px] animate-pulse delay-700" />
+                                                        <div className="absolute bottom-[35%] left-[30%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse delay-[1500ms]" />
+                                                        <div className="absolute top-[45%] right-[15%] w-1 h-1 bg-[#DFFF00] rounded-full blur-[1px] animate-pulse delay-300" />
 
-                                                        {/* Logo at bottom */}
-                                                        <div className="mt-8 flex flex-col items-center">
-                                                            <p className="text-[9px] text-white/70 tracking-[0.4em] font-semibold mb-1.5 uppercase">ONLY ON</p>
-                                                            <div className="flex items-center gap-0.5">
-                                                                <span className="text-[24px] font-black text-white tracking-tighter">TIC</span>
-                                                                <span className="text-[24px] font-black text-white tracking-tighter flex items-center -ml-1">
-                                                                    P <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5 mt-1 animate-pulse" /> IN
-                                                                </span>
+                                                        {/* Main Content */}
+                                                        <div className="relative z-10 flex flex-col items-center">
+                                                            <h1 className="text-[36px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase text-center"
+                                                                style={{
+                                                                    fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
+                                                                    transform: 'skewX(-16deg) scaleY(1.3)',
+                                                                    textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
+                                                                }}>
+                                                                THE TICPIN<br />PLAY<br />FESTIVAL
+                                                            </h1>
+
+                                                            {/* Divider */}
+                                                            <div className="flex items-center gap-2.5 w-full max-w-[180px] my-6 relative">
+                                                                <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
+                                                                <div className="w-[8px] h-[8px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
+                                                                <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                                            </div>
+
+                                                            {/* Offer Text */}
+                                                            <div className="text-center group">
+                                                                <p className="text-[20px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>
+                                                                    GET UP TO
+                                                                </p>
+                                                                <p className="text-[34px] font-bold text-white leading-[0.85] mt-1 group-hover:scale-105 transition-transform duration-500" style={{ fontFamily: 'serif' }}>
+                                                                    50% off*
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Logo at bottom */}
+                                                            <div className="mt-8 flex flex-col items-center">
+                                                                <p className="text-[9px] text-white/70 tracking-[0.4em] font-semibold mb-1.5 uppercase">ONLY ON</p>
+                                                                <div className="flex items-center gap-0.5">
+                                                                    <span className="text-[24px] font-black text-white tracking-tighter">TIC</span>
+                                                                    <span className="text-[24px] font-black text-white tracking-tighter flex items-center -ml-1">
+                                                                        P <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5 mt-1 animate-pulse" /> IN
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {/* Overlay Icons */}
-
+                                                }
+                                            />
                                         </div>
 
                                         {/* Bottom Details Section */}
@@ -762,71 +761,66 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             >
                                                 {/* Top Poster Section */}
                                                 <div className="w-full aspect-[280/390] relative overflow-hidden bg-[#110D2C]">
-                                                    {eventImg ? (
-                                                        <img
-                                                            src={eventImg.startsWith('.') ? eventImg.substring(1) : eventImg}
-                                                            alt={event.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
-                                                            {/* Abstract Wavy Background Effect */}
-                                                            <div className="absolute inset-0 opacity-40">
-                                                                <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
-                                                            </div>
-
-                                                            {/* Sparkles */}
-                                                            <div className="absolute top-[25%] left-[20%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse" />
-                                                            <div className="absolute top-[18%] right-[25%] w-0.5 h-0.5 bg-[#DFFF00] rounded-full blur-[0.5px] animate-pulse delay-700" />
-                                                            <div className="absolute bottom-[35%] left-[30%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse delay-[1500ms]" />
-                                                            <div className="absolute top-[45%] right-[15%] w-1 h-1 bg-[#DFFF00] rounded-full blur-[1px] animate-pulse delay-300" />
-
-                                                            {/* Main Content */}
-                                                            <div className="relative z-10 flex flex-col items-center">
-                                                                <h1 className="text-[36px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase text-center"
-                                                                    style={{
-                                                                        fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
-                                                                        transform: 'skewX(-16deg) scaleY(1.3)',
-                                                                        textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
-                                                                    }}>
-                                                                    THE TICPIN<br />PLAY<br />FESTIVAL
-                                                                </h1>
-
-                                                                {/* Divider */}
-                                                                <div className="flex items-center gap-2.5 w-full max-w-[180px] my-6 relative">
-                                                                    <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
-                                                                    <div className="w-[8px] h-[8px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
-                                                                    <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                                    <EventCardMedia
+                                                        card_video_url={event.card_video_url}
+                                                        portrait_image_url={event.portrait_image_url}
+                                                        landscape_image_url={event.landscape_image_url}
+                                                        name={event.name}
+                                                        fallbackContent={
+                                                            <div className="w-full h-full p-6 flex flex-col items-center justify-center relative">
+                                                                {/* Abstract Wavy Background Effect */}
+                                                                <div className="absolute inset-0 opacity-40">
+                                                                    <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_30%_30%,#DFFF00_0%,transparent_40%),radial-gradient(circle_at_70%_70%,#5331EA_0%,transparent_50%),radial-gradient(circle_at_90%_20%,#DFFF00_0%,transparent_30%)] blur-[80px]" />
                                                                 </div>
 
-                                                                {/* Offer Text */}
-                                                                <div className="text-center group">
-                                                                    <p className="text-[20px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>
-                                                                        GET UP TO
-                                                                    </p>
-                                                                    <p className="text-[34px] font-bold text-white leading-[0.85] mt-1 group-hover:scale-105 transition-transform duration-500" style={{ fontFamily: 'serif' }}>
-                                                                        50% off*
-                                                                    </p>
-                                                                </div>
+                                                                {/* Sparkles */}
+                                                                <div className="absolute top-[25%] left-[20%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse" />
+                                                                <div className="absolute top-[18%] right-[25%] w-0.5 h-0.5 bg-[#DFFF00] rounded-full blur-[0.5px] animate-pulse delay-700" />
+                                                                <div className="absolute bottom-[35%] left-[30%] w-1 h-1 bg-white rounded-full blur-[1px] animate-pulse delay-[1500ms]" />
+                                                                <div className="absolute top-[45%] right-[15%] w-1 h-1 bg-[#DFFF00] rounded-full blur-[1px] animate-pulse delay-300" />
 
-                                                                {/* Logo at bottom */}
-                                                                <div className="mt-8 flex flex-col items-center">
-                                                                    <p className="text-[9px] text-white/70 tracking-[0.4em] font-semibold mb-1.5 uppercase">ONLY ON</p>
-                                                                    <div className="flex items-center gap-0.5">
-                                                                        <span className="text-[24px] font-black text-white tracking-tighter">TIC</span>
-                                                                        <span className="text-[24px] font-black text-white tracking-tighter flex items-center -ml-1">
-                                                                            P <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5 mt-1 animate-pulse" /> IN
-                                                                        </span>
+                                                                {/* Main Content */}
+                                                                <div className="relative z-10 flex flex-col items-center">
+                                                                    <h1 className="text-[36px] font-black text-[#DFFF00] italic leading-[0.8] tracking-tighter uppercase text-center"
+                                                                        style={{
+                                                                            fontFamily: "var(--font-anek-tamil-condensed), sans-serif",
+                                                                            transform: 'skewX(-16deg) scaleY(1.3)',
+                                                                            textShadow: '0 0 15px rgba(223, 255, 0, 0.5)'
+                                                                        }}>
+                                                                        THE TICPIN<br />PLAY<br />FESTIVAL
+                                                                    </h1>
+
+                                                                    {/* Divider */}
+                                                                    <div className="flex items-center gap-2.5 w-full max-w-[180px] my-6 relative">
+                                                                        <div className="h-[0.5px] bg-gradient-to-r from-transparent via-white/50 to-white flex-1" />
+                                                                        <div className="w-[8px] h-[8px] bg-white rotate-45 border-[0.5px] border-white/20 shadow-[0_0_6px_white]" />
+                                                                        <div className="h-[0.5px] bg-gradient-to-l from-transparent via-white/50 to-white flex-1" />
+                                                                    </div>
+
+                                                                    {/* Offer Text */}
+                                                                    <div className="text-center group">
+                                                                        <p className="text-[20px] font-light text-white italic tracking-tight leading-tight opacity-90" style={{ fontFamily: 'serif' }}>
+                                                                            GET UP TO
+                                                                        </p>
+                                                                        <p className="text-[34px] font-bold text-white leading-[0.85] mt-1 group-hover:scale-105 transition-transform duration-500" style={{ fontFamily: 'serif' }}>
+                                                                            50% off*
+                                                                        </p>
+                                                                    </div>
+
+                                                                    {/* Logo at bottom */}
+                                                                    <div className="mt-8 flex flex-col items-center">
+                                                                        <p className="text-[9px] text-white/70 tracking-[0.4em] font-semibold mb-1.5 uppercase">ONLY ON</p>
+                                                                        <div className="flex items-center gap-0.5">
+                                                                            <span className="text-[24px] font-black text-white tracking-tighter">TIC</span>
+                                                                            <span className="text-[24px] font-black text-white tracking-tighter flex items-center -ml-1">
+                                                                                P <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5 mt-1 animate-pulse" /> IN
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Overlay Icons */}
-                                                    <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white flex items-center justify-center border border-white">
-                                                        <img src="/mobile_icons/fluent_speaker-2-28-regular.svg" alt="Mute/Unmute" className="w-[20px] h-[20px]" />
-                                                    </div>
+                                                        }
+                                                    />
                                                 </div>
 
                                                 {/* Bottom Details Section */}

@@ -296,16 +296,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                             </div>
 
                             <div className="pt-4 flex flex-wrap gap-6 items-center">
-                                {!isCancelled && !isExpired && (
-                                    <div className="flex gap-6">
-                                        <button
-                                            onClick={() => setIsCancelModalOpen(true)}
-                                            className="text-[22px] font-semibold text-[#ED4D1B] underline underline-offset-4 decoration-1"
-                                        >
-                                            Cancel booking
-                                        </button>
-                                    </div>
-                                )}
+                                {/* Cancel booking (Disabled) */}
                                 <button
                                     onClick={handleDownloadTicket}
                                     disabled={downloading}

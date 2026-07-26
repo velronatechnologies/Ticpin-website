@@ -46,7 +46,7 @@ const LoginView: React.FC<LoginViewProps> = ({
     }, [view, otpRefs]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full min-h-screen md:min-h-0 flex flex-col overflow-y-auto bg-white">
             {/* Permanent recaptcha-container so it never gets unmounted */}
             <div id="recaptcha-container"></div>
 
@@ -64,7 +64,7 @@ const LoginView: React.FC<LoginViewProps> = ({
                 </button>
             </div>
 
-            <div className="p-6 sm:p-8 space-y-5 flex-1 flex flex-col items-center justify-center bg-white">
+            <div className="p-6 sm:p-8 space-y-5 flex-1 flex flex-col items-center justify-start pt-8 bg-white">
                 {view === 'number' ? (
                     <>
                         <div className="text-center space-y-1.5">
