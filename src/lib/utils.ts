@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export function getMinPrice(
   event: {
     price_starts_from?: number;
-    ticket_categories?: Array<{ price?: number; name?: string; capacity?: number }>;
+    ticket_categories?: Array<{ price?: number; name?: string; capacity?: number; available?: number }>;
     layout_json?: string;
   },
   bookedMap?: Record<string, number>
@@ -18,9 +18,10 @@ export function getMinPrice(
   if (event.ticket_categories && event.ticket_categories.length > 0) {
     event.ticket_categories.forEach(cat => {
       if (cat.price !== undefined && cat.price > 0) {
-        if (bookedMap && cat.name && cat.capacity !== undefined && cat.capacity > 0) {
+        const limit = cat.available !== undefined ? cat.available : cat.capacity;
+        if (bookedMap && cat.name && limit !== undefined) {
           const booked = bookedMap[cat.name] ?? 0;
-          if (booked >= cat.capacity) {
+          if (booked >= limit && (limit > 0 || cat.available !== undefined)) {
             return; // Skip full/sold out category
           }
         }
@@ -37,9 +38,10 @@ export function getMinPrice(
           if (el.type === 'section' && el.price !== undefined) {
             const p = Number(el.price);
             if (!isNaN(p) && p > 0) {
-              if (bookedMap && el.name && el.capacity !== undefined && el.capacity > 0) {
+              const limit = el.available !== undefined ? Number(el.available) : (el.capacity !== undefined ? Number(el.capacity) : undefined);
+              if (bookedMap && el.name && limit !== undefined) {
                 const booked = bookedMap[el.name] ?? 0;
-                if (booked >= el.capacity) {
+                if (booked >= limit && (limit > 0 || el.available !== undefined)) {
                   return; // Skip full/sold out layout section
                 }
               }

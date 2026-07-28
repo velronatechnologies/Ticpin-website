@@ -29,6 +29,7 @@ interface TicketCategory {
   name: string;
   price?: number;
   capacity?: number;
+  available?: number;
   image_url?: string;
   has_image?: boolean;
 }
@@ -464,6 +465,7 @@ export default function TicketSelectionPage() {
               name: el.name || "Unnamed Section",
               price: el.price !== undefined ? Number(el.price) : 0,
               capacity: el.capacity !== undefined ? Number(el.capacity) : 100,
+              available: el.available !== undefined ? Number(el.available) : undefined,
               image_url: el.image_url || "",
               has_image: !!el.image_url,
             }));
@@ -526,9 +528,28 @@ export default function TicketSelectionPage() {
   }, [event]);
 
   const getAvailable = (cat: TicketCategory) => {
-    if (!cat.capacity || cat.capacity <= 0) return Infinity;
+    const totalLimit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+    if (totalLimit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) return Infinity;
     const booked = bookedMap[cat.name] ?? 0;
-    return Math.max(0, cat.capacity - booked);
+    return Math.max(0, totalLimit - booked);
+  };
+
+  const getZoneAvailable = (zoneName: string, el?: any) => {
+    const primaryZone = zoneName.split(" ")[0].toUpperCase();
+    const cat = categories.find((c) => {
+      const cName = c.name.toUpperCase();
+      return (
+        cName.includes(primaryZone) ||
+        primaryZone.includes(cName) ||
+        (primaryZone === "VIP" && cName === "VIP PASS") ||
+        (primaryZone === "PLATINUM" && cName === "PLATINUM PASS") ||
+        (primaryZone === "GOLD" && cName === "GOLD PASS") ||
+        (primaryZone === "MIP" && cName === "MIP PASS")
+      );
+    });
+    if (cat) return getAvailable(cat);
+    if (el && el.available !== undefined) return Number(el.available);
+    return Infinity;
   };
 
   const add = (i: number) => {
@@ -749,6 +770,7 @@ export default function TicketSelectionPage() {
                   onSelectSection={(name) => handleZoneClick(name)}
                   getZonePrice={(name) => getZonePrice(name)}
                   getZoneQuantity={(name) => getZoneQuantity(name)}
+                  getZoneAvailable={(name, el) => getZoneAvailable(name, el)}
                 />
               </div>
             ) : (
@@ -823,6 +845,7 @@ export default function TicketSelectionPage() {
                   onSelectSection={(name) => handleZoneClick(name)}
                   getZonePrice={(name) => getZonePrice(name)}
                   getZoneQuantity={(name) => getZoneQuantity(name)}
+                  getZoneAvailable={(name, el) => getZoneAvailable(name, el)}
                 />
               </div>
             ) : (

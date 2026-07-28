@@ -22,7 +22,7 @@ interface RealEvent {
     portrait_image_url?: string;
     landscape_image_url?: string;
     category?: string;
-    ticket_categories?: Array<{ name: string; price?: number; capacity?: number }>;
+    ticket_categories?: Array<{ name: string; price?: number; capacity?: number; available?: number }>;
     layout_json?: string;
 }
 

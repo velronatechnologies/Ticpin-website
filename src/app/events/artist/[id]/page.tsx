@@ -28,7 +28,7 @@ interface RealEvent {
     landscape_image_url?: string;
     category?: string;
     artists?: Artist[];
-    ticket_categories?: Array<{ name: string; price?: number; capacity?: number }>;
+    ticket_categories?: Array<{ name: string; price?: number; capacity?: number; available?: number }>;
     layout_json?: string;
 }
 

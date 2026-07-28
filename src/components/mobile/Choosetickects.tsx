@@ -10,11 +10,13 @@ import AuthModal from '@/components/modals/AuthModal';
 import { toast } from '@/components/ui/Toast';
 import { TicketSkeleton } from '@/components/ui/Skeleton';
 import { trackMetaEvent } from '@/lib/metaPixel';
+import { safeJsonParse } from '@/lib/bookingFlow';
 
 interface TicketCategory {
     name: string;
     price?: number;
     capacity?: number;
+    available?: number;
 }
 
 interface EventDetails {
@@ -155,13 +157,30 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
 
     const categories = useMemo(() => {
         if (!eventDetails) return [];
+        if ((eventDetails as any).is_layout_based && (eventDetails as any).layout_json) {
+            const layout = safeJsonParse<any>((eventDetails as any).layout_json);
+            if (layout && Array.isArray(layout.elements)) {
+                const classSections = layout.elements.filter(
+                    (el: any) => el.type === "section" && el.sectionType === "class"
+                );
+                if (classSections.length > 0) {
+                    return classSections.map((el: any) => ({
+                        name: el.name || "Unnamed Section",
+                        price: el.price !== undefined ? Number(el.price) : 0,
+                        capacity: el.capacity !== undefined ? Number(el.capacity) : 100,
+                        available: el.available !== undefined ? Number(el.available) : undefined,
+                    }));
+                }
+            }
+        }
         return eventDetails.ticket_categories || [];
     }, [eventDetails]);
 
     const getAvailable = (cat: TicketCategory) => {
-        if (!cat.capacity || cat.capacity <= 0) return Infinity;
+        const totalLimit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+        if (totalLimit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) return Infinity;
         const booked = bookedMap[cat.name] ?? 0;
-        return Math.max(0, cat.capacity - booked);
+        return Math.max(0, totalLimit - booked);
     };
 
     const add = (i: number) => {

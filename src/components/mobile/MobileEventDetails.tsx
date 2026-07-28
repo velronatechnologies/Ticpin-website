@@ -47,7 +47,7 @@ interface MobileEventDetailsProps {
         landscape_image_url?: string;
         gallery_urls?: string[];
         price_starts_from?: number;
-        ticket_categories?: { name: string; price?: number; capacity?: number }[];
+        ticket_categories?: { name: string; price?: number; capacity?: number; available?: number }[];
         layout_json?: string;
         is_layout_based?: boolean;
         artist_details?: { name: string; profession?: string; image_url?: string }[];

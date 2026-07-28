@@ -403,12 +403,25 @@ export default function ReviewBookingPage() {
           );
           if (activeRes.active) {
             const mappedTickets = activeRes.tickets.map((t: any) => {
-              const cat = eventData.ticket_categories?.find(
+              let price = eventData.ticket_categories?.find(
                 (c: any) => c.name === t.category,
-              );
+              )?.price;
+
+              if (price === undefined && eventData.is_layout_based && eventData.layout_json) {
+                const layout = safeJsonParse<any>(eventData.layout_json);
+                if (layout && Array.isArray(layout.elements)) {
+                  const el = layout.elements.find(
+                    (e: any) => e.type === "section" && e.name === t.category,
+                  );
+                  if (el && el.price !== undefined) {
+                    price = Number(el.price);
+                  }
+                }
+              }
+
               return {
                 name: t.category,
-                price: cat?.price || eventData.price_starts_from || 0,
+                price: price || eventData.price_starts_from || 0,
                 quantity: t.quantity,
               };
             });

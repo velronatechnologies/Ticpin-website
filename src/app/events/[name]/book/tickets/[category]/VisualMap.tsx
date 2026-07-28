@@ -6,6 +6,7 @@ interface TicketCategory {
   name: string;
   price?: number;
   capacity?: number;
+  available?: number;
   image_url?: string;
   has_image?: boolean;
 }
@@ -37,6 +38,42 @@ export function MobileVisualMap({
   remove,
   zoneStyles,
 }: VisualMapProps) {
+  const isZoneSoldOut = (zoneName: string) => {
+    const primaryZone = zoneName.split(" ")[0].toUpperCase();
+    const cat = categories.find((c) => {
+      const cName = c.name.toUpperCase();
+      return (
+        cName.includes(primaryZone) ||
+        primaryZone.includes(cName) ||
+        (primaryZone === "VIP" && cName === "VIP PASS") ||
+        (primaryZone === "PLATINUM" && cName === "PLATINUM PASS") ||
+        (primaryZone === "GOLD" && cName === "GOLD PASS") ||
+        (primaryZone === "MIP" && cName === "MIP PASS")
+      );
+    });
+    if (!cat) return false;
+    return getAvailable(cat) === 0;
+  };
+
+  const getCustomZoneStyle = (zoneName: string, baseStyle: any) => {
+    const style = getZoneStyle(zoneName, baseStyle);
+    if (isZoneSoldOut(zoneName)) {
+      return {
+        ...style,
+        opacity: 0.55,
+        cursor: "not-allowed",
+      };
+    }
+    return style;
+  };
+
+  const renderZonePriceOrSoldOut = (zoneName: string) => {
+    if (isZoneSoldOut(zoneName)) {
+      return <span className="text-red-600 font-bold uppercase tracking-wider text-[12px]">SOLD OUT</span>;
+    }
+    return getZonePrice(zoneName);
+  };
+
   return (
     <div
       className="w-full max-w-[480px] mx-auto bg-white flex flex-col gap-[10px] p-4 select-none shrink-0"
@@ -110,7 +147,7 @@ export function MobileVisualMap({
       <button
         onClick={() => handleZoneClick("MIP")}
         className="w-full rounded-[10px] py-[12px] px-[16px] mt-[70px] text-center border-2 border-solid transition-all duration-300 active:scale-95 cursor-pointer flex flex-col items-center justify-center"
-        style={getZoneStyle("MIP", zoneStyles.MIP)}
+        style={getCustomZoneStyle("MIP", zoneStyles.MIP)}
       >
         <div className="font-extrabold text-[20px] leading-tight flex items-center justify-center gap-1.5 w-full">
           MIP
@@ -138,7 +175,7 @@ export function MobileVisualMap({
           <path d="M18 20V10H6v10M12 10V4M6 14h12" />
         </svg>
         <div className="text-[13px] mt-[6px] font-bold">
-          {getZonePrice("MIP")}
+          {renderZonePriceOrSoldOut("MIP")}
         </div>
       </button>
 
@@ -451,6 +488,42 @@ export function DesktopVisualMap({
   remove,
   zoneStyles,
 }: VisualMapProps) {
+  const isZoneSoldOut = (zoneName: string) => {
+    const primaryZone = zoneName.split(" ")[0].toUpperCase();
+    const cat = categories.find((c) => {
+      const cName = c.name.toUpperCase();
+      return (
+        cName.includes(primaryZone) ||
+        primaryZone.includes(cName) ||
+        (primaryZone === "VIP" && cName === "VIP PASS") ||
+        (primaryZone === "PLATINUM" && cName === "PLATINUM PASS") ||
+        (primaryZone === "GOLD" && cName === "GOLD PASS") ||
+        (primaryZone === "MIP" && cName === "MIP PASS")
+      );
+    });
+    if (!cat) return false;
+    return getAvailable(cat) === 0;
+  };
+
+  const getCustomZoneStyle = (zoneName: string, baseStyle: any) => {
+    const style = getZoneStyle(zoneName, baseStyle);
+    if (isZoneSoldOut(zoneName)) {
+      return {
+        ...style,
+        opacity: 0.55,
+        cursor: "not-allowed",
+      };
+    }
+    return style;
+  };
+
+  const renderZonePriceOrSoldOut = (zoneName: string) => {
+    if (isZoneSoldOut(zoneName)) {
+      return <span className="text-red-600 font-bold uppercase tracking-wider text-[12px]">SOLD OUT</span>;
+    }
+    return getZonePrice(zoneName);
+  };
+
   return (
     <div
       className="w-full max-w-[480px] mx-auto bg-white flex flex-col gap-[10px] p-4 select-none shrink-0"
@@ -524,7 +597,7 @@ export function DesktopVisualMap({
       <button
         onClick={() => handleZoneClick("MIP")}
         className="w-full rounded-[10px] py-[12px] px-[16px] mt-[70px] text-center border-2 border-solid transition-all duration-300 active:scale-95 cursor-pointer flex flex-col items-center justify-center"
-        style={getZoneStyle("MIP", zoneStyles.MIP)}
+        style={getCustomZoneStyle("MIP", zoneStyles.MIP)}
       >
         <div className="font-extrabold text-[20px] leading-tight flex items-center justify-center gap-1.5 w-full">
           MIP
@@ -552,7 +625,7 @@ export function DesktopVisualMap({
           <path d="M18 20V10H6v10M12 10V4M6 14h12" />
         </svg>
         <div className="text-[13px] mt-[6px] font-bold">
-          {getZonePrice("MIP")}
+          {renderZonePriceOrSoldOut("MIP")}
         </div>
       </button>
 

@@ -23,11 +23,13 @@ const MobileEventDetails = dynamic(
 import { useCurrentTime } from '@/hooks/use-current-time';
 import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
 import { trackMetaEvent } from '@/lib/metaPixel';
+import { safeJsonParse } from '@/lib/bookingFlow';
 
 interface TicketCategory {
     name: string;
     price?: number;
     capacity?: number;
+    available?: number;
     image_url?: string;
     has_image?: boolean;
 }
@@ -192,6 +194,42 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
 
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
+    const isSoldOut = useMemo(() => {
+        if (!availabilityLoaded) return false;
+        let categories: TicketCategory[] = event.ticket_categories || [];
+        if (event.is_layout_based && event.layout_json) {
+            const layout = safeJsonParse<any>(event.layout_json);
+            if (layout && Array.isArray(layout.elements)) {
+                const classSections = layout.elements.filter(
+                    (el: any) => el.type === "section" && el.sectionType === "class"
+                );
+                if (classSections.length > 0) {
+                    categories = classSections.map((el: any) => ({
+                        name: el.name || "Unnamed Section",
+                        price: el.price !== undefined ? Number(el.price) : 0,
+                        capacity: el.capacity !== undefined ? Number(el.capacity) : 100,
+                        available: el.available !== undefined ? Number(el.available) : undefined,
+                    }));
+                }
+            }
+        }
+        if (categories.length === 0) return false;
+        for (const cat of categories) {
+            const limit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+            if (limit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) {
+                return false;
+            }
+            if (limit >= 999999) {
+                return false;
+            }
+            const booked = bookedMap[cat.name] ?? 0;
+            if (Math.max(0, limit - booked) > 0) {
+                return false;
+            }
+        }
+        return true;
+    }, [event, bookedMap, availabilityLoaded]);
+
     const bookingStatus = useMemo(() => {
         if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
 
@@ -212,8 +250,12 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
             return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
         }
 
+        if (isSoldOut) {
+            return { isClosed: true, notOpenedYet: false, text: 'SOLD OUT' };
+        }
+
         return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
-    }, [event, nowMs]);
+    }, [event, nowMs, isSoldOut]);
 
     const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
 
@@ -243,18 +285,35 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                     ? bookedMap
                     : (await bookingApi.getEventAvailability(event.id)).booked ?? {};
 
-            const categories = event.ticket_categories || [];
+            let categories: TicketCategory[] = event.ticket_categories || [];
+            if (event.is_layout_based && event.layout_json) {
+                const layout = safeJsonParse<any>(event.layout_json);
+                if (layout && Array.isArray(layout.elements)) {
+                    const classSections = layout.elements.filter(
+                        (el: any) => el.type === "section" && el.sectionType === "class"
+                    );
+                    if (classSections.length > 0) {
+                        categories = classSections.map((el: any) => ({
+                            name: el.name || "Unnamed Section",
+                            price: el.price !== undefined ? Number(el.price) : 0,
+                            capacity: el.capacity !== undefined ? Number(el.capacity) : 100,
+                            available: el.available !== undefined ? Number(el.available) : undefined,
+                        }));
+                    }
+                }
+            }
 
             let totalAvailable = 0;
             let hasInfinite = false;
 
             for (const cat of categories) {
-                if (!cat.capacity || cat.capacity <= 0) {
+                const limit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+                if (limit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) {
                     hasInfinite = true;
                     break;
                 }
                 const booked = availabilityMap[cat.name] ?? 0;
-                const left = cat.capacity - booked;
+                const left = Math.max(0, limit - booked);
                 if (left > 0) {
                     totalAvailable += left;
                 }

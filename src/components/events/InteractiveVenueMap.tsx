@@ -8,6 +8,7 @@ export default function InteractiveVenueMap({
     onSelectSection,
     getZonePrice,
     getZoneQuantity,
+    getZoneAvailable,
     getZoneStyle,
     zoneStyles
 }: {
@@ -16,6 +17,7 @@ export default function InteractiveVenueMap({
     onSelectSection: (name: string) => void;
     getZonePrice: (name: string) => string;
     getZoneQuantity: (name: string) => number;
+    getZoneAvailable?: (name: string, el?: any) => number;
     getZoneStyle?: (zoneKey: string, baseStyle: any) => any;
     zoneStyles?: any;
 }) {
@@ -69,9 +71,12 @@ export default function InteractiveVenueMap({
                         
                         if (el.type === 'section') {
                             const isRamp = el.name?.toUpperCase() === 'RAMP';
+                            const avail = getZoneAvailable ? getZoneAvailable(el.name, el) : (el.available !== undefined ? Number(el.available) : Infinity);
+                            const isSoldOut = !isRamp && avail <= 0;
+
                             const price = isRamp ? '' : getZonePrice(el.name);
                             const qty = isRamp ? 0 : getZoneQuantity(el.name);
-                            const priceOrQtyText = qty > 0 ? `${qty} Selected` : price;
+                            const priceOrQtyText = isRamp ? '' : isSoldOut ? 'SOLD OUT' : qty > 0 ? `${qty} Selected` : price;
 
                             const isSitting = el.sectionType === 'class' && (el.seatingType === 'sitting' || el.icon === 'sitting');
                             
@@ -112,16 +117,20 @@ export default function InteractiveVenueMap({
 
                             const fill = appliedStyle?.backgroundColor || (el.color || '#F5F5F5');
                             const stroke = appliedStyle?.borderColor || (el.borderColor || '#D0D0D0');
-                            const strokeWidth = 2;
+                            const strokeWidth = isSelected ? 3 : 2;
                             const textColor = appliedStyle?.color || (el.textColor || '#1A1A1A');
                             const iconColor = appliedStyle?.color || (el.iconColor || el.borderColor || '#1A1A1A');
+                            const priceTextColor = isSoldOut ? (el.textColor || appliedStyle?.color || '#1A1A1A') : textColor;
+                            const priceFontWeight = isSoldOut ? '700' : '400';
+
+                            const showIcon = isSitting && !isSoldOut;
 
                             // Compute y offsets inside the box
                             let nameY = 0;
                             let iconY = 0;
                             let priceY = 0;
 
-                            if (isSitting) {
+                            if (showIcon) {
                                 const sittingContentH = nameFontSize + gap + iconSize + gap + priceFontSize;
                                 const sittingStartY = (el.height - sittingContentH) / 2;
                                 nameY = sittingStartY + nameFontSize / 2;
@@ -138,7 +147,7 @@ export default function InteractiveVenueMap({
                                 <g 
                                     key={i} 
                                     onClick={isRamp ? undefined : () => onSelectSection(el.name)}
-                                    className={isRamp ? "pointer-events-none select-none" : "cursor-pointer transition-all duration-200 hover:opacity-80"}
+                                    className={isRamp ? "pointer-events-none select-none" : isSoldOut ? "cursor-not-allowed opacity-55 select-none transition-all duration-200" : "cursor-pointer transition-all duration-200 hover:opacity-80"}
                                 >
                                     <rect
                                         x={el.x}
@@ -164,7 +173,7 @@ export default function InteractiveVenueMap({
                                         {el.name}
                                     </text>
 
-                                    {isSitting && (
+                                    {showIcon && (
                                         <g
                                             transform={`translate(${el.x + (el.width - iconSize) / 2}, ${el.y + iconY}) scale(${iconSize / 24})`}
                                             className="pointer-events-none select-none"
@@ -181,10 +190,10 @@ export default function InteractiveVenueMap({
                                         y={el.y + priceY}
                                         textAnchor="middle"
                                         dominantBaseline="middle"
-                                        fill={textColor}
+                                        fill={priceTextColor}
                                         fontFamily="'Anek Latin', sans-serif"
                                         fontSize={priceFontSize}
-                                        fontWeight="400"
+                                        fontWeight={priceFontWeight}
                                         className="select-none pointer-events-none"
                                     >
                                         {priceOrQtyText}
