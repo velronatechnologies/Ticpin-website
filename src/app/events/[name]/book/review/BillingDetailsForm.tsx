@@ -111,7 +111,6 @@ export default function BillingDetailsForm({
 
           {/* Name */}
           <div className="space-y-1">
-          
             <input
               type="text"
               value={billing.name}
@@ -120,15 +119,19 @@ export default function BillingDetailsForm({
                 setBookingError("");
               }}
               placeholder="Name*"
-              className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE] bg-white"
+              className={`w-full h-[55px] border ${billing.name.trim() !== "" && billing.name.trim().length < 3 ? "border-red-500" : "border-[#AEAEAE]"} rounded-[10px] px-5 focus:outline-none focus:border-black text-black font-medium text-[16px] placeholder:text-[#AEAEAE] bg-white`}
               style={{ fontFamily: "var(--font-anek-latin)" }}
             />
+            {billing.name.trim() !== "" && billing.name.trim().length < 3 && (
+              <p className="text-red-500 text-[13px] font-medium" style={{ fontFamily: "var(--font-anek-latin)" }}>
+                Name must be at least 3 characters long
+              </p>
+            )}
           </div>
 
           {/* Phone */}
           <div className="space-y-1">
-          
-            <div className="w-full h-[55px] border border-[#AEAEAE] rounded-[10px] px-5 flex items-center bg-white gap-2">
+            <div className={`w-full h-[55px] border ${(billing.phone || "").replace(/\D/g, "").length > 0 && (billing.phone || "").replace(/\D/g, "").length < 10 ? "border-red-500" : "border-[#AEAEAE]"} rounded-[10px] px-5 flex items-center bg-white gap-2`}>
               <span className="text-[16px] font-medium text-black">🇮🇳 +91</span>
               <input
                 type="text"
@@ -145,8 +148,12 @@ export default function BillingDetailsForm({
                 className="flex-grow h-full focus:outline-none text-black font-medium text-[15px] placeholder:text-[#AEAEAE] bg-white"
                 style={{ fontFamily: "var(--font-anek-latin)" }}
               />
-              
             </div>
+            {(billing.phone || "").replace(/\D/g, "").length > 0 && (billing.phone || "").replace(/\D/g, "").length < 10 && (
+              <p className="text-red-500 text-[13px] font-medium" style={{ fontFamily: "var(--font-anek-latin)" }}>
+                Mobile number must be 10 digits
+              </p>
+            )}
           </div>
 
           {/* Nationality */}

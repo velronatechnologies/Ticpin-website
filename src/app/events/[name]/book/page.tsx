@@ -3,6 +3,7 @@
 import { useParams, useRouter, notFound } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
+import { formatPrice, formatTime12hr } from "@/lib/utils";
 import { bookingApi } from "@/lib/api/booking";
 import { passApi, TicpinPass } from "@/lib/api/pass";
 import {
@@ -598,7 +599,7 @@ export default function TicketSelectionPage() {
           month: "short",
         })
         : null,
-      event?.time ?? null,
+      event?.time ? formatTime12hr(event.time) : null,
       locationPart,
     ]
       .filter(Boolean)

@@ -31,7 +31,7 @@ import {
 import { getBookingStatus } from "@/lib/utils/booking-status";
 import { toast } from "@/components/ui/Toast";
 import { AlertCircle } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatTime12hr } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import {
   clearEventBookingStorage,
@@ -181,8 +181,9 @@ export default function ReviewBookingPage() {
 
   // All required billing fields completed
   const billingComplete =
-    (billing.name || "").trim() !== "" &&
-    (billing.phone || "").trim().length >= 10 &&
+    (billing.name || "").trim().length >= 3 &&
+    /^[6-9]\d{9}$/.test((billing.phone || "").replace(/\D/g, "")) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim()) &&
     (billing.nationality || "").trim() !== "" &&
     (billing.state || "").trim() !== "" &&
     acceptedTerms;
@@ -385,7 +386,7 @@ export default function ReviewBookingPage() {
           return;
         }
         eventId = parsedCart.eventId;
-        setCart(parsedCart);
+        setCart(parsedCart as CartData);
       } else {
         // Self-healing: if cart is missing (e.g. copied/duplicated tab),
         // fetch the event details to get eventId and verify active reservation
@@ -599,8 +600,8 @@ export default function ReviewBookingPage() {
           ...prev,
           id: cartData.eventId,
           name: cartData.eventName,
-          landscape_image_url: cartData.landscape_image_url,
-          portrait_image_url: cartData.portrait_image_url,
+          landscape_image_url: (cartData as any).landscape_image_url,
+          portrait_image_url: (cartData as any).portrait_image_url,
         }));
       }
     }
@@ -1300,19 +1301,27 @@ export default function ReviewBookingPage() {
   };
 
   const handlePayNow = async () => {
-    if (!(billing.name || "").trim()) {
+    const nameTrimmed = (billing.name || "").trim();
+    if (!nameTrimmed) {
       setBookingError("Please enter your full name");
       return;
     }
-    if (!email.trim() || !email.includes("@")) {
+    if (nameTrimmed.length < 3) {
+      setBookingError("Name must be at least 3 characters long");
+      return;
+    }
+    const emailTrimmed = (email || "").trim();
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
       setBookingError("Please enter a valid email address");
       return;
     }
-    if (
-      !(billing.phone || "").trim() ||
-      billing.phone.replace(/\D/g, "").length < 10
-    ) {
+    const cleanPhone = (billing.phone || "").replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length !== 10) {
       setBookingError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setBookingError("Mobile number must be a valid 10-digit Indian number starting with 6, 7, 8, or 9");
       return;
     }
     if (!(billing.nationality || "").trim()) {
@@ -1617,7 +1626,7 @@ export default function ReviewBookingPage() {
           month: "short",
         })
       : "";
-    const eventTimeStr = eventData?.time ? ` | ${eventData.time} onwards` : "";
+    const eventTimeStr = eventData?.time ? ` | ${formatTime12hr(eventData.time)} onwards` : "";
     const dateTimeStr = `${eventDateStr}${eventTimeStr}`;
     const venueName = eventData?.venue_name || "";
     const venueAddress = eventData?.venue_address || "";

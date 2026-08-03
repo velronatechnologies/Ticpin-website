@@ -11,6 +11,7 @@ import { toast } from '@/components/ui/Toast';
 import { TicketSkeleton } from '@/components/ui/Skeleton';
 import { trackMetaEvent } from '@/lib/metaPixel';
 import { safeJsonParse } from '@/lib/bookingFlow';
+import { formatTime12hr } from '@/lib/utils';
 
 interface TicketCategory {
     name: string;
@@ -52,6 +53,8 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
     const [offers, setOffers] = useState<any[]>([]);
     const [counts, setCounts] = useState<Record<number, number>>({});
     const [initialCountsRestored, setInitialCountsRestored] = useState<Record<number, number> | null>(null);
+    const [rawInputValues, setRawInputValues] = useState<Record<number, string>>({});
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
     
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [isReserving, setIsReserving] = useState(false);
@@ -177,7 +180,9 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
     }, [eventDetails]);
 
     const getAvailable = (cat: TicketCategory) => {
-        const totalLimit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+        const totalLimit = (cat.capacity && cat.capacity > 0)
+            ? cat.capacity
+            : (cat.available !== undefined ? cat.available : 0);
         if (totalLimit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) return Infinity;
         const booked = bookedMap[cat.name] ?? 0;
         return Math.max(0, totalLimit - booked);
@@ -191,13 +196,73 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
             toast.warning('No more tickets available for this category');
             return;
         }
-        setCounts(prev => ({ ...prev, [i]: current + 1 }));
+        const nextVal = current + 1;
+        setCounts(prev => ({ ...prev, [i]: nextVal }));
+        setRawInputValues(prev => ({ ...prev, [i]: String(nextVal) }));
+        setEditingIndex(i);
     };
 
     const remove = (i: number) => {
         const current = counts[i] ?? 0;
         if (current === 0) return;
-        setCounts(prev => ({ ...prev, [i]: current - 1 }));
+        const nextVal = current - 1;
+        setCounts(prev => ({ ...prev, [i]: nextVal }));
+        if (nextVal === 0) {
+            setRawInputValues(prev => {
+                const copy = { ...prev };
+                delete copy[i];
+                return copy;
+            });
+            if (editingIndex === i) setEditingIndex(null);
+        } else {
+            setRawInputValues(prev => ({ ...prev, [i]: String(nextVal) }));
+        }
+    };
+
+    const handleQuantityInputChange = (i: number, valStr: string) => {
+        const cat = categories[i];
+        const avail = getAvailable(cat);
+
+        setRawInputValues(prev => ({ ...prev, [i]: valStr }));
+        setEditingIndex(i);
+
+        if (valStr.trim() === "") {
+            setCounts(prev => ({ ...prev, [i]: 0 }));
+            return;
+        }
+
+        let parsed = parseInt(valStr, 10);
+        if (isNaN(parsed) || parsed < 0) parsed = 0;
+
+        if (parsed > avail) {
+            parsed = avail;
+            setRawInputValues(prev => ({ ...prev, [i]: String(avail) }));
+            toast.warning(`Only ${avail} ticket${avail === 1 ? '' : 's'} available`);
+        }
+
+        setCounts(prev => ({ ...prev, [i]: parsed }));
+    };
+
+    const handleQuantityInputBlur = (i: number) => {
+        setEditingIndex(null);
+        const cat = categories[i];
+        const avail = getAvailable(cat);
+        const raw = rawInputValues[i];
+
+        if (raw === undefined || raw.trim() === "" || parseInt(raw, 10) === 0) {
+            setCounts(prev => ({ ...prev, [i]: 0 }));
+            setRawInputValues(prev => {
+                const copy = { ...prev };
+                delete copy[i];
+                return copy;
+            });
+        } else {
+            let parsed = parseInt(raw, 10);
+            if (isNaN(parsed) || parsed < 0) parsed = 0;
+            if (parsed > avail) parsed = avail;
+            setCounts(prev => ({ ...prev, [i]: parsed }));
+            setRawInputValues(prev => ({ ...prev, [i]: String(parsed) }));
+        }
     };
 
     const totalTickets = useMemo(() => {
@@ -205,7 +270,7 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
     }, [counts]);
 
     const totalPrice = useMemo(() => {
-        return categories.reduce((sum, cat, i) => {
+        return categories.reduce((sum: number, cat: any, i: number) => {
             return sum + (counts[i] ?? 0) * (cat.price ?? 0);
         }, 0);
     }, [categories, counts]);
@@ -236,11 +301,11 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
         });
 
         const ticketReqs = categories
-            .map((cat, i) => ({
+            .map((cat: any, i: number) => ({
                 category: cat.name,
                 quantity: counts[i] ?? 0,
             }))
-            .filter(t => t.quantity > 0);
+            .filter((t: any) => t.quantity > 0);
 
         try {
             const res = await bookingApi.createReservation(
@@ -255,12 +320,12 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
                     res.reservation_id,
                     eventDetails!.id,
                     categories
-                        .map((cat, i) => ({
+                        .map((cat: any, i: number) => ({
                             name: cat.name,
                             price: cat.price ?? 0,
                             quantity: counts[i] ?? 0,
                         }))
-                        .filter(t => t.quantity > 0),
+                        .filter((t: any) => t.quantity > 0),
                     res.expires_at
                 );
 
@@ -271,12 +336,12 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
                     landscape_image_url: eventDetails!.landscape_image_url,
                     portrait_image_url: eventDetails!.portrait_image_url,
                     tickets: categories
-                        .map((cat, i) => ({
+                        .map((cat: any, i: number) => ({
                             name: cat.name,
                             price: cat.price ?? 0,
                             quantity: counts[i] ?? 0,
                         }))
-                        .filter(t => t.quantity > 0),
+                        .filter((t: any) => t.quantity > 0),
                     totalPrice,
                     type: 'event' as const,
                 };
@@ -323,7 +388,7 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
                         {eventDetails?.name || 'Event'}
                     </h1>
                     <p className="text-[10px] font-medium text-[#5331EA] mt-1 uppercase">
-                        {formattedDate}{eventDetails?.time ? `, ${eventDetails.time}` : ''}
+                        {formattedDate}{eventDetails?.time ? `, ${formatTime12hr(eventDetails.time)}` : ''}
                     </p>
                 </div>
             </div>
@@ -335,10 +400,12 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
 
             {/* Ticket Cards List */}
             <div className="flex-1 overflow-y-auto px-4 pb-[100px] space-y-4">
-                {categories.map((cat, i) => {
+                {categories.map((cat: any, i: number) => {
                     const available = getAvailable(cat);
                     const isSoldOut = available === 0;
                     const current = counts[i] ?? 0;
+                    const isEditingThis = editingIndex === i || rawInputValues[i] !== undefined;
+                    const showCounter = isEditingThis || current > 0;
                     const bestOffer = offers && offers.length > 0 
                         ? offers[0].title 
                         : 'GET EXTRA DISCOUNT WITH TICPIN PASS';
@@ -356,7 +423,7 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
                                         <div className="w-[61px] h-[23px] bg-red-100 border border-red-500 rounded-[5px] text-[10px] font-medium text-red-600 flex items-center justify-center">
                                             Sold Out
                                         </div>
-                                    ) : current === 0 ? (
+                                    ) : !showCounter ? (
                                         <button 
                                             onClick={() => add(i)}
                                             className="w-[61px] h-[23px] bg-[#EFEFEF] border border-[#686868] rounded-[5px] text-[12px] font-medium text-black flex items-center justify-center active:scale-95 transition-transform"
@@ -364,20 +431,31 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
                                             Add
                                         </button>
                                     ) : (
-                                        <div className="flex items-center border border-[#686868] rounded-[5px] bg-[#EFEFEF] h-[23px] overflow-hidden">
+                                        <div className="flex items-center border border-[#686868] rounded-[5px] bg-[#EFEFEF] h-[26px] overflow-hidden px-1">
                                             <button
                                                 onClick={() => remove(i)}
-                                                className="px-2 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors"
+                                                className="px-1.5 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors"
                                             >
                                                 -
                                             </button>
-                                            <span className="px-2 text-[12px] font-medium text-black min-w-[20px] text-center">
-                                                {current}
-                                            </span>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={available}
+                                                value={rawInputValues[i] !== undefined ? rawInputValues[i] : (current === 0 ? "" : current)}
+                                                placeholder="0"
+                                                onFocus={() => {
+                                                    setEditingIndex(i);
+                                                    setRawInputValues(prev => ({ ...prev, [i]: rawInputValues[i] !== undefined ? rawInputValues[i] : (current === 0 ? "" : String(current)) }));
+                                                }}
+                                                onChange={(e) => handleQuantityInputChange(i, e.target.value)}
+                                                onBlur={() => handleQuantityInputBlur(i)}
+                                                className="w-8 text-center bg-transparent text-[12px] font-bold text-black focus:outline-none focus:bg-black/10 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
                                             <button
                                                 onClick={() => add(i)}
                                                 disabled={current >= available}
-                                                className="px-2 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors disabled:opacity-40"
+                                                className="px-1.5 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors disabled:opacity-40"
                                             >
                                                 +
                                             </button>

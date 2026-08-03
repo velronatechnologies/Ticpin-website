@@ -150,7 +150,7 @@ export default function MobilePlayDetails({ venue, offers = [] }: MobilePlayDeta
             : []);
 
     // Format time display - check pricing_plans first, then opening/closing, then time
-    const displayTime = venue.min_duration || venue.pricing_plans?.[0]?.min_duration || '6:00 AM - 10:00 PM';
+    const displayTime = (venue as any).min_duration || (venue as any).pricing_plans?.[0]?.min_duration || '6:00 AM - 10:00 PM';
 
     return (
         <div className="min-h-screen w-full bg-white font-sans selection:bg-[#866BFF]/20 overflow-x-hidden relative" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>

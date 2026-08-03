@@ -31,7 +31,7 @@ import { useReservationStore } from "@/store/useReservationStore";
 import { useRef } from "react";
 import { MobileVisualMap, DesktopVisualMap } from "./VisualMap";
 import { toast } from "@/components/ui/Toast";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatTime12hr } from "@/lib/utils";
 import {
   clearEventBookingStorage,
   readEventCart,
@@ -107,6 +107,8 @@ export default function TicketSelectionPage() {
   const organizerSession = useOrganizerSession();
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [rawInputValues, setRawInputValues] = useState<Record<number, string>>({});
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
 
   // Enforce logged-in session: redirect to login if not authenticated
@@ -433,22 +435,71 @@ export default function TicketSelectionPage() {
     return event.ticket_categories || [];
   }, [event]);
 
+  // Real-time stock polling & automatic clamping
+  useEffect(() => {
+    if (!event?.id) return;
+    const pollAvailability = async () => {
+      try {
+        const availability = await bookingApi.getEventAvailability(event.id);
+        const newBooked = availability.booked ?? {};
+        setBookedMap(newBooked);
+
+        const toastsToTrigger: string[] = [];
+
+        setCounts((prevCounts) => {
+          let changed = false;
+          const updated = { ...prevCounts };
+          categories.forEach((cat, i) => {
+            const currentVal = prevCounts[i] ?? 0;
+            if (currentVal > 0) {
+              const totalLimit = (cat.capacity && cat.capacity > 0) ? cat.capacity : (cat.available !== undefined ? cat.available : 0);
+              const booked = newBooked[cat.name] ?? 0;
+              const avail = Math.max(0, totalLimit - booked);
+              if (currentVal > avail) {
+                updated[i] = avail;
+                changed = true;
+                if (avail > 0) {
+                  toastsToTrigger.push(`Stock updated: max ${avail} ticket${avail === 1 ? '' : 's'} available for ${cat.name}`);
+                } else {
+                  toastsToTrigger.push(`${cat.name} is now SOLD OUT`);
+                }
+              }
+            }
+          });
+          return changed ? updated : prevCounts;
+        });
+
+        if (toastsToTrigger.length > 0) {
+          setTimeout(() => {
+            toastsToTrigger.forEach((msg) => toast.error(msg));
+          }, 0);
+        }
+      } catch (e) {
+        console.error("Availability poll error:", e);
+      }
+    };
+
+    const interval = setInterval(pollAvailability, 4000);
+    return () => clearInterval(interval);
+  }, [event?.id, categories]);
+
   useEffect(() => {
     if (Object.keys(counts).length > 0) {
       const countsList = categories
         .map((cat, i) => ({
           name: cat.name,
-          price: cat.price ?? 0,
           quantity: counts[i] ?? 0,
+          price: cat.price,
         }))
-        .filter((t) => t.quantity > 0);
+        .filter((c) => c.quantity > 0);
       if (countsList.length > 0) {
-        if (event?.id) writeScopedTempCounts(event.id, countsList);
-      } else {
-        sessionStorage.removeItem("ticpin_temp_counts");
+        sessionStorage.setItem(
+          "ticpin_restore_counts",
+          JSON.stringify(countsList),
+        );
       }
     }
-  }, [counts, categories, event?.id]);
+  }, [counts, categories]);
 
   const layoutPrices = useMemo(() => {
     if (!event?.layout_json) return {};
@@ -465,7 +516,9 @@ export default function TicketSelectionPage() {
   }, [event?.layout_json]);
 
   const getAvailable = (cat: TicketCategory) => {
-    const totalLimit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+    const totalLimit = (cat.capacity && cat.capacity > 0)
+      ? cat.capacity
+      : (cat.available !== undefined ? cat.available : 0);
     if (totalLimit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) return Infinity;
     const booked = bookedMap[cat.name] ?? 0;
     return Math.max(0, totalLimit - booked);
@@ -545,9 +598,15 @@ export default function TicketSelectionPage() {
     const cat = categories[i];
     const avail = getAvailable(cat);
     const current = counts[i] ?? 0;
-    if (current >= avail) return;
+    if (current >= avail) {
+      toast.error(`Only ${avail} ticket${avail === 1 ? '' : 's'} available`);
+      return;
+    }
 
-    setCounts((c) => ({ ...c, [i]: current + 1 }));
+    const nextVal = current + 1;
+    setCounts((c) => ({ ...c, [i]: nextVal }));
+    setRawInputValues((prev) => ({ ...prev, [i]: String(nextVal) }));
+    setEditingIndex(i);
     trackMetaEvent("AddToCart", { content_name: cat.name, value: cat.price ?? 0, currency: "INR" });
     if (!isAllRoute && selectedCategoryIndex === null) {
       setSelectedCategoryIndex(i);
@@ -557,7 +616,69 @@ export default function TicketSelectionPage() {
   const remove = (i: number) => {
     const current = counts[i] ?? 0;
     if (current === 0) return;
-    setCounts((c) => ({ ...c, [i]: current - 1 }));
+    const nextVal = current - 1;
+    setCounts((c) => ({ ...c, [i]: nextVal }));
+    if (nextVal === 0) {
+      setRawInputValues((prev) => {
+        const copy = { ...prev };
+        delete copy[i];
+        return copy;
+      });
+      if (editingIndex === i) setEditingIndex(null);
+    } else {
+      setRawInputValues((prev) => ({ ...prev, [i]: String(nextVal) }));
+    }
+  };
+
+  const handleQuantityInputChange = (i: number, valStr: string) => {
+    const cat = categories[i];
+    const avail = getAvailable(cat);
+
+    setRawInputValues((prev) => ({ ...prev, [i]: valStr }));
+    setEditingIndex(i);
+
+    if (valStr.trim() === "") {
+      setCounts((c) => ({ ...c, [i]: 0 }));
+      return;
+    }
+
+    let parsed = parseInt(valStr, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      parsed = 0;
+    }
+
+    if (parsed > avail) {
+      parsed = avail;
+      setRawInputValues((prev) => ({ ...prev, [i]: String(avail) }));
+      toast.error(`Only ${avail} ticket${avail === 1 ? '' : 's'} available`);
+    }
+
+    setCounts((c) => ({ ...c, [i]: parsed }));
+    if (parsed > 0 && !isAllRoute && selectedCategoryIndex === null) {
+      setSelectedCategoryIndex(i);
+    }
+  };
+
+  const handleQuantityInputBlur = (i: number) => {
+    setEditingIndex(null);
+    const cat = categories[i];
+    const avail = getAvailable(cat);
+    const raw = rawInputValues[i];
+
+    if (raw === undefined || raw.trim() === "" || parseInt(raw, 10) === 0) {
+      setCounts((c) => ({ ...c, [i]: 0 }));
+      setRawInputValues((prev) => {
+        const copy = { ...prev };
+        delete copy[i];
+        return copy;
+      });
+    } else {
+      let parsed = parseInt(raw, 10);
+      if (isNaN(parsed) || parsed < 0) parsed = 0;
+      if (parsed > avail) parsed = avail;
+      setCounts((c) => ({ ...c, [i]: parsed }));
+      setRawInputValues((prev) => ({ ...prev, [i]: String(parsed) }));
+    }
   };
 
   const totalTickets = useMemo(
@@ -592,7 +713,7 @@ export default function TicketSelectionPage() {
           month: "short",
         })
         : null,
-      event?.time ?? null,
+      event?.time ? formatTime12hr(event.time) : null,
       locationPart,
     ]
       .filter(Boolean)
@@ -836,6 +957,8 @@ export default function TicketSelectionPage() {
                 const available = getAvailable(cat);
                 const isSoldOut = available === 0;
                 const current = counts[i] ?? 0;
+                const isEditingThis = editingIndex === i || rawInputValues[i] !== undefined;
+                const showCounter = isEditingThis || current > 0;
 
                 return (
                   <div
@@ -853,7 +976,7 @@ export default function TicketSelectionPage() {
                           <div className="w-[61px] h-[23px] bg-red-100 border border-red-500 rounded-[5px] text-[10px] font-medium text-red-600 flex items-center justify-center">
                             SOLD OUT
                           </div>
-                        ) : current === 0 ? (
+                        ) : !showCounter ? (
                           <button
                             onClick={() => add(i)}
                             className="w-[61px] h-[23px] bg-[#EFEFEF] border border-[#686868] rounded-[5px] text-[12px] font-medium text-black flex items-center justify-center active:scale-95 transition-transform"
@@ -861,20 +984,31 @@ export default function TicketSelectionPage() {
                             Add
                           </button>
                         ) : (
-                          <div className="flex items-center border border-[#686868] rounded-[5px] bg-[#EFEFEF] h-[23px] overflow-hidden">
+                          <div className="flex items-center border border-[#686868] rounded-[5px] bg-[#EFEFEF] h-[26px] overflow-hidden px-1">
                             <button
                               onClick={() => remove(i)}
-                              className="px-2 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors"
+                              className="px-1.5 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors"
                             >
                               -
                             </button>
-                            <span className="px-2 text-[12px] font-medium text-black min-w-[20px] text-center">
-                              {current}
-                            </span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={available}
+                              value={rawInputValues[i] !== undefined ? rawInputValues[i] : (current === 0 ? "" : current)}
+                              placeholder="0"
+                              onFocus={() => {
+                                setEditingIndex(i);
+                                setRawInputValues((prev) => ({ ...prev, [i]: rawInputValues[i] !== undefined ? rawInputValues[i] : (current === 0 ? "" : String(current)) }));
+                              }}
+                              onChange={(e) => handleQuantityInputChange(i, e.target.value)}
+                              onBlur={() => handleQuantityInputBlur(i)}
+                              className="w-8 text-center bg-transparent text-[12px] font-bold text-black focus:outline-none focus:bg-black/10 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
                             <button
                               onClick={() => add(i)}
                               disabled={current >= available}
-                              className="px-2 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors disabled:opacity-40"
+                              className="px-1.5 text-[14px] font-bold text-black active:bg-zinc-200 transition-colors disabled:opacity-40"
                             >
                               +
                             </button>
@@ -1047,6 +1181,8 @@ export default function TicketSelectionPage() {
                 const available = getAvailable(cat);
                 const isSoldOut = available === 0;
                 const current = counts[i] ?? 0;
+                const isEditingThis = editingIndex === i || rawInputValues[i] !== undefined;
+                const showCounter = isEditingThis || current > 0;
 
                 return (
                   <div
@@ -1101,7 +1237,7 @@ export default function TicketSelectionPage() {
                           </span>
                         ) : (
                           <>
-                            {current === 0 ? (
+                            {!showCounter ? (
                               <button
                                 onClick={() => add(i)}
                                 className="w-[80px] h-[34px] bg-[#D9D9D9] hover:bg-[#c9c9c9] text-black rounded-[7px] flex items-center justify-center active:scale-95 transition-all"
@@ -1116,11 +1252,11 @@ export default function TicketSelectionPage() {
                               </button>
                             ) : (
                               <div
-                                className="w-[80px] h-[34px] bg-black text-white rounded-[7px] flex items-center justify-between px-2"
+                                className="w-[100px] h-[34px] bg-black text-white rounded-[7px] flex items-center justify-between px-2"
                                 style={{
                                   fontFamily: "'Anek Tamil Medium', sans-serif",
                                   fontWeight: 500,
-                                  fontSize: "22px",
+                                  fontSize: "18px",
                                   lineHeight: "1",
                                 }}
                               >
@@ -1130,9 +1266,20 @@ export default function TicketSelectionPage() {
                                 >
                                   -
                                 </button>
-                                <span className="font-medium select-none text-[18px]">
-                                  {current}
-                                </span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={available}
+                                  value={rawInputValues[i] !== undefined ? rawInputValues[i] : (current === 0 ? "" : current)}
+                                  placeholder="0"
+                                  onFocus={() => {
+                                    setEditingIndex(i);
+                                    setRawInputValues((prev) => ({ ...prev, [i]: rawInputValues[i] !== undefined ? rawInputValues[i] : (current === 0 ? "" : String(current)) }));
+                                  }}
+                                  onChange={(e) => handleQuantityInputChange(i, e.target.value)}
+                                  onBlur={() => handleQuantityInputBlur(i)}
+                                  className="w-10 text-center bg-transparent font-medium text-[18px] text-white focus:outline-none focus:bg-white/20 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
                                 <button
                                   onClick={() => add(i)}
                                   disabled={current >= available}

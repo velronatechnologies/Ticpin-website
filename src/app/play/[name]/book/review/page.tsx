@@ -729,14 +729,19 @@ export default function PlayReviewPage() {
     const handlePayNow = async () => {
         if (!firstName.trim()) { setBookingError('Please enter your first name'); return; }
         if (!lastName.trim()) { setBookingError('Please enter your last name'); return; }
+        const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+        if (fullName.length < 3) { setBookingError('Name must be at least 3 characters long'); return; }
 
         // Email format validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email.trim() || !emailRegex.test(email)) { setBookingError('Please enter a valid email address'); return; }
 
-        // Phone number validation (10 digits)
-        const phoneRegex = /^[0-9]{10}$/;
-        if (!billing.phone || !phoneRegex.test(billing.phone.replace(/[^0-9]/g, ''))) { setBookingError('Please enter a valid 10-digit phone number'); return; }
+        // Phone number validation (10 digits starting with 6-9)
+        const cleanPhone = (billing.phone || "").replace(/\D/g, "");
+        if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+            setBookingError('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9');
+            return;
+        }
 
         if (!billing.address.trim()) { setBookingError('Please enter your address'); return; }
         if (!billing.city.trim()) { setBookingError('Please enter your city'); return; }

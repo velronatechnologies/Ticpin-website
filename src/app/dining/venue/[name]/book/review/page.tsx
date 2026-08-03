@@ -270,9 +270,14 @@ export default function DiningReviewPage() {
     };
 
     const handlePayNow = async () => {
-        if (!billing.name.trim()) { setBookingError('Please enter your full name'); return; }
-        if (!billing.email.trim() || !billing.email.includes('@')) { setBookingError('Please enter a valid email'); return; }
-        if (!billing.phone || billing.phone.replace(/\D/g, '').length < 10) { setBookingError('Please enter a valid 10-digit phone number'); return; }
+        const nameTrimmed = (billing.name || "").trim();
+        if (!nameTrimmed) { setBookingError('Please enter your full name'); return; }
+        if (nameTrimmed.length < 3) { setBookingError('Name must be at least 3 characters long'); return; }
+        const emailTrimmed = (billing.email || "").trim();
+        if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) { setBookingError('Please enter a valid email address'); return; }
+        const phoneClean = (billing.phone || "").replace(/\D/g, "");
+        if (!phoneClean || phoneClean.length !== 10) { setBookingError('Please enter a valid 10-digit phone number'); return; }
+        if (!/^[6-9]\d{9}$/.test(phoneClean)) { setBookingError('Mobile number must be a valid 10-digit Indian number starting with 6, 7, 8, or 9'); return; }
         if (!billing.address.trim()) { setBookingError('Please enter your address'); return; }
         if (!acceptedTerms) { setBookingError('Please accept the terms and conditions'); return; }
 

@@ -39,20 +39,22 @@ export function MobileVisualMap({
   zoneStyles,
 }: VisualMapProps) {
   const isZoneSoldOut = (zoneName: string) => {
-    const primaryZone = zoneName.split(" ")[0].toUpperCase();
+    const norm = (s: string) => s.toUpperCase().replace(/[-\s]/g, "");
+    const zNorm = norm(zoneName);
     const cat = categories.find((c) => {
-      const cName = c.name.toUpperCase();
+      const cNorm = norm(c.name);
       return (
-        cName.includes(primaryZone) ||
-        primaryZone.includes(cName) ||
-        (primaryZone === "VIP" && cName === "VIP PASS") ||
-        (primaryZone === "PLATINUM" && cName === "PLATINUM PASS") ||
-        (primaryZone === "GOLD" && cName === "GOLD PASS") ||
-        (primaryZone === "MIP" && cName === "MIP PASS")
+        cNorm === zNorm ||
+        cNorm.includes(zNorm) ||
+        zNorm.includes(cNorm) ||
+        (zNorm.startsWith("VIP") && cNorm.includes("VIP")) ||
+        (zNorm.startsWith("PLATINUM") && cNorm.includes("PLATINUM")) ||
+        (zNorm.startsWith("GOLD") && cNorm.includes("GOLD")) ||
+        (zNorm.startsWith("MIP") && cNorm.includes("MIP"))
       );
     });
     if (!cat) return false;
-    return getAvailable(cat) === 0;
+    return getAvailable(cat) <= 0;
   };
 
   const getCustomZoneStyle = (zoneName: string, baseStyle: any) => {
@@ -489,20 +491,22 @@ export function DesktopVisualMap({
   zoneStyles,
 }: VisualMapProps) {
   const isZoneSoldOut = (zoneName: string) => {
-    const primaryZone = zoneName.split(" ")[0].toUpperCase();
+    const norm = (s: string) => s.toUpperCase().replace(/[-\s]/g, "");
+    const zNorm = norm(zoneName);
     const cat = categories.find((c) => {
-      const cName = c.name.toUpperCase();
+      const cNorm = norm(c.name);
       return (
-        cName.includes(primaryZone) ||
-        primaryZone.includes(cName) ||
-        (primaryZone === "VIP" && cName === "VIP PASS") ||
-        (primaryZone === "PLATINUM" && cName === "PLATINUM PASS") ||
-        (primaryZone === "GOLD" && cName === "GOLD PASS") ||
-        (primaryZone === "MIP" && cName === "MIP PASS")
+        cNorm === zNorm ||
+        cNorm.includes(zNorm) ||
+        zNorm.includes(cNorm) ||
+        (zNorm.startsWith("VIP") && cNorm.includes("VIP")) ||
+        (zNorm.startsWith("PLATINUM") && cNorm.includes("PLATINUM")) ||
+        (zNorm.startsWith("GOLD") && cNorm.includes("GOLD")) ||
+        (zNorm.startsWith("MIP") && cNorm.includes("MIP"))
       );
     });
     if (!cat) return false;
-    return getAvailable(cat) === 0;
+    return getAvailable(cat) <= 0;
   };
 
   const getCustomZoneStyle = (zoneName: string, baseStyle: any) => {
