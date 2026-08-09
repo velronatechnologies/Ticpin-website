@@ -1445,7 +1445,42 @@ export default function ReviewBookingPage() {
         }
       }
 
-      // Step 2: Store pending booking data so we can complete after redirect (Cashfree)
+      // Step 2: Pre-create PENDING booking record in DB before launching payment gateway
+      // This ensures server-to-server webhooks and 10-second auto-reconciliation can confirm the booking even if the user's browser closes!
+      try {
+        await bookingApi.createEventBooking({
+          user_email: email,
+          user_name: billing.name,
+          user_phone: billing.phone,
+          address: billing.address,
+          city: billing.city,
+          pincode: billing.pincode,
+          nationality: billing.nationality,
+          state: billing.state,
+          event_id: cart.eventId,
+          event_name: cart.eventName,
+          tickets: cart.tickets.map((t) => ({
+            category: t.category,
+            price: t.price,
+            quantity: t.quantity,
+          })),
+          order_amount: orderAmount,
+          booking_fee: bookingFee,
+          coupon_code: appliedCoupon || undefined,
+          offer_id: appliedOffer?.id,
+          user_id: session?.id,
+          order_id: orderRes.order_id,
+          payment_gateway: orderRes.gateway,
+          status: "pending",
+          use_ticpass: isPassApplied,
+          reservation_id: reservationStore.reservationId,
+          donation_amount: isDonationAdded ? donationAmount : 0,
+        });
+      } catch (preCreateErr) {
+        console.warn("Pre-creating pending booking record warning:", preCreateErr);
+      }
+
+      // Step 3: Store pending booking data so we can complete after redirect (Cashfree)
       sessionStorage.setItem(
         "ticpin_pending_payment",
         JSON.stringify({

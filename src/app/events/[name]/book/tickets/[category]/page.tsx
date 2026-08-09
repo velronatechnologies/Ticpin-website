@@ -744,9 +744,14 @@ export default function TicketSelectionPage() {
     // Double check event date validity before proceeding to review
     if (event?.date) {
       const eventDate = new Date(event.date);
+      const endDateRaw = (event as any).event_end_date || (event as any).eventEndDate || (event as any).ticket_close_date || (event as any).ticketCloseDate;
+      const endDate = endDateRaw ? new Date(endDateRaw) : null;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      if (eventDate < today) {
+
+      // If event has a future end date or close date, allow bookings; otherwise check start date
+      const isPast = endDate && !Number.isNaN(endDate.getTime()) ? endDate < today : eventDate < today;
+      if (isPast) {
         toast.error("Event date has passed. Bookings are closed.");
         resetReservationUi();
         router.push(`/events/${name}`);
