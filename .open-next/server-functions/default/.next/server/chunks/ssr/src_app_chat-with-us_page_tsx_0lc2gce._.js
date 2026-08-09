@@ -1,0 +1,3 @@
+module.exports=[56587,a=>{"use strict";var b=a.i(26326),c=a.i(27468),d=a.i(2669);a.s(["default",0,function(){let a=(0,c.useRouter)();return(0,d.useEffect)(()=>{a.replace("/chat-support")},[a]),(0,b.jsx)("div",{className:"flex h-screen items-center justify-center font-sans",children:(0,b.jsx)("div",{className:"w-10 h-10 border-4 border-[#5331EA] border-t-transparent rounded-full animate-spin"})})}])}];
+
+//# sourceMappingURL=src_app_chat-with-us_page_tsx_0lc2gce._.js.map

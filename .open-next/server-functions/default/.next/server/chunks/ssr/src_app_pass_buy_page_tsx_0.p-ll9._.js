@@ -1,0 +1,3 @@
+module.exports=[36771,a=>{"use strict";var b=a.i(26326),c=a.i(2669),d=a.i(27468);a.s(["default",0,function(){let a=(0,d.useRouter)();return(0,c.useEffect)(()=>{a.replace("/pass")},[a]),(0,b.jsx)("div",{className:"min-h-screen bg-white flex items-center justify-center",children:(0,b.jsx)("div",{className:"w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"})})}])}];
+
+//# sourceMappingURL=src_app_pass_buy_page_tsx_0.p-ll9._.js.map

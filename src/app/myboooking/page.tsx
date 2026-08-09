@@ -138,15 +138,20 @@ function MyBookingsContent() {
                     <div className="space-y-6">
                         {filteredBookings.map((booking, idx) => {
                             const isCancelled = booking.status === 'cancelled' || booking.status === 'refunded';
-                            const isExpired = booking.date ? new Date(booking.date).getTime() < new Date().setHours(0, 0, 0, 0) : false;
+                            const isBooked = booking.status === 'booked' || booking.status === 'confirmed';
+                            const isExpired = !isBooked && booking.date ? new Date(booking.date).getTime() < new Date().setHours(0, 0, 0, 0) : false;
 
-                            let statusLabel = 'Confirmed';
+                            let statusLabel = 'Booked';
                             let statusColor = '#009133';
                             let statusBg = '#D6FAE5';
                             if (isCancelled) {
                                 statusLabel = 'Cancelled';
                                 statusColor = '#E53935';
                                 statusBg = '#FFD6D6';
+                            } else if (isBooked) {
+                                statusLabel = 'Booked';
+                                statusColor = '#009133';
+                                statusBg = '#D6FAE5';
                             } else if (isExpired) {
                                 statusLabel = 'Expired';
                                 statusColor = '#E65100';
@@ -154,7 +159,8 @@ function MyBookingsContent() {
                             }
 
                             const title = booking.event_name || booking.venue_name || 'Booking';
-                            const dateStr = booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+                            const rawDate = booking.booked_at || booking.created_at || booking.date;
+                            const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
                             const timeStr = booking.time || booking.time_slot || booking.slot || '';
                             const formattedDateTime = dateStr && timeStr ? `${dateStr} | ${timeStr}` : (dateStr || timeStr || 'Date | Time');
 
