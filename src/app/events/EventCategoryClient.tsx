@@ -42,7 +42,7 @@ export default function EventCategoryClient({
 
     const filteredEvents = useMemo(() => {
         let result = [...events];
-        
+
         // Chip filter (Today/Tomorrow)
         if (activeFilter === 'Today') {
             const today = new Date().toISOString().split('T')[0];

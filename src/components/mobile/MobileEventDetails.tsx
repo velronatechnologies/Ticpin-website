@@ -9,6 +9,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import { toast } from '@/components/ui/Toast';
 import { bookingApi } from '@/lib/api/booking';
 import { getMinPrice, formatEventDateUTC, formatEventDateUTCWithDay, slugify } from '@/lib/utils';
+import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
 import AuthModal from '@/components/modals/AuthModal';
 
 interface OfferRecord {
@@ -137,37 +138,21 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const bookingStatus = useMemo(() => {
         if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
 
-        if (event.is_sales_paused || event.is_canceled) {
+        if (isEventBookingClosed(event, Date.now())) {
             return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
         }
 
-        if (event.ticket_open_date) {
-            const openDate = new Date(event.ticket_open_date);
-            if (!isNaN(openDate.getTime()) && openDate.getTime() > Date.now()) {
-                const formatted = openDate.toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short'
-                }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                });
-                return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
-            }
-        }
-
-        if (event.ticket_close_date) {
-            const closeDate = new Date(event.ticket_close_date);
-            if (!isNaN(closeDate.getTime()) && closeDate.getTime() < Date.now()) {
-                return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
-            }
-        }
-
-        if (event.event_end_date) {
-            const endDate = new Date(event.event_end_date);
-            if (!isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) {
-                return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
-            }
+        if (isEventBookingNotOpenedYet(event, Date.now())) {
+            const openDate = new Date(event.ticket_open_date!);
+            const formatted = openDate.toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short'
+            }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+            return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
         }
 
         return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
