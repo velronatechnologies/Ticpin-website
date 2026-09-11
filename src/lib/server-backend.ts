@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_ORIGIN = 'https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io';
+const DEFAULT_BACKEND_ORIGIN = 'https://postgresbackend.vercel.app';
 
 // Server-rendered pages need an absolute URL during build/prerender. Prefer the
 // explicit backend origin when present, and fall back to local development.

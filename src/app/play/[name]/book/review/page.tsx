@@ -575,7 +575,7 @@ export default function PlayReviewPage() {
             });
     }, [venueName, session?.id]);
     const orderAmount = cart?.totalPrice ?? 0;
-    const bookingFee = Math.round(orderAmount * 0.13);
+    const bookingFee = orderAmount > 0 ? Math.round(orderAmount * 0.13) : 0;
     // Check if any offers are expiring soon
     const hasExpiringOffers = offers.some((offer) => isExpiringWithinDay(offer.valid_until, nowMs));
     const hasExpiringCoupons = availableCoupons.some((coupon) => isExpiringWithinDay(coupon.valid_until, nowMs));

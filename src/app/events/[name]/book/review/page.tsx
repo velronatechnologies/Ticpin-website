@@ -894,7 +894,7 @@ export default function ReviewBookingPage() {
   }, [cart?.eventId, cart?.type, session?.id]);
 
   const orderAmount = cart?.totalPrice ?? 0;
-  const bookingFee = Math.round(orderAmount * 0.06);
+  const bookingFee = orderAmount > 0 ? Math.round(orderAmount * 0.06) : 0;
 
   const isPassApplied = cart?.use_pass ?? false;
   const passDiscount =

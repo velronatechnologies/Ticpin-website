@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/backend/:path*",
-        destination: `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io"
+        destination: `${process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "https://postgresbackend.vercel.app"
           }/:path*`,
       },
     ];

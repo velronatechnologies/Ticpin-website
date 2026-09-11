@@ -17,7 +17,7 @@ function BookingsContent() {
     const searchParams = useSearchParams();
     const session = useUserSession();
     const typeParam = searchParams.get('type') as any;
-    const activeTab = typeParam && ['events', 'play'].includes(typeParam) ? typeParam : 'play';
+    const activeTab = typeParam && ['events', 'play'].includes(typeParam) ? typeParam : 'events';
     const currentPathWithQuery = () =>
         typeof window === 'undefined'
             ? '/bookings'
@@ -252,11 +252,19 @@ function BookingsContent() {
                                 {/* Bottom Row: Divider, Badge & Action */}
                                 <div className="pt-3 border-t border-[#686868] flex justify-between items-center w-full">
                                     {/* Status Badge */}
-                                    <div className={`px-3 py-1 rounded-[6px] flex items-center justify-center min-w-[80px] ${(booking.status === 'booked' || booking.status === 'confirmed' || booking.status === 'pending') ? 'bg-[#65B54E]/30 ' : 'bg-red-50'}`}>
-                                        <span className={`text-[14px] font-semibold ${(booking.status === 'booked' || booking.status === 'confirmed' || booking.status === 'pending') ? 'text-[#009133]' : 'text-red-600'}`}>
-                                            {(booking.status === 'booked' || booking.status === 'confirmed' || booking.status === 'pending') ? 'Booked' : booking.status || 'Booked'}
-                                        </span>
-                                    </div>
+                                    {(() => {
+                                        const status = booking.status;
+                                        const isConfirmed = status === 'booked' || status === 'confirmed';
+                                        const isPending = status === 'pending';
+                                        const badgeClass = isConfirmed ? 'bg-[#65B54E]/30' : isPending ? 'bg-amber-100' : 'bg-red-50';
+                                        const textClass = isConfirmed ? 'text-[#009133]' : isPending ? 'text-amber-700' : 'text-red-600';
+                                        const label = isConfirmed ? 'Booked' : isPending ? 'Pending' : (status || 'Booked');
+                                        return (
+                                            <div className={`px-3 py-1 rounded-[6px] flex items-center justify-center min-w-[80px] ${badgeClass}`}>
+                                                <span className={`text-[14px] font-semibold ${textClass}`}>{label}</span>
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* Action link */}
                                     <Link href={`/bookings/${booking.id}`} className="flex items-center gap-1 text-black">

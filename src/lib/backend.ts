@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_ORIGIN = 'https://ticpin-backend.politebay-860bc91e.centralindia.azurecontainerapps.io';
+const DEFAULT_BACKEND_ORIGIN = 'https://postgresbackend.vercel.app';
 
 const SERVER_BACKEND_ORIGIN =
   process.env.BACKEND_URL ||
