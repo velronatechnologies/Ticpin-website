@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
 interface BillingDetails {
@@ -310,11 +311,12 @@ export default function BillingDetailsForm({
               className="flex-1 h-[55px] bg-black text-white rounded-[10px] font-medium text-[22px] uppercase  active:bg-black transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-normal"
               style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
             >
-              {bookingLoading
-                ? "Processing..."
-                : grandTotal === 0
-                  ? "CONTINUE"
-                  : "PAY NOW"}
+              {bookingLoading || isPaying ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" aria-label="Processing payment" />
+                  Processing...
+                </span>
+              ) : grandTotal === 0 ? "CONTINUE" : "PAY NOW"}
             </button>
           </div>
         </div>

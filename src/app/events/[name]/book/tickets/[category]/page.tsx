@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Percent,
   Info,
+  Loader2,
 } from "lucide-react";
 import { useSlotLock } from "@/hooks/useSlotLock";
 import AuthModal from "@/components/modals/AuthModal";
@@ -1082,7 +1083,11 @@ export default function TicketSelectionPage() {
                 : "bg-zinc-400 cursor-not-allowed opacity-60"
             }`}
           >
-            {isEditing && hasChanges ? "UPDATE CART" : "ADD TO CART"}
+            {isCreatingReservation ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-label="Adding to cart" />
+            ) : (
+              isEditing && hasChanges ? "UPDATE CART" : "ADD TO CART"
+            )}
           </button>
         </footer>
       </div>
@@ -1385,7 +1390,11 @@ export default function TicketSelectionPage() {
               lineHeight: "1",
             }}
           >
-            {isEditing && hasChanges ? "UPDATE CART" : "ADD TO CART"}
+            {isCreatingReservation ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-label="Adding to cart" />
+            ) : (
+              isEditing && hasChanges ? "UPDATE CART" : "ADD TO CART"
+            )}
           </button>
         </footer>
       </div>

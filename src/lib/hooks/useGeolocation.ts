@@ -46,7 +46,9 @@ export function useGeolocation() {
                         `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`,
                         { headers: { 'Accept-Language': 'en' } }
                     );
-                    const data = await res.json();
+                    const text = await res.text();
+                    let data: any = {};
+                    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
                     const name = data.name || data.address?.suburb || data.address?.neighbourhood || data.address?.city || '';
                     const district = data.address?.state_district || data.address?.county || '';
                     const state = data.address?.state || '';

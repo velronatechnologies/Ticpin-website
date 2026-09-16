@@ -9,22 +9,27 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
 
-  // Check if response is ok BEFORE parsing JSON
-  if (!res.ok) {
-    try {
-      const errorData = await res.json();
-      throw new Error(errorData.error ?? `HTTP ${res.status}: ${res.statusText}`);
-    } catch (e) {
-      // If response is not JSON, try to get text
-      if (e instanceof SyntaxError) {
-        const text = await res.text();
-        throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
-      }
-      throw e;
-    }
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
   }
 
-  const data = await res.json();
+  const trimmed = (text || '').trim();
+  const isHtml = trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html');
+
+  if (!res.ok) {
+    if (isHtml) {
+      if ([530, 502, 503, 504].includes(res.status)) {
+        throw new Error('Backend server is currently offline. Please try again shortly.');
+      }
+      throw new Error(`Server error (${res.status}). Please try again.`);
+    }
+    throw new Error(data?.error || data?.message || `HTTP ${res.status}: ${res.statusText}`);
+  }
+
   return data as T;
 }
 
@@ -115,8 +120,19 @@ export const organizerApi = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(`${BASE}/organizer/upload-pan`, { method: 'POST', body: form, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+    const text = await res.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+    const trimmed = (text || '').trim();
+    if (!res.ok) {
+      if (trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html')) {
+        if ([530, 502, 503, 504].includes(res.status)) {
+          throw new Error('Backend server is currently offline. Please try again shortly.');
+        }
+        throw new Error(`PAN upload failed (Status ${res.status})`);
+      }
+      throw new Error(data?.error || data?.message || 'PAN upload failed');
+    }
     return data.url as string;
   },
 
@@ -125,8 +141,19 @@ export const organizerApi = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(`${BASE}/organizer/upload-profile-photo`, { method: 'POST', body: form, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+    const text = await res.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+    const trimmed = (text || '').trim();
+    if (!res.ok) {
+      if (trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html')) {
+        if ([530, 502, 503, 504].includes(res.status)) {
+          throw new Error('Backend server is currently offline. Please try again shortly.');
+        }
+        throw new Error(`Profile photo upload failed (Status ${res.status})`);
+      }
+      throw new Error(data?.error || data?.message || 'Profile photo upload failed');
+    }
     return data.url as string;
   },
 
@@ -135,8 +162,19 @@ export const organizerApi = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(`${BASE}/organizer/upload-media`, { method: 'POST', body: form, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+    const text = await res.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+    const trimmed = (text || '').trim();
+    if (!res.ok) {
+      if (trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html')) {
+        if ([530, 502, 503, 504].includes(res.status)) {
+          throw new Error('Backend server is currently offline. Please try again shortly.');
+        }
+        throw new Error(`Media upload failed (Status ${res.status})`);
+      }
+      throw new Error(data?.error || data?.message || 'Media upload failed');
+    }
     return data.url as string;
   },
 

@@ -3,10 +3,30 @@
  */
 import { BACKEND_API_BASE } from '../backend';
 
+async function safeAuthFetch(url: string, init?: RequestInit, fallbackError = 'Request failed') {
+    const res = await fetch(url, init);
+    const text = await res.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+    const trimmed = (text || '').trim();
+    const isHtml = trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html');
+
+    if (!res.ok) {
+        if (isHtml) {
+            if ([530, 502, 503, 504].includes(res.status)) {
+                throw new Error('Backend server is currently offline. Please try again shortly.');
+            }
+            throw new Error(`Server error (${res.status}). Please try again.`);
+        }
+        throw new Error(data?.error || data?.message || fallbackError);
+    }
+    return data;
+}
+
 export const authApi = {
     // Organizer/User Login
     login: async (identifier: string, vertical?: string, verificationCredential?: string) => {
-        const response = await fetch(`${BACKEND_API_BASE}/organizer/login`, {
+        return safeAuthFetch(`${BACKEND_API_BASE}/organizer/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -14,58 +34,43 @@ export const authApi = {
                 vertical, 
                 verification_credential: verificationCredential 
             }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Login failed');
-        return data;
+        }, 'Login failed');
     },
 
     // Verify OTP for Organizer/User
     verifyOTP: async (identifier: string, otp: string, vertical?: string) => {
-        const response = await fetch(`${BACKEND_API_BASE}/organizer/verify-otp`, {
+        return safeAuthFetch(`${BACKEND_API_BASE}/organizer/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, otp, vertical }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Verification failed');
-        return data;
+        }, 'Verification failed');
     },
 
     // Admin Login
     adminLogin: async (identifier: string) => {
         const payload = { email: identifier }; // Backend Login expects Email field
-        const response = await fetch(`${BACKEND_API_BASE}/admin/login`, {
+        return safeAuthFetch(`${BACKEND_API_BASE}/admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Admin login failed');
-        return data;
+        }, 'Admin login failed');
     },
 
     // Verify Admin OTP
     verifyAdminOTP: async (identifier: string, otp: string) => {
-        const response = await fetch(`${BACKEND_API_BASE}/admin/verify-otp`, {
+        return safeAuthFetch(`${BACKEND_API_BASE}/admin/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, otp }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Admin verification failed');
-        return data;
+        }, 'Admin verification failed');
     },
 
     // Resend OTP
     resendOTP: async (identifier: string, vertical?: string) => {
-        const response = await fetch(`${BACKEND_API_BASE}/organizer/resend-otp`, {
+        return safeAuthFetch(`${BACKEND_API_BASE}/organizer/resend-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier, vertical }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to resend OTP');
-        return data;
+        }, 'Failed to resend OTP');
     }
 };

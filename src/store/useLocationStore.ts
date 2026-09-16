@@ -64,7 +64,9 @@ export const useLocationStore = create<LocationState>()(
                                 const res = await fetch(
                                     `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.latitude},${coords.longitude}&key=${API_KEY}`
                                 );
-                                const data = await res.json();
+                                const text = await res.text();
+                                let data: any = {};
+                                try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
 
                                 if (data.results && data.results.length > 0) {
                                     let city = "";

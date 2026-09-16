@@ -34,6 +34,17 @@ export interface UserProfile {
     createdAt?: string;
 }
 
+function parseResponseError(data: any, text: string, res: Response, fallback: string): string {
+    const trimmed = (text || '').trim();
+    if (trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html')) {
+        if ([530, 502, 503, 504].includes(res.status)) {
+            return 'Backend server is currently offline. Please try again shortly.';
+        }
+        return `Server error (${res.status}). Please try again.`;
+    }
+    return data?.error || data?.message || fallback;
+}
+
 export const profileApi = {
     getProfile: async (userId: string): Promise<UserProfile | null> => {
         try {
@@ -42,8 +53,11 @@ export const profileApi = {
                 credentials: 'include'
             });
             if (res.status === 404) return null;
-            if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`);
-            return await res.json();
+            const text = await res.text();
+            let data: any = null;
+            try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+            if (!res.ok) throw new Error(parseResponseError(data, text, res, `Failed to fetch profile: ${res.status}`));
+            return data as UserProfile;
         } catch (err) {
             console.error('Failed to fetch profile:', err);
             throw err;
@@ -57,8 +71,10 @@ export const profileApi = {
             credentials: 'include',
             body: JSON.stringify(profile)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to update profile');
+        const text = await res.text();
+        let data: any = {};
+        try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+        if (!res.ok) throw new Error(parseResponseError(data, text, res, 'Failed to update profile'));
         return data as UserProfile;
     },
 
@@ -69,8 +85,10 @@ export const profileApi = {
             credentials: 'include',
             body: JSON.stringify(profile)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to create profile');
+        const text = await res.text();
+        let data: any = {};
+        try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+        if (!res.ok) throw new Error(parseResponseError(data, text, res, 'Failed to create profile'));
         return data as UserProfile;
     },
 
@@ -83,8 +101,10 @@ export const profileApi = {
             credentials: 'include',
             body: formData
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to upload photo');
+        const text = await res.text();
+        let data: any = {};
+        try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
+        if (!res.ok) throw new Error(parseResponseError(data, text, res, 'Failed to upload photo'));
         return data as { url: string };
     }
 };

@@ -47,7 +47,9 @@ export function useSlotLock(type: 'play' | 'event' | 'dining') {
         try {
             const res = await fetch(`/backend/api/booking/lock/status?lock_key=${lockKey}&type=${type}`);
             if (res.ok) {
-                const data = await res.json();
+                const text = await res.text();
+                let data: any = {};
+                try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
                 setLocks(data.locks || []);
             }
         } catch (err) {
@@ -122,17 +124,17 @@ export function useSlotLock(type: 'play' | 'event' | 'dining') {
             } else {
                 let errorText = 'Failed to lock slot';
                 try {
-                    const contentType = res.headers.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
-                        const errorData: any = await res.json();
-                        errorText =
-                            errorData?.message ||
-                            errorData?.error ||
-                            errorData?.details ||
-                            errorText;
-                    } else {
-                        const t = await res.text();
-                        if (t) errorText = t;
+                    const text = await res.text();
+                    const trimmed = (text || '').trim();
+                    if (trimmed.startsWith('<') || trimmed.includes('<!doctype')) {
+                        errorText = `Server error (${res.status})`;
+                    } else if (text) {
+                        try {
+                            const errorData = JSON.parse(text);
+                            errorText = errorData?.message || errorData?.error || errorData?.details || text;
+                        } catch {
+                            errorText = text;
+                        }
                     }
                 } catch {
                     // ignore parse errors and keep fallback

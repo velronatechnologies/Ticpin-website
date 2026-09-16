@@ -19,8 +19,26 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return Promise.reject(new Error('Session expired. Please login again.'));
   }
   
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Something went wrong');
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+
+  const trimmed = (text || '').trim();
+  const isHtml = trimmed.startsWith('<') || trimmed.includes('<!doctype') || trimmed.includes('<html');
+
+  if (!res.ok) {
+    if (isHtml) {
+      if ([530, 502, 503, 504].includes(res.status)) {
+        throw new Error('Backend server is currently offline. Please try again shortly.');
+      }
+      throw new Error(`Server error (${res.status}). Please try again.`);
+    }
+    throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+  }
   return data as T;
 }
 

@@ -46,7 +46,9 @@ export function useUserPass() {
 
         const passRes = await fetch(`/backend/api/pass/user/${session.id}/latest`);
         if (passRes.ok) {
-          const passData = await passRes.json();
+          const passText = await passRes.text();
+          let passData: any = null;
+          try { passData = passText ? JSON.parse(passText) : null; } catch { passData = null; }
           if (passData && passData.status === 'active') {
             setUserPass(passData);
           } else {
