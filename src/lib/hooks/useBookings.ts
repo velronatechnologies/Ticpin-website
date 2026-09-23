@@ -1,12 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingApi } from '@/lib/api/booking';
+import { toast } from '@/components/ui/Toast';
 
 export const useUserBookings = (email?: string, phone?: string, userId?: string) => {
     return useQuery({
         queryKey: ['bookings', email, phone, userId],
         queryFn: async () => {
             if (!email && !phone && !userId) return [];
-            return await bookingApi.getUserBookings({ email, phone, userId });
+            try {
+                return await bookingApi.getUserBookings({ email, phone, userId });
+            } catch (err) {
+                console.error('Failed to load bookings:', err);
+                toast.error('Failed to load your bookings history.');
+                return [];
+            }
         },
         enabled: !!(email || phone || userId),
         staleTime: 2 * 60 * 1000, // 2 minutes

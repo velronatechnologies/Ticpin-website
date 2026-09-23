@@ -284,15 +284,52 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
 
                             <div className="h-[0.5px] bg-[#686868] w-full" />
 
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 <p className="text-[17px] font-medium text-[#686868] leading-none">Discount</p>
-                                <p className="text-[20px] font-medium text-black uppercase">
-                                    {booking.ticpassApplied || booking.ticpass_applied ? `Ticpass Applied - ₹${booking.discountAmount || booking.discount_amount} off` :
-                                        booking.offerId || booking.offer_id ? `Offer Applied - ₹${booking.discountAmount || booking.discount_amount} off` :
-                                        booking.couponCode || booking.coupon_code ? `Coupon: ${booking.couponCode || booking.coupon_code} - ₹${booking.discountAmount || booking.discount_amount} off` :
-                                        (booking.grandTotal ?? booking.grand_total) === 0 ? 'Total Free' :
-                                        (booking.discountAmount || booking.discount_amount) > 0 ? `₹${booking.discountAmount || booking.discount_amount} Savings` : 'No offer applied'}
-                                </p>
+                                {(() => {
+                                    const offerDisc = Number(booking.offerDiscountAmount ?? booking.offer_discount_amount ?? 0);
+                                    const couponDisc = Number(booking.couponDiscountAmount ?? booking.coupon_discount_amount ?? 0);
+                                    const passDisc = Number(booking.ticpassDiscountAmount ?? booking.ticpass_discount_amount ?? 0);
+                                    const totalDisc = Number(booking.discountAmount ?? booking.discount_amount ?? 0);
+                                    const offerName = booking.offerTitle || booking.offer_title || 'Offer';
+                                    const couponCode = booking.couponCode || booking.coupon_code;
+
+                                    if (offerDisc > 0 || couponDisc > 0 || passDisc > 0) {
+                                        return (
+                                            <div className="space-y-1">
+                                                {offerDisc > 0 && (
+                                                    <p className="text-[17px] font-medium text-black uppercase">
+                                                        {offerName} - ₹{offerDisc} off
+                                                    </p>
+                                                )}
+                                                {couponDisc > 0 && (
+                                                    <p className="text-[17px] font-medium text-black uppercase">
+                                                        Coupon: {couponCode} - ₹{couponDisc} off
+                                                    </p>
+                                                )}
+                                                {passDisc > 0 && (
+                                                    <p className="text-[17px] font-medium text-black uppercase">
+                                                        Ticpass Discount - ₹{passDisc} off
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
+                                    if (totalDisc > 0) {
+                                        return (
+                                            <p className="text-[20px] font-medium text-black uppercase">
+                                                ₹{totalDisc} Savings
+                                            </p>
+                                        );
+                                    }
+
+                                    return (
+                                        <p className="text-[20px] font-medium text-black uppercase">
+                                            {(booking.grandTotal ?? booking.grand_total) === 0 ? 'Total Free' : 'No offer applied'}
+                                        </p>
+                                    );
+                                })()}
                             </div>
 
                             <div className="pt-4 flex flex-wrap gap-6 items-center">

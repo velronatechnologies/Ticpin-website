@@ -24,6 +24,7 @@ import { useCurrentTime } from '@/hooks/use-current-time';
 import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
 import { trackMetaEvent } from '@/lib/metaPixel';
 import { safeJsonParse } from '@/lib/bookingFlow';
+import { formatTime12hr } from '@/lib/utils';
 
 interface TicketCategory {
     name: string;
@@ -125,12 +126,22 @@ const getAmenityIcon = (name: string) => {
     return <Check className={iconClass} />;
 };
 
+interface OfferRecord {
+    id: string;
+    title: string;
+    description: string;
+    image?: string;
+    discount_type: 'percent' | 'flat';
+    discount_value: number;
+}
+
 interface EventDetailClientProps {
     event: EventData;
     id: string;
+    offers?: OfferRecord[];
 }
 
-export default function EventDetailClient({ event, id }: EventDetailClientProps) {
+export default function EventDetailClient({ event, id, offers = [] }: EventDetailClientProps) {
     if (!event || !event.status || event.status.toLowerCase() !== 'approved') {
         notFound();
     }
@@ -195,7 +206,7 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
     const isSoldOut = useMemo(() => {
-        if (!availabilityLoaded) return false;
+        if (!availabilityLoaded) return null; // Return null while loading to indicate unknown state
         let categories: TicketCategory[] = event.ticket_categories || [];
         if (event.is_layout_based && event.layout_json) {
             const layout = safeJsonParse<any>(event.layout_json);
@@ -216,25 +227,27 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
         if (categories.length === 0) return false;
         for (const cat of categories) {
             const limit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+            // Treat invalid/missing capacity as unavailable (fail safe)
             if (limit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) {
-                return false;
+                return true; // No valid capacity info - treat as sold out
             }
+            // Explicit unlimited capacity indicator
             if (limit >= 999999) {
-                return false;
+                return false; // Has unlimited capacity
             }
             const booked = bookedMap[cat.name] ?? 0;
             if (Math.max(0, limit - booked) > 0) {
-                return false;
+                return false; // Has available tickets
             }
         }
-        return true;
+        return true; // All categories are sold out
     }, [event, bookedMap, availabilityLoaded]);
 
     const bookingStatus = useMemo(() => {
-        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS', isLoading: true };
 
         if (isEventBookingClosed(event, nowMs)) {
-            return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
+            return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED', isLoading: false };
         }
 
         if (isEventBookingNotOpenedYet(event, nowMs)) {
@@ -247,17 +260,22 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                 minute: '2-digit',
                 hour12: true
             });
-            return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
+            return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}`, isLoading: false };
+        }
+
+        // If availability is still loading, show loading state
+        if (isSoldOut === null) {
+            return { isClosed: false, notOpenedYet: false, text: 'CHECKING AVAILABILITY...', isLoading: true };
         }
 
         if (isSoldOut) {
-            return { isClosed: true, notOpenedYet: false, text: 'SOLD OUT' };
+            return { isClosed: true, notOpenedYet: false, text: 'SOLD OUT', isLoading: false };
         }
 
-        return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+        return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS', isLoading: false };
     }, [event, nowMs, isSoldOut]);
 
-    const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
+    const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet || bookingStatus.isLoading;
 
     // Reset state + scroll to top when navigating to a new event (handles back/forward)
     useEffect(() => {
@@ -276,7 +294,13 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
 
     const handleBook = async () => {
         if (closedBooking) {
-            toast.error('Booking for this event is closed!');
+            if (bookingStatus.notOpenedYet) {
+                toast.error('Tickets for this event have not opened yet!');
+            } else if (bookingStatus.isClosed) {
+                toast.error('Booking for this event is closed!');
+            } else {
+                toast.error('Please wait while we check availability...');
+            }
             return;
         }
         try {
@@ -355,7 +379,7 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
     const bannerImg = useMemo(() => event?.landscape_image_url || event?.portrait_image_url || '', [event]);
 
     if (isMobile) {
-        return <MobileEventDetails event={event} offers={[]} />;
+        return <MobileEventDetails event={event} offers={offers} />;
     }
 
     return (
@@ -419,16 +443,24 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                 <div className="flex items-center gap-[18px]">
                                     <div className="w-[60px] h-[60px] bg-[#FAF6F6] rounded-[15px] flex items-center justify-center shrink-0">
-                                        <img src="/language-logo.svg" alt="Language" className="w-[28px] h-[28px] shrink-0" />
+                                        <Calendar className="w-[28px] h-[28px] text-[#8E8E93] shrink-0" />
                                     </div>
                                     <div className="flex flex-col justify-center">
-                                        <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Language</p>
-                                        <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>
-                                            {event.guide?.languages?.length ? event.guide.languages.filter(Boolean).join(', ') : 'TBA'}
-                                        </p>
+                                        <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Date</p>
+                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{formattedDate}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-[18px]">
+                                    <div className="w-[60px] h-[60px] bg-[#FAF6F6] rounded-[15px] flex items-center justify-center shrink-0">
+                                        <Timer className="w-[28px] h-[28px] text-[#8E8E93] shrink-0" />
+                                    </div>
+                                    <div className="flex flex-col justify-center">
+                                        <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Time</p>
+                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{formatTime12hr(event.time) || 'TBA'}</p>
                                     </div>
                                 </div>
 
@@ -438,7 +470,7 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Duration</p>
-                                        <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>{event.duration || 'TBA'}</p>
+                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.duration || 'TBA'}</p>
                                     </div>
                                 </div>
 
@@ -448,12 +480,48 @@ export default function EventDetailClient({ event, id }: EventDetailClientProps)
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Tickets Needed For</p>
-                                        <p className="text-[20px] font-medium text-black" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>{event.tickets_needed_for || 'All ages'}</p>
+                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.tickets_needed_for || 'All ages'}</p>
                                     </div>
                                 </div>
                             </div>
                         </section>
 
+                        {/* Exclusive Event Offers */}
+                        {offers && offers.length > 0 && (
+                            <section className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-2xl font-semibold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>Exclusive Event Offers</h2>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {offers.map((offer) => (
+                                        <div key={offer.id} className="relative overflow-hidden p-5 rounded-[16px] border border-[#DCD0F7] shadow-sm flex items-start gap-4 bg-[#FAF8FF]">
+                                            {offer.image && (
+                                                <div
+                                                    className="absolute inset-0 bg-cover bg-center pointer-events-none"
+                                                    style={{ backgroundImage: `url(${offer.image})` }}
+                                                />
+                                            )}
+                                            <div className="relative flex items-start gap-4 w-full">
+                                                <div className="w-12 h-12 rounded-xl bg-[#866BFF] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                                                    {offer.discount_type === 'percent' ? `${offer.discount_value}%` : `₹${offer.discount_value}`}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-bold text-black text-lg truncate" style={{ fontFamily: 'var(--font-anek-latin)' }}>{offer.title}</h3>
+                                                        <span className="text-[11px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-md shrink-0">
+                                                            {offer.discount_type === 'percent' ? `${offer.discount_value}% OFF` : `₹${offer.discount_value} OFF`}
+                                                        </span>
+                                                    </div>
+                                                    {offer.description && (
+                                                        <p className="text-sm text-[#686868] mt-1 line-clamp-2">{offer.description}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
 
                         {/* Gallery Section */}
                         {event.gallery_urls && event.gallery_urls.length > 0 && (

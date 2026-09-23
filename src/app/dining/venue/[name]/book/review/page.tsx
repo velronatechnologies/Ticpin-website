@@ -314,7 +314,7 @@ export default function DiningReviewPage() {
         if (!cart) return;
 
         try {
-            if (grandTotal === 0) {
+            if (grandTotal <= 0) {
                 const freeId = isPassApplied ? `PASS_${cart.pass_id}_${Date.now()}` : `FREE_DINING_${Date.now()}`;
                 await completeDiningBooking(freeId, isPassApplied ? 'TICPASS' : 'FREE', freeId);
                 return;
@@ -330,9 +330,10 @@ export default function DiningReviewPage() {
                 type: 'dining',
             });
 
+            const rzpAmountPaise = Math.round(grandTotal * 100) < 100 && grandTotal > 0 ? 100 : Math.round(grandTotal * 100);
             const options = {
                 key: res.razorpay_key,
-                amount: grandTotal * 100,
+                amount: rzpAmountPaise,
                 currency: 'INR',
                 name: cart?.eventName || 'Dining Reservation',
                 description: `Dining reservation for ${cart?.guests || 1} guests`,

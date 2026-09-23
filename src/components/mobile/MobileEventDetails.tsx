@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/Toast';
 import { bookingApi } from '@/lib/api/booking';
 import { getMinPrice, formatEventDateUTC, formatEventDateUTCWithDay, slugify } from '@/lib/utils';
 import { isEventBookingClosed, isEventBookingNotOpenedYet } from '@/lib/event-booking';
+import { useCurrentTime } from '@/hooks/use-current-time';
 import AuthModal from '@/components/modals/AuthModal';
 
 interface OfferRecord {
@@ -135,14 +136,16 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
         }
     };
 
-    const bookingStatus = useMemo(() => {
-        if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
+    const nowMs = useCurrentTime();
 
-        if (isEventBookingClosed(event, Date.now())) {
-            return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
+    const bookingStatus = useMemo(() => {
+        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+
+        if (isEventBookingClosed(event, nowMs)) {
+            return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
         }
 
-        if (isEventBookingNotOpenedYet(event, Date.now())) {
+        if (isEventBookingNotOpenedYet(event, nowMs)) {
             const openDate = new Date(event.ticket_open_date!);
             const formatted = openDate.toLocaleDateString('en-IN', {
                 day: 'numeric',
@@ -152,11 +155,11 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 minute: '2-digit',
                 hour12: true
             });
-            return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
+            return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
         }
 
-        return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
-    }, [event]);
+        return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+    }, [event, nowMs]);
 
     const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
@@ -626,7 +629,11 @@ Rules:
 
     const handleBook = () => {
         if (closedBooking) {
-            toast.error('Booking for this event is closed!');
+            if (bookingStatus.notOpenedYet) {
+                toast.error('Tickets for this event have not opened yet!');
+            } else {
+                toast.error('Booking for this event is closed!');
+            }
             return;
         }
         if (!session) {
@@ -946,6 +953,46 @@ Rules:
                         <ChevronRight size={18} className="text-[#686868] shrink-0 mt-3" />
                     </div>
                 </div>
+
+                {/* Active Event Offers */}
+                {offers && offers.length > 0 && (
+                    <div className="mb-8">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-[20px] font-semibold text-black" style={{ lineHeight: '22px' }}>Event Offers</h2>
+                        </div>
+                        <div className="space-y-3">
+                            {offers.map((offer) => (
+                                <div
+                                    key={offer.id}
+                                    className="relative overflow-hidden rounded-[14px] border border-purple-200/80 p-4 shadow-sm bg-[#FAF8FF]"
+                                >
+                                    {offer.image && (
+                                        <div
+                                            className="absolute inset-0 bg-cover bg-center pointer-events-none"
+                                            style={{ backgroundImage: `url(${offer.image})` }}
+                                        />
+                                    )}
+                                    <div className="relative flex items-center gap-3.5">
+                                        <div className="w-11 h-11 rounded-[10px] bg-[#866BFF] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                                            {offer.discount_type === 'percent' ? `${offer.discount_value}%` : `₹${offer.discount_value}`}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-[15px] font-semibold text-black truncate">{offer.title}</h3>
+                                                <span className="text-[10px] bg-green-100 text-green-700 font-bold px-1.5 py-0.5 rounded">
+                                                    {offer.discount_type === 'percent' ? `${offer.discount_value}% OFF` : `₹${offer.discount_value} OFF`}
+                                                </span>
+                                            </div>
+                                            {offer.description && (
+                                                <p className="text-[12px] text-[#686868] mt-0.5 line-clamp-2">{offer.description}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* About the event */}
                 <div className="mb-8">

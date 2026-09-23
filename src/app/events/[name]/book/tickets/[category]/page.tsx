@@ -41,7 +41,7 @@ import {
   writeScopedTempCounts,
 } from "@/lib/bookingFlow";
 import { useCurrentTime } from "@/hooks/use-current-time";
-import { isEventBookingClosed } from "@/lib/event-booking";
+import { isEventBookingClosed, isEventBookingNotOpenedYet } from "@/lib/event-booking";
 import { trackMetaEvent } from "@/lib/metaPixel";
 
 
@@ -247,12 +247,13 @@ export default function TicketSelectionPage() {
           return;
         }
 
-        // Check if event booking is closed
+        // Check if event booking is closed or not opened yet
         const isClosed = isEventBookingClosed(eventData, nowMs, true);
+        const notOpenedYet = isEventBookingNotOpenedYet(eventData, nowMs);
 
-        if (isClosed) {
-          toast.error("Bookings for this event are closed.");
-          router.replace(`/events/${name}`);
+        if (isClosed || notOpenedYet) {
+          setIsNotFound(true);
+          setLoading(false);
           return;
         }
 
@@ -794,7 +795,42 @@ export default function TicketSelectionPage() {
       num_items: totalTickets,
     });
 
-    // Start reservation creation in the background
+    // Validate event state before creating reservation
+    try {
+      const latestEventRes = await fetch(`/backend/api/events/${encodeURIComponent(name)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const latestEvent = await latestEventRes.json();
+      
+      if (!latestEvent || latestEvent.error || 
+          (latestEvent.status && latestEvent.status.toLowerCase() !== "approved") ||
+          latestEvent.is_sales_paused || 
+          latestEvent.is_canceled ||
+          isEventBookingClosed(latestEvent, nowMs) ||
+          isEventBookingNotOpenedYet(latestEvent, nowMs)) {
+        
+        // Clear cart and reservation
+        clearEventBookingStorage();
+        reservationStore.clearReservation();
+        
+        const errorMsg = latestEvent?.is_sales_paused ? "Sales are paused for this event" :
+                         latestEvent?.is_canceled ? "This event has been cancelled" :
+                         isEventBookingClosed(latestEvent, nowMs) ? "Booking for this event is closed" :
+                         isEventBookingNotOpenedYet(latestEvent, nowMs) ? "Tickets for this event have not opened yet" :
+                         "This event is not available for booking";
+        
+        toast.error(errorMsg);
+        router.replace(`/events/${name}`);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to validate event state before reservation:", err);
+      toast.error("Unable to validate event status. Please try again.");
+      return;
+    }
+
+    // Create reservation and await it before navigation
     const reservationPromise = bookingApi
       .createReservation(
         event!.id,
@@ -821,6 +857,11 @@ export default function TicketSelectionPage() {
         }
         return res;
       })
+      .catch((err) => {
+        console.error("Reservation creation failed:", err);
+        toast.error("Failed to create reservation. Please try again.");
+        throw err;
+      })
       .finally(() => {
         setIsCreatingReservation(false);
         isReservingRef.current = false;
@@ -828,6 +869,14 @@ export default function TicketSelectionPage() {
 
     if (typeof window !== "undefined") {
       (window as any).__pendingReservationPromise = reservationPromise;
+    }
+
+    // Wait for reservation to complete before navigation
+    try {
+      await reservationPromise;
+    } catch (err) {
+      // Reservation failed, don't navigate
+      return;
     }
 
     if (isAllRoute) {

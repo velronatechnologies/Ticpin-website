@@ -30,6 +30,15 @@ interface EventGuide {
     facilities?: string[];
 }
 
+interface TicketCategory {
+    name: string;
+    price?: number;
+    capacity?: number;
+    available?: number;
+    image_url?: string;
+    has_image?: boolean;
+}
+
 interface EventData {
     id: string;
     name: string;
@@ -54,6 +63,16 @@ interface EventData {
     status?: string;
     terms?: string;
     event_instructions?: string;
+    ticket_categories?: TicketCategory[];
+    ticket_open_date?: string;
+    ticket_close_date?: string;
+    event_end_date?: string;
+    timezone?: string;
+    total_tickets_available?: number;
+    is_sales_paused?: boolean;
+    is_canceled?: boolean;
+    is_layout_based?: boolean;
+    layout_json?: string;
 }
 
 import { cache } from 'react';
@@ -63,7 +82,7 @@ const getEventData = cache(async (name: string): Promise<EventData | null> => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
-            next: { revalidate: 10 },
+            cache: 'no-store',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -92,12 +111,30 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
     };
 }
 
+const getEventOffers = cache(async (id: string) => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${id}/offers`, {
+            next: { revalidate: 10 },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error("Failed to fetch event offers:", error);
+        return [];
+    }
+});
+
 const getMobileEventData = cache(async (id: string) => {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, {
-            next: { revalidate: 10 },
+            cache: 'no-store',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -123,6 +160,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
         notFound();
     }
 
+    const offers = await getEventOffers(event.id);
+
     if (isMobile) {
         const mobileData = await getMobileEventData(event.id);
         if (mobileData && mobileData.event && mobileData.event.status && mobileData.event.status.toLowerCase() === 'approved') {
@@ -132,7 +171,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
                         <div className="w-10 h-10 rounded-full border-4 border-[#866BFF] border-t-transparent animate-spin" />
                     </div>
                 }>
-                    <MobileEventDetailsClient event={mobileData.event} offers={mobileData.offers || []} />
+                    <MobileEventDetailsClient event={mobileData.event} offers={mobileData.offers?.length ? mobileData.offers : offers} />
                 </Suspense>
             );
         } else {
@@ -140,5 +179,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
         }
     }
 
-    return <EventDetailClient event={event} id={event.id} />;
+    return <EventDetailClient event={event} id={event.id} offers={offers} />;
 }
+

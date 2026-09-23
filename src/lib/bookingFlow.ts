@@ -48,7 +48,9 @@ export function readScopedTempCounts(eventId: string): EventCartTicket[] | null 
     sessionStorage.getItem('ticpin_temp_counts'),
   );
 
-  if (Array.isArray(parsed)) return parsed;
+  // Legacy unscoped arrays can leak a previous event's quantities into a new
+  // booking flow; discard them rather than guessing their event.
+  if (Array.isArray(parsed)) return null;
   if (parsed?.eventId === eventId && Array.isArray(parsed.tickets)) return parsed.tickets;
   return null;
 }

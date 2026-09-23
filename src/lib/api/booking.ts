@@ -105,6 +105,47 @@ export interface PaymentOrderResponse {
     razorpay_key?: string;       // Razorpay
 }
 
+export interface EventQuotePayload {
+    event_id: string;
+    reservation_id?: string;
+    tickets?: BookingTicketItem[];
+    coupon_code?: string;
+    offer_id?: string;
+    use_ticpass?: boolean;
+    donation_amount?: number;
+    billing_state?: string;
+}
+
+export interface EventPricingQuote {
+    ticket_subtotal: number;
+    discounted_ticket_subtotal: number;
+    booking_fee: number;
+    platform_fee_before_gst: number;
+    total_gst: number;
+    cgst: number;
+    sgst: number;
+    igst: number;
+    automatic_offer: {
+        id: string;
+        title: string;
+        discount_type: 'percent' | 'flat';
+        discount_value: number;
+        discount_amount: number;
+    } | null;
+    coupon: {
+        code: string;
+        discount_amount: number;
+    } | null;
+    ticpass_applied: boolean;
+    ticpass_discount_amount: number;
+    total_discount: number;
+    donation_amount: number;
+    grand_total: number;
+    organizer_id?: string;
+    organizer_state?: string;
+    tickets?: BookingTicketItem[];
+}
+
 export interface BookingResult {
     booking_id: string;
     grand_total: number;
@@ -119,7 +160,7 @@ export interface OfferItem {
     description: string;
     discount_type: 'percent' | 'flat';
     discount_value: number;
-    valid_until: string;
+    valid_until?: string;
 }
 
 export interface CouponValidateResult {
@@ -210,12 +251,13 @@ export const bookingApi = {
     /** Get active offers for an event */
     getEventOffers: async (eventId: string): Promise<OfferItem[]> => {
         const res = await fetch(`${BASE}/events/${eventId}/offers`);
-        if (!res.ok) return [];
+        if (!res.ok) throw new Error(`Failed to load event offers (${res.status})`);
         try {
             const data = await res.json();
+            if (!Array.isArray(data)) throw new Error('Invalid event offers response');
             return data as OfferItem[];
         } catch {
-            return [];
+            throw new Error('Failed to parse event offers response');
         }
     },
 
@@ -246,12 +288,15 @@ export const bookingApi = {
     /** Get seat availability (booked counts) for an event */
     getEventAvailability: async (eventId: string): Promise<AvailabilityResult> => {
         const res = await fetch(`${BASE}/events/${eventId}/availability`);
-        if (!res.ok) return { booked: {} };
+        if (!res.ok) throw new Error(`Failed to load event availability (${res.status})`);
         try {
             const data = await res.json();
+            if (!data || typeof data.booked !== 'object' || Array.isArray(data.booked)) {
+                throw new Error('Invalid event availability response');
+            }
             return data as AvailabilityResult;
         } catch {
-            return { booked: {} };
+            throw new Error('Failed to parse event availability response');
         }
     },
 
@@ -377,6 +422,26 @@ export const bookingApi = {
         return fetchWithAuth<any>(`${BASE}/bookings/events/unlock-reservation`, {
             method: 'POST',
             body: JSON.stringify({ reservation_id: reservationId }),
+        });
+    },
+
+    verifyReservation: async (eventId: string, reservationId: string): Promise<{ valid: boolean }> => {
+        try {
+            const res = await fetchWithAuth<any>(`${BASE}/bookings/events/verify-reservation`, {
+                method: 'POST',
+                body: JSON.stringify({ event_id: eventId, reservation_id: reservationId }),
+            });
+            return { valid: res?.valid === true };
+        } catch (err) {
+            console.error("Failed to verify reservation:", err);
+            return { valid: false };
+        }
+    },
+
+    getEventQuote: async (payload: EventQuotePayload): Promise<EventPricingQuote> => {
+        return fetchWithAuth<EventPricingQuote>(`${BASE}/bookings/events/quote`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
         });
     },
 };

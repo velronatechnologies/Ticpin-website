@@ -24,7 +24,7 @@ import ProfileDrawer from "@/components/layout/Navbar/ProfileDrawer";
 import InteractiveVenueMap from "@/components/events/InteractiveVenueMap";
 import { clearEventBookingStorage, readEventCart, safeJsonParse } from "@/lib/bookingFlow";
 import { useCurrentTime } from "@/hooks/use-current-time";
-import { isEventBookingClosed } from "@/lib/event-booking";
+import { isEventBookingClosed, isEventBookingNotOpenedYet } from "@/lib/event-booking";
 
 interface TicketCategory {
   name: string;
@@ -265,9 +265,9 @@ export default function TicketSelectionPage() {
           setLoading(false);
           return;
         }
-        if (isEventBookingClosed(eventData, nowMs)) {
-          toast.error("Booking for this event is closed!");
-          router.push(`/events/${name}`);
+        if (isEventBookingClosed(eventData, nowMs) || isEventBookingNotOpenedYet(eventData, nowMs)) {
+          setIsNotFound(true);
+          setLoading(false);
           return;
         }
         if (!eventData.is_layout_based) {

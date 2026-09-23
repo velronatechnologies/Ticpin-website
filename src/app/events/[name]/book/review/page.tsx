@@ -58,7 +58,7 @@ import BillingDetailsForm from "./BillingDetailsForm";
 import MobileReviewBooking from "@/components/mobile/MobileReviewBooking";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentTime } from "@/hooks/use-current-time";
-import { isEventBookingClosed } from "@/lib/event-booking";
+import { isEventBookingClosed, isEventBookingNotOpenedYet } from "@/lib/event-booking";
 import { trackMetaEvent } from "@/lib/metaPixel";
 
 interface CartData {
@@ -316,7 +316,7 @@ export default function ReviewBookingPage() {
 
       // Check event existence and status FIRST before any session or reservation check
       const currentEvent = await fetchCurrentEvent();
-      if (!currentEvent) {
+      if (!currentEvent || isEventBookingClosed(currentEvent, nowMs, true) || isEventBookingNotOpenedYet(currentEvent, nowMs)) {
         setIsNotFound(true);
         setIsValidating(false);
         return;
@@ -348,8 +348,8 @@ export default function ReviewBookingPage() {
 
       let savedCart = sessionStorage.getItem("ticpin_cart");
       
-      // If cart exists in sessionStorage AND Zustand has a reservation, skip backend check
-      // (User is navigating back from tickets page - reservation is still valid)
+      // If cart exists in sessionStorage AND Zustand has a reservation, verify with backend
+      // to ensure reservation is still valid (handles refresh, duplicate tabs, stale state)
       if (savedCart && reservationStore.reservationId && reservationStore.hasActiveReservation()) {
         const parsedCart = safeJsonParse<CartData>(savedCart);
         if (!parsedCart || !isCurrentEventCart(parsedCart, currentEvent.id)) {
@@ -359,6 +359,30 @@ export default function ReviewBookingPage() {
           setIsValidating(false);
           return;
         }
+        
+        // Always verify reservation with backend
+        try {
+          const verifyRes = await bookingApi.verifyReservation(parsedCart.eventId, reservationStore.reservationId);
+          if (!verifyRes || !verifyRes.valid) {
+            // Reservation is no longer valid
+            clearEventBookingStorage();
+            reservationStore.clearReservation();
+            toast.error("Your reservation has expired. Please select your tickets again.");
+            router.replace(`/events/${name}/book`);
+            setIsValidating(false);
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to verify reservation:", err);
+          // On verification failure, clear state and redirect
+          clearEventBookingStorage();
+          reservationStore.clearReservation();
+          toast.error("Unable to verify your reservation. Please try again.");
+          router.replace(`/events/${name}/book`);
+          setIsValidating(false);
+          return;
+        }
+        
         setCart(parsedCart);
         if (parsedCart.type === "event" && parsedCart.eventId) {
           setEventData((prev: any) => ({ ...prev, id: parsedCart.eventId, name: parsedCart.eventName }));
@@ -490,12 +514,13 @@ export default function ReviewBookingPage() {
           setIsValidating(false);
           return;
         }
-        // Check if event booking is closed
+        // Check if event booking is closed or not opened yet
         const isClosed = isEventBookingClosed(data, nowMs, true);
+        const notOpenedYet = isEventBookingNotOpenedYet(data, nowMs);
 
-        if (isClosed) {
-          toast.error("Bookings for this event are closed.");
-          router.replace(`/events/${name}`);
+        if (isClosed || notOpenedYet) {
+          setIsNotFound(true);
+          setIsValidating(false);
           return;
         }
         setEventData(data);
@@ -893,17 +918,94 @@ export default function ReviewBookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart?.eventId, cart?.type, session?.id]);
 
-  const orderAmount = cart?.totalPrice ?? 0;
-  const bookingFee = orderAmount > 0 ? Math.round(orderAmount * 0.06) : 0;
+  const [quote, setQuote] = useState<any | null>(null);
+
+  // Authoritatively fetch backend pricing quote whenever checkout parameters change
+  useEffect(() => {
+    if (
+      step === "success" ||
+      isBookingCompletedRef.current ||
+      isPayingRef.current ||
+      !cart?.eventId ||
+      !session?.id ||
+      !cart?.tickets?.length
+    )
+      return;
+
+    let isMounted = true;
+    bookingApi
+      .getEventQuote({
+        event_id: cart.eventId,
+        reservation_id: reservationStore.reservationId || undefined,
+        tickets: cart.tickets?.map((t) => ({
+          category: t.name,
+          quantity: t.quantity,
+          price: t.price,
+        })),
+        coupon_code: appliedCoupon || undefined,
+        offer_id: appliedOffer?.id || undefined,
+        use_ticpass: Boolean(cart.use_pass),
+        donation_amount: isDonationAdded ? donationAmount : 0,
+        billing_state: billing.state || undefined,
+      })
+      .then((res) => {
+        if (!isMounted) return;
+        setQuote(res);
+        if (res.automatic_offer) {
+          setAppliedOffer({
+            id: res.automatic_offer.id,
+            title: res.automatic_offer.title,
+            description: "",
+            discount_type: res.automatic_offer.discount_type,
+            discount_value: res.automatic_offer.discount_value,
+          });
+          setOfferDiscount(res.automatic_offer.discount_amount);
+        } else if (!appliedOffer) {
+          setAppliedOffer(null);
+          setOfferDiscount(0);
+        }
+        if (res.coupon) {
+          setCouponDiscount(res.coupon.discount_amount);
+        } else if (!appliedCoupon) {
+          setCouponDiscount(0);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch event pricing quote:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    step,
+    cart?.eventId,
+    cart?.tickets,
+    cart?.totalPrice,
+    cart?.use_pass,
+    reservationStore.reservationId,
+    appliedCoupon,
+    appliedOffer?.id,
+    isDonationAdded,
+    donationAmount,
+    billing.state,
+    session?.id,
+  ]);
+
+  const orderAmount = quote?.ticket_subtotal ?? (cart?.totalPrice ?? 0);
+  const bookingFee = quote?.booking_fee ?? (orderAmount > 0 ? Math.round(orderAmount * 0.06) : 0);
 
   const isPassApplied = cart?.use_pass ?? false;
-  const passDiscount =
+  const passDiscount = quote?.ticpass_discount_amount ?? (
     isPassApplied && pass?.benefits.events_discount_active
       ? Math.round(orderAmount * 0.1)
-      : 0;
+      : 0
+  );
 
-  const totalDiscount = offerDiscount + couponDiscount + passDiscount;
-  const baseAmount = orderAmount + bookingFee - totalDiscount;
+  const totalDiscount = quote?.total_discount ?? (offerDiscount + couponDiscount + passDiscount);
+  const baseAmount = quote?.discounted_ticket_subtotal !== undefined
+    ? (quote.discounted_ticket_subtotal + bookingFee)
+    : (orderAmount + bookingFee - totalDiscount);
   const defaultDonation = baseAmount % 5 === 0 ? 5 : 5 - (baseAmount % 5);
 
   // Keep donationAmount in sync with defaultDonation unless user has edited it
@@ -913,7 +1015,7 @@ export default function ReviewBookingPage() {
     }
   }, [baseAmount, defaultDonation, isDonationEdited]);
 
-  const grandTotal = Math.max(
+  const grandTotal = quote?.grand_total ?? Math.max(
     0,
     baseAmount + (isDonationAdded ? donationAmount : 0),
   );
@@ -1148,6 +1250,7 @@ export default function ReviewBookingPage() {
     setBookingLoading(false);
     setBookingError("");
     setShowInProgressLoader(true);
+    setStep("success");
   };
 
   /** Called after payment succeeds (Razorpay callback or Cashfree redirect return).
@@ -1286,10 +1389,15 @@ export default function ReviewBookingPage() {
       });
     } catch (err: unknown) {
       setShowInProgressLoader(false);
-      const message =
+      let message =
         err instanceof Error
           ? err.message
           : "Booking failed. Please contact support with your payment ID.";
+      if (message.includes("offer_invalid") || message.includes("offer")) {
+        message = "The selected offer is no longer valid. Please review your order.";
+        setAppliedOffer(null);
+        setOfferDiscount(0);
+      }
       setBookingError(message);
       toast.error(message);
       if (!isBookingCompletedRef.current) {
@@ -1383,7 +1491,40 @@ export default function ReviewBookingPage() {
 
     // Booking email is informational for this booking; no duplicate-account blocking needed.
 
-    if (grandTotal === 0) {
+    // Validate event state one more time before payment
+    try {
+      const latestEventRes = await fetch(`/backend/api/events/${encodeURIComponent(name)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const latestEvent = await latestEventRes.json();
+      
+      if (!latestEvent || latestEvent.error || 
+          (latestEvent.status && latestEvent.status.toLowerCase() !== "approved") ||
+          latestEvent.is_sales_paused || 
+          latestEvent.is_canceled ||
+          isEventBookingClosed(latestEvent, nowMs) ||
+          isEventBookingNotOpenedYet(latestEvent, nowMs)) {
+        
+        const errorMsg = latestEvent?.is_sales_paused ? "Sales are paused for this event" :
+                         latestEvent?.is_canceled ? "This event has been cancelled" :
+                         isEventBookingClosed(latestEvent, nowMs) ? "Booking for this event is closed" :
+                         isEventBookingNotOpenedYet(latestEvent, nowMs) ? "Tickets for this event have not opened yet" :
+                         "This event is not available for booking";
+        
+        toast.error(errorMsg);
+        clearEventBookingStorage();
+        reservationStore.clearReservation();
+        router.replace(`/events/${name}`);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to validate event state before payment:", err);
+      toast.error("Unable to validate event status. Please try again.");
+      return;
+    }
+
+    if (grandTotal <= 0) {
       const freeId = isPassApplied
         ? `PASS_${cart.pass_id}_${Date.now()}`
         : `FREE_BOOKING_${Date.now()}`;
@@ -1460,7 +1601,7 @@ export default function ReviewBookingPage() {
           event_id: cart.eventId,
           event_name: cart.eventName,
           tickets: cart.tickets.map((t) => ({
-            category: t.category,
+            category: t.name,
             price: t.price,
             quantity: t.quantity,
           })),
@@ -1473,7 +1614,7 @@ export default function ReviewBookingPage() {
           payment_gateway: orderRes.gateway,
           status: "pending",
           use_ticpass: isPassApplied,
-          reservation_id: reservationStore.reservationId,
+          reservation_id: reservationStore.reservationId || undefined,
           donation_amount: isDonationAdded ? donationAmount : 0,
         });
       } catch (preCreateErr) {
@@ -1516,9 +1657,13 @@ export default function ReviewBookingPage() {
       } else {
         // Razorpay — inline modal, no redirect needed
         await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+        const rzpAmountPaise =
+          Math.round(grandTotal * 100) < 100 && grandTotal > 0
+            ? 100
+            : Math.round(grandTotal * 100);
         const options = {
           key: orderRes.razorpay_key,
-          amount: grandTotal * 100,
+          amount: rzpAmountPaise,
           currency: "INR",
           order_id: orderRes.order_id,
           name: "Ticpin",
@@ -1567,9 +1712,37 @@ export default function ReviewBookingPage() {
               razorpayRef.current = null;
               inflightOrderIdRef.current = null;
               sessionStorage.removeItem("ticpin_pending_payment");
-              setBookingLoading(false);
-              isPayingRef.current = false;
               setBookingError("Payment was cancelled. Please try again.");
+
+              // Mark pending booking as cancelled
+              if (orderRes?.order_id) {
+                try {
+                  await bookingApi.createEventBooking({
+                    user_email: email,
+                    user_name: billing.name,
+                    user_phone: billing.phone,
+                    address: billing.address,
+                    city: billing.city,
+                    pincode: billing.pincode,
+                    nationality: billing.nationality,
+                    state: billing.state,
+                    event_id: cart.eventId,
+                    event_name: cart.eventName,
+                    tickets: cart.tickets.map((t) => ({
+                      category: t.name,
+                      price: t.price,
+                      quantity: t.quantity,
+                    })),
+                    order_amount: orderAmount,
+                    booking_fee: bookingFee,
+                    user_id: session?.id,
+                    order_id: orderRes.order_id,
+                    payment_gateway: orderRes.gateway,
+                    status: "cancelled",
+                    reservation_id: reservationStore.reservationId || undefined,
+                  });
+                } catch (_) {}
+              }
 
               // Safely revert reservation back to standard PENDING state
               if (reservationStore.reservationId) {
@@ -1604,6 +1777,8 @@ export default function ReviewBookingPage() {
                   console.error("Reverting payment status failed:", e);
                 }
               }
+              setBookingLoading(false);
+              isPayingRef.current = false;
             },
           },
         };

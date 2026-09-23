@@ -317,18 +317,17 @@ export default function MobileReviewBooking({
                             <div className="p-4 bg-zinc-50 border-t border-[#D9D9D9] space-y-2 animate-in fade-in duration-200">
                                 {offers.length > 0 ? (
                                     offers.map(o => (
-                                        <div key={o.id} className="flex justify-between items-center p-2 bg-white rounded border border-[#D9D9D9]">
-                                            <div>
-                                                <p className="font-bold text-[13px] text-black">{o.code}</p>
-                                                <p className="text-[11px] text-[#686868]">{o.description}</p>
+                                        <div key={o.id} className="flex justify-between items-center p-2.5 bg-white rounded-[8px] border border-[#D9D9D9]">
+                                            <div className="flex-1 pr-2">
+                                                <p className="font-bold text-[13px] text-black">{o.title || o.code}</p>
+                                                <p className="text-[11px] text-[#686868] mt-0.5">{o.description}</p>
+                                                <p className="text-[11px] text-green-600 font-semibold mt-1">
+                                                    {o.discount_type === 'percent' ? `${o.discount_value}% OFF` : `₹${o.discount_value} OFF`}
+                                                </p>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => applyOffer(o)}
-                                                className="px-2.5 py-1 bg-black text-white rounded text-[11px] font-bold"
-                                            >
-                                                Apply
-                                            </button>
+                                            <span className="px-2.5 py-1 bg-purple-100 text-purple-700 rounded text-[10px] font-bold shrink-0">
+                                                Auto-applied
+                                            </span>
                                         </div>
                                     ))
                                 ) : (

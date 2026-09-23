@@ -599,7 +599,7 @@ export default function PlayReviewPage() {
         setExpandedSection('none');
 
         // Show urgency message for expiring offers
-        if (isExpiringSoon) {
+        if (isExpiringSoon && offer.valid_until) {
             const expiryDate = new Date(offer.valid_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             toast.success(`🎉 Perfect timing! You saved ₹${disc} with an offer expiring on ${expiryDate}!`);
         } else {
@@ -782,7 +782,7 @@ export default function PlayReviewPage() {
             console.error('Email check failed:', err);
         }
 
-        if (grandTotal === 0) {
+        if (grandTotal <= 0) {
             const freeId = isPassApplied ? `PASS_${cart.pass_id}_${Date.now()}` : `FREE_BOOKING_${Date.now()}`;
             // Optimistic Success Transition
             setBookingId(freeId);
@@ -886,9 +886,10 @@ export default function PlayReviewPage() {
                 setBookingError('Failed to load payment gateway. Please refresh the page and try again.');
                 return;
             }
+            const rzpAmountPaise = Math.round(grandTotal * 100) < 100 && grandTotal > 0 ? 100 : Math.round(grandTotal * 100);
             const options = {
                 key: orderRes.razorpay_key,
-                amount: grandTotal * 100,
+                amount: rzpAmountPaise,
                 currency: 'INR',
                 order_id: orderRes.order_id,
                 name: 'Ticpin',
@@ -967,7 +968,6 @@ export default function PlayReviewPage() {
     const handleOrganizerLogout = () => {
         clearOrganizerSession();
         logoutOrganizer();
-        setShowLogoutModal(false);
         setShowAuthModal(true);
     };
 
@@ -1019,7 +1019,7 @@ export default function PlayReviewPage() {
         );
     }
 
-    if (isMobile && step !== 'success') {
+    if (isMobile) {
         return (
             <MobilePlayReview
                 cart={cart}

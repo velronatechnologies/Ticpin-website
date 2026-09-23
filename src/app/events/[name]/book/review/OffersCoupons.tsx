@@ -65,13 +65,13 @@ export default function OffersCoupons({
                     <div className="flex items-center gap-3">
                         <Tag size={16} className="text-green-600" />
                         <div>
-                            <p className="text-[14px] font-semibold text-green-700">{appliedOffer.title}</p>
-                            <p className="text-[12px] text-green-600">-₹{offerDiscount.toLocaleString('en-IN')} discount applied</p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-[14px] font-semibold text-green-700">{appliedOffer.title}</p>
+                                <span className="text-[10px] bg-green-200 text-green-800 font-bold px-1.5 py-0.5 rounded">Auto-applied</span>
+                            </div>
+                            <p className="text-[12px] text-green-600">-₹{offerDiscount.toLocaleString('en-IN')} discount applied automatically</p>
                         </div>
                     </div>
-                    <button onClick={removeOffer} className="text-[#AEAEAE] hover:text-red-500 transition-colors">
-                        <X size={16} />
-                    </button>
                 </div>
             )}
 
@@ -99,9 +99,11 @@ export default function OffersCoupons({
                         <div className="flex items-center gap-4">
                             <div className="w-8 h-8 rounded-full border-[2px] border-black flex items-center justify-center text-[19px] font-bold shrink-0">%</div>
                             <span style={{ color: 'black', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
-                                {appliedOffer ? `Offer applied: ${appliedOffer.title}` : `View all ${cart?.type || 'event'} offers`}
-                                {offers?.length > 0 && !appliedOffer && (
-                                    <span className="ml-2 text-[13px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{offers.length} available</span>
+                                {appliedOffer ? `Offer auto-applied: ${appliedOffer.title}` : `View all ${cart?.type || 'event'} offers`}
+                                {offers?.length > 0 && (
+                                    <span className="ml-2 text-[13px] bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full font-semibold">
+                                        Auto-selected
+                                    </span>
                                 )}
                             </span>
                         </div>
@@ -116,18 +118,30 @@ export default function OffersCoupons({
                                 offers.map((offer, i) => (
                                     <div key={i} className="border border-[#F0F0F0] bg-white rounded-[12px] p-4 flex justify-between items-center transition-all hover:border-[#AEAEAE]">
                                         <div className="flex-1 pr-4">
-                                            <p className="text-[16px] font-bold text-black">{offer.title}</p>
-                                            <p className="text-[13px] text-[#686868]">{offer.description}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[16px] font-bold text-black">{offer.title}</p>
+                                                {appliedOffer?.id === offer.id && (
+                                                    <span className="text-[11px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">
+                                                        Best Offer Applied
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[13px] text-[#686868] mt-0.5">{offer.description}</p>
                                             <p className="text-[12px] text-green-600 font-semibold mt-1">
                                                 {offer.discount_type === 'percent' ? `${offer.discount_value}% OFF` : `₹${offer.discount_value} OFF`}
                                             </p>
                                         </div>
-                                        <button
-                                            onClick={() => applyOffer(offer)}
-                                            className={`px-4 h-[34px] rounded-[6px] text-[13px] font-bold uppercase transition-all ${appliedOffer?.id === offer.id ? 'bg-green-100 text-green-700' : 'bg-black text-white hover:bg-zinc-800'}`}
-                                        >
-                                            {appliedOffer?.id === offer.id ? 'Applied' : 'Apply'}
-                                        </button>
+                                        <div className="text-right shrink-0">
+                                            {appliedOffer?.id === offer.id ? (
+                                                <span className="px-3 py-1.5 bg-green-100 text-green-800 rounded-[6px] text-[12px] font-bold">
+                                                    Applied
+                                                </span>
+                                            ) : (
+                                                <span className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded-[6px] text-[11px] font-medium">
+                                                    Auto at checkout
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             )}

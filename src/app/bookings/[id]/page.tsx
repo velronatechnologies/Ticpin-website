@@ -598,19 +598,45 @@ export default function BookingDetailsPage() {
                 <p className="text-[12px] md:text-[14px] font-medium text-[#686868] leading-none">
                   Discount
                 </p>
-                <p className="text-[13px] md:text-[16px] font-medium text-black uppercase leading-tight">
-                  {booking.ticpass_applied
-                    ? `Ticpass Applied - ₹${booking.discount_amount} off`
-                    : booking.offer_id
-                      ? `Offer Applied - ₹${booking.discount_amount} off`
-                      : booking.coupon_code
-                        ? `Coupon: ${booking.coupon_code} - ₹${booking.discount_amount} off`
-                        : booking.grand_total === 0
-                          ? "Total Free"
-                          : booking.discount_amount > 0
-                            ? `₹${booking.discount_amount} Savings`
-                            : "No offer applied"}
-                </p>
+                {(() => {
+                  const offerDisc = Number(booking.offer_discount_amount || 0);
+                  const couponDisc = Number(booking.coupon_discount_amount || 0);
+                  const passDisc = Number(booking.ticpass_discount_amount || 0);
+                  const totalDisc = Number(booking.discount_amount || 0);
+                  const offerName = booking.offer_title || "Offer";
+
+                  if (offerDisc > 0 || couponDisc > 0 || passDisc > 0) {
+                    return (
+                      <div className="space-y-0.5">
+                        {offerDisc > 0 && (
+                          <p className="text-[13px] md:text-[16px] font-medium text-black uppercase leading-tight">
+                            {offerName} - ₹{offerDisc} off
+                          </p>
+                        )}
+                        {couponDisc > 0 && (
+                          <p className="text-[13px] md:text-[16px] font-medium text-black uppercase leading-tight">
+                            Coupon: {booking.coupon_code} - ₹{couponDisc} off
+                          </p>
+                        )}
+                        {passDisc > 0 && (
+                          <p className="text-[13px] md:text-[16px] font-medium text-black uppercase leading-tight">
+                            Ticpass Discount - ₹{passDisc} off
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <p className="text-[13px] md:text-[16px] font-medium text-black uppercase leading-tight">
+                      {booking.grand_total === 0
+                        ? "Total Free"
+                        : totalDisc > 0
+                          ? `₹${totalDisc} Savings`
+                          : "No offer applied"}
+                    </p>
+                  );
+                })()}
               </div>
 
               {/* Cancel Link (Disabled) */}
@@ -1032,25 +1058,45 @@ export default function BookingDetailsPage() {
                       >
                         Discount
                       </p>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: "#000000",
-                          lineHeight: "16px",
-                        }}
-                      >
-                        {booking.ticpass_applied
-                          ? `Ticpass Applied - ₹${booking.discount_amount} off`
-                          : booking.offer_id
-                            ? `Offer Applied - ₹${booking.discount_amount} off`
-                            : booking.coupon_code
-                              ? `Coupon: ${booking.coupon_code} - ₹${booking.discount_amount} off`
-                              : booking.grand_total === 0
+                        {(() => {
+                          const offerDisc = Number(booking.offer_discount_amount || 0);
+                          const couponDisc = Number(booking.coupon_discount_amount || 0);
+                          const passDisc = Number(booking.ticpass_discount_amount || 0);
+                          const totalDisc = Number(booking.discount_amount || 0);
+                          const offerName = booking.offer_title || "Offer";
+
+                          if (offerDisc > 0 || couponDisc > 0 || passDisc > 0) {
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                {offerDisc > 0 && (
+                                  <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#000000", lineHeight: "16px" }}>
+                                    {offerName} - ₹{offerDisc} off
+                                  </p>
+                                )}
+                                {couponDisc > 0 && (
+                                  <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#000000", lineHeight: "16px" }}>
+                                    Coupon: {booking.coupon_code} - ₹{couponDisc} off
+                                  </p>
+                                )}
+                                {passDisc > 0 && (
+                                  <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#000000", lineHeight: "16px" }}>
+                                    Ticpass Discount - ₹{passDisc} off
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: "#000000", lineHeight: "16px" }}>
+                              {booking.grand_total === 0
                                 ? "Total Free"
-                                : ""}
-                      </p>
+                                : totalDisc > 0
+                                  ? `₹${totalDisc} Savings`
+                                  : ""}
+                            </p>
+                          );
+                        })()}
                     </>
                   )}
               </div>

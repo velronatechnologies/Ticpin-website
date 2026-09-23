@@ -1,17 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profileApi, type UserProfile } from '@/lib/api/profile';
+import { toast } from '@/components/ui/Toast';
 
 export const useProfile = (userId: string | undefined) => {
     return useQuery({
         queryKey: ['profile', userId],
         queryFn: async () => {
             if (!userId) return null;
-            const profile = await profileApi.getProfile(userId);
-            if (!profile) {
-                // Return dummy profile if not found, as per current logic
+            try {
+                const profile = await profileApi.getProfile(userId);
+                if (!profile) {
+                    // Return dummy profile if not found, as per current logic
+                    return { userId, phone: userId, name: 'Member' } as UserProfile;
+                }
+                return profile;
+            } catch (err) {
+                console.error('Failed to fetch profile:', err);
+                toast.error('Could not load profile details. Showing default details.');
                 return { userId, phone: userId, name: 'Member' } as UserProfile;
             }
-            return profile;
         },
         enabled: !!userId,
         staleTime: 5 * 60 * 1000, // 5 minutes

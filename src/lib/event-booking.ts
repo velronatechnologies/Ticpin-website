@@ -16,6 +16,7 @@ export function isEventBookingNotOpenedYet(
   const openDate = new Date(event.ticket_open_date);
   if (Number.isNaN(openDate.getTime())) {
     // Malformed open date - block booking (treat as not open) for safety
+    console.error("Malformed ticket_open_date:", event.ticket_open_date);
     return true;
   }
   return openDate.getTime() > nowMs;
@@ -32,15 +33,23 @@ export function isEventBookingClosed(
   // 1. If ticket_close_date is present, it is the primary controller of sales closing.
   if (event.ticket_close_date) {
     const closeDate = new Date(event.ticket_close_date);
-    if (!Number.isNaN(closeDate.getTime())) {
-      return closeDate.getTime() < nowMs;
+    if (Number.isNaN(closeDate.getTime())) {
+      // Malformed close date - treat as closed for safety
+      console.error("Malformed ticket_close_date:", event.ticket_close_date);
+      return true;
     }
+    return closeDate.getTime() < nowMs;
   }
 
   // 2. If ticket_close_date is not set, fall back to checking event_end_date.
   if (event.event_end_date) {
     const endDate = new Date(event.event_end_date);
-    if (!Number.isNaN(endDate.getTime()) && endDate.getTime() < nowMs) {
+    if (Number.isNaN(endDate.getTime())) {
+      // Malformed end date - treat as closed for safety
+      console.error("Malformed event_end_date:", event.event_end_date);
+      return true;
+    }
+    if (endDate.getTime() < nowMs) {
       return true;
     }
   }
@@ -50,7 +59,7 @@ export function isEventBookingClosed(
     const eventDate = new Date(event.date);
     const today = new Date(nowMs);
     today.setHours(0, 0, 0, 0);
-    if (!Number.isNaN(eventDate.getTime()) && eventDate < today && event.status !== "unlimited") {
+    if (!Number.isNaN(eventDate.getTime()) && eventDate < today && (event.status ?? '').toLowerCase() !== 'unlimited') {
       return true;
     }
   }
