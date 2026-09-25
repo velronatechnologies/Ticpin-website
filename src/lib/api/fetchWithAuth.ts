@@ -30,6 +30,9 @@ export async function fetchWithAuth<T>(
   }
 
   if (!res.ok) {
+    if (res.status >= 500) {
+      throw new Error(data.error ?? 'Service is temporarily unavailable. Please try again in a few moments.');
+    }
     throw new Error(data.error ?? `Request failed with status ${res.status}`);
   }
   return data as T;
