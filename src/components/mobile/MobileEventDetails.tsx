@@ -1118,9 +1118,9 @@ Rules:
                     <button
                         onClick={handleBook}
                         disabled={closedBooking}
-                        className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${closedBooking
-                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
-                            : 'bg-black text-white text-[18px] w-[138px]'
+                        className={`w-[138px] h-[51px] rounded-[40px] font-medium text-[18px] active:scale-95 transition-all flex items-center justify-center ${closedBooking
+                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[12px] leading-tight text-center px-2'
+                            : 'bg-black text-white'
                             }`}
                     >
                         {bookingStatus.text}

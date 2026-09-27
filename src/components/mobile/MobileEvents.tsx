@@ -538,14 +538,14 @@ export default function MobileEvents({ events }: MobileEventsProps) {
 
             {/* Event Grid */}
             {filteredAndSearchedEvents.length > 0 ? (
-                <div className="mt-[18px] px-[8px] grid grid-cols-2 gap-[10px]">
+                <div className="mt-[30px] px-[18px] grid grid-cols-2 gap-[16px]">
                     {filteredAndSearchedEvents.map((event) => (
                         <div
                             key={event.id}
-                            className="flex flex-col bg-white rounded-[15px] border-[0.5px] border-black overflow-hidden active:scale-95 transition-all duration-150 cursor-pointer"
+                            className="flex flex-col bg-white rounded-[20px] border-[0.5px] border-[#AEAEAE] overflow-hidden active:scale-95 transition-all duration-150 cursor-pointer"
                             onClick={() => router.push(`/events/${slugify(event.name)}`)}
                         >
-                            <div className="aspect-[175/200] relative bg-[#E4E4E4] overflow-hidden">
+                            <div className="aspect-[175/233] relative bg-[#E4E4E4] overflow-hidden">
                                 <EventCardMedia
                                     card_video_url={event.card_video_url}
                                     portrait_image_url={event.portrait_image_url}
