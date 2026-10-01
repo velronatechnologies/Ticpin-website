@@ -325,8 +325,8 @@ export default function MobileReviewBooking({
                                                     {o.discount_type === 'percent' ? `${o.discount_value}% OFF` : `₹${o.discount_value} OFF`}
                                                 </p>
                                             </div>
-                                            <span className="px-2.5 py-1 bg-purple-100 text-purple-700 rounded text-[10px] font-bold shrink-0">
-                                                Auto-applied
+                                            <span className="px-2.5 py-1 bg-zinc-100 text-zinc-600 rounded text-[10px] font-medium shrink-0">
+                                                Available
                                             </span>
                                         </div>
                                     ))

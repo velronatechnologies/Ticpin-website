@@ -146,6 +146,23 @@ const getMobileEventData = cache(async (id: string) => {
     }
 });
 
+const getEventAvailability = cache(async (id: string): Promise<Record<string, number>> => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${id}/availability`, {
+            cache: 'no-store',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) return {};
+        const data = await res.json();
+        return data?.booked ?? {};
+    } catch {
+        return {};
+    }
+});
+
 export default async function EventDetailPage({ params }: { params: Promise<{ name: string }> }) {
     const { name } = await params;
     const decodedName = decodeURIComponent(name);
@@ -160,7 +177,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
         notFound();
     }
 
-    const offers = await getEventOffers(event.id);
+    const [offers, initialBookedMap] = await Promise.all([
+        getEventOffers(event.id),
+        getEventAvailability(event.id),
+    ]);
 
     if (isMobile) {
         const mobileData = await getMobileEventData(event.id);
@@ -179,6 +199,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
         }
     }
 
-    return <EventDetailClient event={event} id={event.id} offers={offers} />;
+    return <EventDetailClient event={event} id={event.id} offers={offers} initialBookedMap={initialBookedMap} />;
 }
 

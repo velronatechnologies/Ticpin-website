@@ -273,7 +273,7 @@ export default function MyPassClient({ initialPass, session }: MyPassClientProps
                                 <span className="text-zinc-400 text-sm uppercase font-bold">Inactive</span>
                             )}
                         </div>
-                        <p className="text-xs text-zinc-400 mt-2 uppercase font-bold">Applied automatically at checkout</p>
+                        <p className="text-xs text-zinc-400 mt-2 uppercase font-bold">Applied at checkout</p>
                     </div>
                 </div>
 

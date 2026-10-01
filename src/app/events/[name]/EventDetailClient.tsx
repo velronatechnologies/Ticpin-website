@@ -139,9 +139,10 @@ interface EventDetailClientProps {
     event: EventData;
     id: string;
     offers?: OfferRecord[];
+    initialBookedMap?: Record<string, number>;
 }
 
-export default function EventDetailClient({ event, id, offers = [] }: EventDetailClientProps) {
+export default function EventDetailClient({ event, id, offers = [], initialBookedMap = {} }: EventDetailClientProps) {
     if (!event || !event.status || event.status.toLowerCase() !== 'approved') {
         notFound();
     }
@@ -151,8 +152,8 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const session = useUserSession();
     const organizerSession = getOrganizerSession();
-    const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
-    const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+    const [bookedMap, setBookedMap] = useState<Record<string, number>>(initialBookedMap);
+    const [availabilityLoaded, setAvailabilityLoaded] = useState(true);
     const isMobile = useIsMobile();
     const nowMs = useCurrentTime();
     const [showAllAmenities, setShowAllAmenities] = useState(false);
@@ -175,8 +176,6 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
             trackMetaEvent("ViewContent", { content_name: event.name, content_category: "Event" });
         }
         const fetchAvailability = async () => {
-            setAvailabilityLoaded(false);
-            setBookedMap({});
             try {
                 const avail = await bookingApi.getEventAvailability(event.id);
                 if (avail && avail.booked) {
@@ -184,8 +183,6 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
                 }
             } catch (err) {
                 console.error('Failed to fetch availability:', err);
-            } finally {
-                setAvailabilityLoaded(true);
             }
         };
         if (event?.id) {
@@ -206,7 +203,6 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
 
     const isSoldOut = useMemo(() => {
-        if (!availabilityLoaded) return null; // Return null while loading to indicate unknown state
         let categories: TicketCategory[] = event.ticket_categories || [];
         if (event.is_layout_based && event.layout_json) {
             const layout = safeJsonParse<any>(event.layout_json);
@@ -241,10 +237,10 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
             }
         }
         return true; // All categories are sold out
-    }, [event, bookedMap, availabilityLoaded]);
+    }, [event, bookedMap]);
 
     const bookingStatus = useMemo(() => {
-        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS', isLoading: true };
+        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS', isLoading: false };
 
         if (isEventBookingClosed(event, nowMs)) {
             return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED', isLoading: false };
@@ -263,11 +259,6 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
             return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}`, isLoading: false };
         }
 
-        // If availability is still loading, show loading state
-        if (isSoldOut === null) {
-            return { isClosed: false, notOpenedYet: false, text: 'CHECKING AVAILABILITY...', isLoading: true };
-        }
-
         if (isSoldOut) {
             return { isClosed: true, notOpenedYet: false, text: 'SOLD OUT', isLoading: false };
         }
@@ -282,15 +273,12 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
         setShowFullDesc(false);
         setActiveFaq(null);
         setIsLoginModalOpen(false);
-        setAvailabilityLoaded(false);
-        setBookedMap({});
         setShowAllAmenities(false);
         setShowFaqModal(false);
         setShowTermsModal(false);
         setExpandedFaqIndex(null);
         window.scrollTo(0, 0);
-        router.refresh();
-    }, [event?.id, router]);
+    }, [event?.id]);
 
     const handleBook = async () => {
         if (closedBooking) {

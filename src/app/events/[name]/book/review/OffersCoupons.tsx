@@ -67,9 +67,9 @@ export default function OffersCoupons({
                         <div>
                             <div className="flex items-center gap-2">
                                 <p className="text-[14px] font-semibold text-green-700">{appliedOffer.title}</p>
-                                <span className="text-[10px] bg-green-200 text-green-800 font-bold px-1.5 py-0.5 rounded">Auto-applied</span>
+                                <span className="text-[10px] bg-green-200 text-green-800 font-bold px-1.5 py-0.5 rounded">Applied</span>
                             </div>
-                            <p className="text-[12px] text-green-600">-₹{offerDiscount.toLocaleString('en-IN')} discount applied automatically</p>
+                            <p className="text-[12px] text-green-600">-₹{offerDiscount.toLocaleString('en-IN')} discount applied</p>
                         </div>
                     </div>
                 </div>
@@ -99,12 +99,7 @@ export default function OffersCoupons({
                         <div className="flex items-center gap-4">
                             <div className="w-8 h-8 rounded-full border-[2px] border-black flex items-center justify-center text-[19px] font-bold shrink-0">%</div>
                             <span style={{ color: 'black', fontSize: '20px', fontFamily: 'var(--font-anek-latin)', fontWeight: 500 }}>
-                                {appliedOffer ? `Offer auto-applied: ${appliedOffer.title}` : `View all ${cart?.type || 'event'} offers`}
-                                {offers?.length > 0 && (
-                                    <span className="ml-2 text-[13px] bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full font-semibold">
-                                        Auto-selected
-                                    </span>
-                                )}
+                                {appliedOffer ? `Offer applied: ${appliedOffer.title}` : `View all ${cart?.type || 'event'} offers`}
                             </span>
                         </div>
                         {expandedSection === 'offers' ? <ChevronDown size={26} className="text-black" /> : <ChevronRight size={26} className="text-black" />}
@@ -122,7 +117,7 @@ export default function OffersCoupons({
                                                 <p className="text-[16px] font-bold text-black">{offer.title}</p>
                                                 {appliedOffer?.id === offer.id && (
                                                     <span className="text-[11px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">
-                                                        Best Offer Applied
+                                                        Applied
                                                     </span>
                                                 )}
                                             </div>
@@ -138,7 +133,7 @@ export default function OffersCoupons({
                                                 </span>
                                             ) : (
                                                 <span className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded-[6px] text-[11px] font-medium">
-                                                    Auto at checkout
+                                                    Available
                                                 </span>
                                             )}
                                         </div>
