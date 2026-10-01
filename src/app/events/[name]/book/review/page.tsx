@@ -1587,8 +1587,8 @@ export default function ReviewBookingPage() {
         notes: {
           event_id: cart.eventId || "",
           reservation_id: reservationStore.reservationId || "",
-          coupon_code: couponCode || "",
-          offer_id: selectedOffer?.id || "",
+          coupon_code: appliedCoupon || "",
+          offer_id: appliedOffer?.id || "",
           use_ticpass: isTicpassApplied ? "true" : "false",
           donation_amount: String(donationAmount || 0),
           billing_state: billing.state || "",
