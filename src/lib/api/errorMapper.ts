@@ -75,9 +75,9 @@ export function getFriendlyErrorMessage(err: unknown, fallback = 'Something went
     return 'Attended tickets cannot be cancelled.';
   }
 
-  // Generic fallback cleanup
-  if (lower === 'request failed. please try again.' || lower === 'request failed' || lower.includes('status 500')) {
-    return 'Unable to complete your request right now. Please try again.';
+  // Suppress technical JS runtime errors from leaking into the UI
+  if (lower.includes('is not defined') || lower.includes('referenceerror') || lower.includes('typeerror') || lower.includes('syntaxerror') || lower.includes('cannot read property') || lower.includes('cannot read properties')) {
+    return fallback;
   }
 
   return raw || fallback;

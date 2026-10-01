@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { formatPrice, formatEventDateUTCWithDay, formatTime12hr } from '@/lib/utils';
 import { useIdentityStore } from '@/store/useIdentityStore';
+import { toast } from '@/components/ui/Toast';
 
 interface CartData {
     eventId: string;
@@ -409,18 +410,35 @@ export default function MobileReviewBooking({
                                 <span className="text-[12px] font-normal text-black">₹{formatPrice(bookingFee)}</span>
                             </div>
                             {showGstDetails && (() => {
+                                const cleanState = (s: string) => (s || '').toLowerCase().replace(/\s+/g, '');
+                                const orgState = (eventData as any)?.organizer_state || (eventData as any)?.state || 'Tamil Nadu';
+                                const isIntraState = !activeState || cleanState(activeState) === cleanState(orgState);
                                 const basePlatformFee = Math.round((bookingFee / 1.18) * 100) / 100;
-                                const integratedGst = bookingFee - basePlatformFee;
+                                const totalTax = Math.round((bookingFee - basePlatformFee) * 100) / 100;
+                                const halfTax = Math.round((totalTax / 2) * 100) / 100;
                                 return (
                                     <div className="pl-4 pr-1 mt-2 mb-1 space-y-2 animate-in slide-in-from-top-2 duration-300 overflow-hidden">
                                         <div className="flex justify-between text-[11px] text-[#686868] font-medium">
                                             <span>Base Platform Fee</span>
                                             <span>₹{formatPrice(basePlatformFee)}</span>
                                         </div>
-                                        <div className="flex justify-between text-[11px] text-[#686868] font-medium">
-                                            <span>Integrated GST (18%)</span>
-                                            <span>₹{formatPrice(integratedGst)}</span>
-                                        </div>
+                                        {isIntraState ? (
+                                            <>
+                                                <div className="flex justify-between text-[11px] text-[#686868] font-medium">
+                                                    <span>Central GST (9%)</span>
+                                                    <span>₹{formatPrice(halfTax)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[11px] text-[#686868] font-medium">
+                                                    <span>State GST (9%)</span>
+                                                    <span>₹{formatPrice(Math.round((totalTax - halfTax) * 100) / 100)}</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex justify-between text-[11px] text-[#686868] font-medium">
+                                                <span>Integrated GST (18%)</span>
+                                                <span>₹{formatPrice(totalTax)}</span>
+                                            </div>
+                                        )}
                                         <div className="h-[0.5px] bg-[#EBEBEB] w-full" />
                                     </div>
                                 );
@@ -551,7 +569,7 @@ export default function MobileReviewBooking({
                                     <div className="w-5 h-5 flex items-center justify-center">
                                         <User size={20} className="text-zinc-600" />
                                     </div>
-                                    <span className="text-[15px] font-medium text-black">{activeName || '{AUTO FETCH}'}</span>
+                                    <span className="text-[15px] font-medium text-black">{activeName || 'Name not provided'}</span>
                                 </div>
                                 <button 
                                     onClick={() => setIsEditingBilling(true)}
@@ -561,9 +579,11 @@ export default function MobileReviewBooking({
                                 </button>
                             </div>
                             <div className="ml-8 space-y-2 text-[13px] font-normal text-black">
-                                <p>{activePhone || '{AUTO FETCH}'}</p>
-                                <p>{activeEmail || '{AUTO FETCH}'}</p>
-                                <p>{activeState || '{AUTO FETCH}'}</p>
+                                <p>{activePhone || 'Phone not provided'}</p>
+                                <p>{activeEmail || 'Email not provided'}</p>
+                                <p className={!activeState ? "text-amber-600 font-medium" : ""}>
+                                    {activeState || 'State not selected (Required for GST)'}
+                                </p>
                                 <p>{billing.nationality || 'Indian resident'}</p>
                             </div>
 
@@ -592,7 +612,7 @@ export default function MobileReviewBooking({
             </div>
 
             {/* Sticky Footer */}
-            <div className="fixed bottom-0 left-0 w-full h-[88px] bg-[#EFEFEF] flex items-center justify-between px-[25px] z-[130] border-t border-[#AEAEAE] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+            <div className="fixed bottom-0 left-0 w-full min-h-[88px] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2.5 bg-[#EFEFEF] flex items-center justify-between px-[25px] z-[130] border-t border-[#AEAEAE] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                 <div className="flex flex-col">
                     <span className="text-[12px] font-normal text-black">
                         {cart.tickets?.reduce((acc, t) => acc + t.quantity, 0) || 0} {cart.tickets?.reduce((acc, t) => acc + t.quantity, 0) === 1 ? 'ticket' : 'tickets'}
@@ -600,7 +620,15 @@ export default function MobileReviewBooking({
                     <span className="text-[20px] font-medium text-black leading-tight mt-[1px]">₹{formatPrice(grandTotal)}</span>
                 </div>
                 <button
-                    onClick={handlePayNow}
+                    onClick={() => {
+                        if (!billing.state) {
+                            setIsEditingBilling(true);
+                            if (setBookingError) setBookingError("Please select your billing state");
+                            toast.error("Please select your state for billing");
+                            return;
+                        }
+                        handlePayNow();
+                    }}
                     disabled={bookingLoading}
                     className="w-[148px] h-[44px] bg-black text-white rounded-[14px] font-semibold text-[15px] flex items-center justify-center active:scale-95 transition-all disabled:opacity-50"
                 >

@@ -39,7 +39,7 @@ export function MobileVisualMap({
   zoneStyles,
 }: VisualMapProps) {
   const isZoneSoldOut = (zoneName: string) => {
-    const norm = (s: string) => s.toUpperCase().replace(/[-\s]/g, "");
+    const norm = (s: string) => (s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     const zNorm = norm(zoneName);
     const cat = categories.find((c) => {
       const cNorm = norm(c.name);
@@ -491,7 +491,7 @@ export function DesktopVisualMap({
   zoneStyles,
 }: VisualMapProps) {
   const isZoneSoldOut = (zoneName: string) => {
-    const norm = (s: string) => s.toUpperCase().replace(/[-\s]/g, "");
+    const norm = (s: string) => (s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     const zNorm = norm(zoneName);
     const cat = categories.find((c) => {
       const cNorm = norm(c.name);

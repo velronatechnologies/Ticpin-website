@@ -211,28 +211,16 @@ export default function SuccessView({
                         Booking date: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
 
-                    <div className="flex flex-col sm:flex-row gap-2 w-full">
-                        <button
-                            onClick={() => {
-                                sessionStorage.removeItem('ticpin_booking_step');
-                                router.push(`/bookings/events/${bookingId}`);
-                            }}
-                            className="flex-1 h-[44px] bg-[#5331EA] text-white rounded-[7px] font-medium text-[20px] hover:bg-[#4323D4] active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
-                            style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
-                        >
-                            VIEW TICKETS
-                        </button>
-                        <button
-                            onClick={() => {
-                                sessionStorage.removeItem('ticpin_booking_step');
-                                router.push('/');
-                            }}
-                            className="flex-1 h-[44px] bg-black text-white rounded-[7px] font-medium text-[20px] hover:bg-zinc-900 active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
-                            style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
-                        >
-                            BACK TO HOME
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => {
+                            sessionStorage.removeItem('ticpin_booking_step');
+                            router.push('/');
+                        }}
+                        className="w-full h-[44px] bg-black text-white rounded-[7px] font-medium text-[24px] hover:bg-zinc-900 active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
+                        style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
+                    >
+                        BACK TO HOME
+                    </button>
                 </div>
             </div>
 

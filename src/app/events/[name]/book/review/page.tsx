@@ -1589,8 +1589,8 @@ export default function ReviewBookingPage() {
           reservation_id: reservationStore.reservationId || "",
           coupon_code: appliedCoupon || "",
           offer_id: appliedOffer?.id || "",
-          use_ticpass: isTicpassApplied ? "true" : "false",
-          donation_amount: String(donationAmount || 0),
+          use_ticpass: isPassApplied ? "true" : "false",
+          donation_amount: String(isDonationAdded ? donationAmount : 0),
           billing_state: billing.state || "",
         },
       });

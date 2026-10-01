@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * @deprecated This component is retained for legacy reference only.
+ * The active, canonical ticket selection implementation is located at:
+ * src/app/events/[name]/book/tickets/[category]/page.tsx
+ */
+
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, Info, Percent, Loader2 } from 'lucide-react';
 import { useRouter, useParams, notFound } from 'next/navigation';
