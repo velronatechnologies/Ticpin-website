@@ -1,5 +1,8 @@
 import { BACKEND_API_BASE } from '../backend';
 import { fetchWithAuth, postWithAuth } from './fetchWithAuth';
+import { getFriendlyErrorMessage } from './errorMapper';
+
+export { getFriendlyErrorMessage };
 
 const BASE = BACKEND_API_BASE;
 
@@ -196,7 +199,7 @@ export const bookingApi = {
         });
         let data: any = {};
         try { data = await res.json(); } catch { data = {}; }
-        if (!res.ok) throw new Error(data.error ?? 'Booking failed');
+        if (!res.ok) throw new Error(getFriendlyErrorMessage(data.error ?? data.message ?? 'Booking failed'));
         return data as BookingResult;
     },
 

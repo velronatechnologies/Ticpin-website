@@ -19,6 +19,8 @@ import { useUserBookings, useCancelBooking } from '@/lib/hooks/useBookings';
 import { getOrganizerSession } from '@/lib/auth/organizer';
 // import { auth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from '@/lib/firebase';
 
+import { getFriendlyErrorMessage } from '@/lib/api/errorMapper';
+
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -138,8 +140,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         }
     }, [userSession, isOpen, initialView, onClose]);
 
-
-
     // Warm up the Vercel Serverless Go backend on modal open to eliminate cold starts
     useEffect(() => {
         if (isOpen) {
@@ -179,7 +179,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
         setLoading(true);
 
         try {
-            // Call backend to generate and store real OTP (printed to console in dev)
             const res = await fetch('/backend/api/user/send-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -188,7 +187,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             let d: any = {};
             try { d = await res.json(); } catch {}
             if (!res.ok) {
-                setError(d.error || 'Failed to send OTP');
+                setError(getFriendlyErrorMessage(d.error, 'Unable to send OTP. Please try again.'));
                 setLoading(false);
                 return;
             }
@@ -210,13 +209,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             setTimeLeft(remaining);
         } catch (err: any) {
             console.error('Send OTP Error:', err);
-            setError('Failed to send OTP. Please try again.');
+            setError(getFriendlyErrorMessage(err, 'Unable to send OTP. Please try again.'));
         } finally {
             setLoading(false);
         }
     };
 
     const handleOtpChange = (index: number, value: string) => {
+        setError('');
         const cleanValue = value.replace(/\D/g, '');
         if (cleanValue.length > 1) {
             const digits = cleanValue.slice(0, 6);
@@ -249,6 +249,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
 
     const handleOtpPaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
+        setError('');
         const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
         if (!data) return;
         setOtp(prev => {
@@ -269,7 +270,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
 
         const otpCode = otp.join('');
         if (otpCode.length !== 6) {
-            setError('Please enter a 6-digit OTP');
+            setError('Please enter the full 6-digit OTP code');
             setLoading(false);
             return;
         }
@@ -288,7 +289,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             let data: any = {};
             try { data = await res.json(); } catch {}
             if (!res.ok) {
-                setError(data.error || 'Verification failed');
+                setError(getFriendlyErrorMessage(data.error, 'Invalid OTP code. Please try again.'));
                 setLoading(false);
                 return;
             }
@@ -303,7 +304,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialView = 'n
             }
         } catch (err: any) {
             console.error('Verification Error:', err);
-            setError('Verification failed');
+            setError(getFriendlyErrorMessage(err, 'Verification failed. Please check your code and try again.'));
         } finally {
             setLoading(false);
         }

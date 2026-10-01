@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useUserSession, clearUserSession } from '@/lib/auth/user';
 import { bookingApi } from '@/lib/api/booking';
+import { getFriendlyErrorMessage } from '@/lib/api/errorMapper';
 import { getBookingStatus } from '@/lib/utils/booking-status';
 
 export default function EventBookingDetailPage() {
@@ -78,7 +79,7 @@ export default function EventBookingDetailPage() {
             router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
           }
-          setError('Failed to load booking details');
+          setError(getFriendlyErrorMessage(err, 'Failed to load booking details. Please try again.'));
         })
         .finally(() => {
           setLoading(false);
@@ -95,7 +96,7 @@ export default function EventBookingDetailPage() {
     setBooking((prev: any) => prev ? { ...prev, status: 'cancelled' } : null);
 
     try {
-      const response: any = await bookingApi.cancelBooking(bookingId, 'events');
+      const response: any = await bookingApi.cancelBooking(bookingId, 'events', reason);
       
       if (!response?.message?.includes('cancelled successfully')) {
         const updatedBooking = await bookingApi.getBookingDetails(bookingId, session?.id);
@@ -107,8 +108,7 @@ export default function EventBookingDetailPage() {
     } catch (err: any) {
       // Rollback UI
       setBooking(previousBooking);
-      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to cancel booking';
-      toast.error(errorMessage);
+      toast.error(getFriendlyErrorMessage(err, 'Failed to cancel booking.'));
     }
   };
 

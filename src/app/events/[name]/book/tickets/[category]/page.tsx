@@ -4,6 +4,7 @@ import { useParams, useRouter, notFound } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { bookingApi } from "@/lib/api/booking";
+import { getFriendlyErrorMessage } from "@/lib/api/errorMapper";
 import { passApi, TicpinPass } from "@/lib/api/pass";
 import { useUserSession, clearUserSession, getUserSession } from "@/lib/auth/user";
 import {
@@ -859,7 +860,7 @@ export default function TicketSelectionPage() {
       })
       .catch((err) => {
         console.error("Reservation creation failed:", err);
-        toast.error("Failed to create reservation. Please try again.");
+        toast.error(getFriendlyErrorMessage(err, "Failed to create reservation. Please try again."));
         throw err;
       })
       .finally(() => {

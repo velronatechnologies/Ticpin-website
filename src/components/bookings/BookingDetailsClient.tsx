@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { bookingApi } from '@/lib/api/booking';
+import { getFriendlyErrorMessage } from '@/lib/api/errorMapper';
 import { profileApi } from '@/lib/api/profile';
 import { useUserSession } from '@/lib/auth/user';
 import { toast } from '@/components/ui/Toast';
@@ -121,7 +122,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
         } catch (err) {
             // Rollback UI
             setBooking(previousBooking);
-            toast.error(err instanceof Error ? err.message : 'Failed to cancel booking');
+            toast.error(getFriendlyErrorMessage(err, 'Failed to cancel booking.'));
         }
     };
 
@@ -152,7 +153,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
             pdf.save(`TICPIN_Ticket_${booking.booking_id || booking.bookingId || booking.BookingID || booking.id}.pdf`);
         } catch (err) {
             console.error('PDF generation error:', err);
-            toast.error('Failed to generate PDF. Please try again.');
+            toast.error(getFriendlyErrorMessage(err, 'Failed to generate ticket PDF. Please try again.'));
         } finally {
             setDownloading(false);
         }
@@ -365,6 +366,11 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                     <div className="px-1 space-y-1">
                         <p className="text-[17px] font-medium text-[#686868]">Booking ID: {booking.booking_id || booking.bookingId || booking.id?.slice(-8).toUpperCase()}</p>
                         <p className="text-[17px] font-medium text-[#686868]">Booking date: {new Date(booking.createdAt || booking.created_at || booking.date).toLocaleDateString('en-IN')}</p>
+                        {!isCancelled && !isExpired && (
+                            <p className="text-[14px] font-medium text-emerald-600 pt-1">
+                                Event reminder will be sent to your email before gates open.
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -388,34 +394,153 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
 
             {/* Hidden Ticket for PDF generation */}
             <div className="opacity-0 pointer-events-none absolute -left-[9999px] top-0">
-                <div ref={ticketRef} style={{ width: '595px', height: '842px', background: '#f5f5f5', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ width: '100%', maxWidth: '500px', background: '#EBEBEB', borderRadius: '15px', overflow: 'hidden', border: '1px solid #D9D9D9' }}>
-                        <div style={{ background: '#E7C200', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: 'black', fontWeight: 900, fontSize: '18px', letterSpacing: '1px' }}>TICPIN</span>
-                            <span style={{ color: 'black', fontWeight: 600, fontSize: '14px' }}>CONFIRMED</span>
+                <div ref={ticketRef} style={{ width: '595px', minHeight: '842px', background: '#f5f5f5', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
+                    <div style={{ width: '100%', maxWidth: '520px', background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #D9D9D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                        <div style={{ background: '#E7C200', padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'black', fontWeight: 900, fontSize: '20px', letterSpacing: '1.5px' }}>TICPIN</span>
+                            <span style={{ color: 'black', fontWeight: 700, fontSize: '13px', background: '#FFFFFF', padding: '4px 10px', borderRadius: '20px', textTransform: 'uppercase' }}>
+                                {isRefunded ? 'REFUNDED' : isCancelled ? 'CANCELLED' : 'CONFIRMED'}
+                            </span>
                         </div>
-                        <div style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                                <span style={{ fontSize: '24px', fontWeight: 700, color: 'black' }}>{booking.eventName || booking.event_name || booking.venueName || booking.venue_name || booking.title}</span>
-                                <div style={{ width: '24px', height: '24px', background: '#0AC655', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>✓</div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '12px', color: '#686868', marginBottom: '4px' }}>DATE & TIME</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 600 }}>{bookingDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                    <div style={{ fontSize: '14px' }}>{booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}</div>
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '12px', color: '#686868', marginBottom: '4px' }}>LOCATION</div>
-                                    <div style={{ fontSize: '14px', fontWeight: 600 }}>{booking.venueAddress || booking.venue_address || booking.city}</div>
-                                </div>
-                            </div>
-                            <div style={{ borderTop: '1px dashed #D9D9D9', padding: '15px 0', display: 'flex', justifyContent: 'space-between' }}>
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div>
-                                    <div style={{ fontSize: '12px', color: '#686868' }}>BOOKING ID</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 700 }}>{booking.booking_id || booking.bookingId || booking.id?.slice(-8).toUpperCase()}</div>
+                                    <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: 0, textTransform: 'uppercase' }}>
+                                        {booking.eventName || booking.event_name || booking.venueName || booking.venue_name || booking.title}
+                                    </h1>
+                                    <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0 0 0' }}>
+                                        {booking.venueAddress || booking.venue_address || booking.address || booking.city}
+                                    </p>
                                 </div>
-                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || ''} size={80} />
+                                <div style={{ width: '28px', height: '28px', background: '#0AC655', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 'bold' }}>✓</div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#F9FAFB', padding: '12px 16px', borderRadius: '12px' }}>
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Date & Time</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginTop: '2px' }}>
+                                        {bookingDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: '#374151' }}>
+                                        {booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Attendee</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginTop: '2px' }}>
+                                        {booking.user_name || booking.userName || 'Guest'}
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: '#374151' }}>
+                                        {booking.user_phone || booking.userPhone || 'N/A'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ticket Category List */}
+                            {Array.isArray(booking.tickets) && booking.tickets.length > 0 && (
+                                <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px' }}>Tickets Booked</div>
+                                    {booking.tickets.map((t: any, idx: number) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#374151', padding: '2px 0' }}>
+                                            <span>{t.category || t.name} x {t.quantity}</span>
+                                            <span style={{ fontWeight: 600 }}>₹{((t.price || 0) * (t.quantity || 1)).toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Itemized Pricing & Tax Breakdown */}
+                            <div style={{ borderTop: '1px dashed #D1D5DB', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Payment Breakdown</div>
+                                
+                                {(() => {
+                                    const subtotal = Number(booking.order_amount ?? booking.orderAmount ?? booking.ticket_price ?? booking.ticketPrice ?? 0);
+                                    const offerDisc = Number(booking.offer_discount_amount ?? booking.offerDiscountAmount ?? 0);
+                                    const couponDisc = Number(booking.coupon_discount_amount ?? booking.couponDiscountAmount ?? 0);
+                                    const passDisc = Number(booking.ticpass_discount_amount ?? booking.ticpassDiscountAmount ?? 0);
+                                    const totalDisc = Number(booking.discount_amount ?? booking.discountAmount ?? (offerDisc + couponDisc + passDisc));
+                                    const bookingFee = Number(booking.booking_fee ?? booking.bookingFee ?? 0);
+                                    const totalGST = Number(booking.total_gst ?? booking.totalGst ?? booking.totalGST ?? (bookingFee > 0 ? (bookingFee - bookingFee / 1.18) : 0));
+                                    const basePlatformFee = Number(booking.platform_fee ?? booking.platformFee ?? (bookingFee - totalGST));
+                                    const cgst = Number(booking.cgst ?? 0);
+                                    const sgst = Number(booking.sgst ?? 0);
+                                    const igst = Number(booking.igst ?? 0);
+                                    const donation = Number(booking.donation_amount ?? booking.donationAmount ?? 0);
+                                    const grandTotal = Number(booking.grand_total ?? booking.grandTotal ?? booking.total_payable ?? booking.totalPayable ?? 0);
+
+                                    return (
+                                        <>
+                                            {subtotal > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#4B5563' }}>
+                                                    <span>Ticket Subtotal</span>
+                                                    <span>₹{subtotal.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {offerDisc > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#059669' }}>
+                                                    <span>Event Offer Discount</span>
+                                                    <span>-₹{offerDisc.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {couponDisc > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#059669' }}>
+                                                    <span>Coupon Discount ({booking.coupon_code || booking.couponCode})</span>
+                                                    <span>-₹{couponDisc.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {passDisc > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#059669' }}>
+                                                    <span>Ticpass Discount</span>
+                                                    <span>-₹{passDisc.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {totalDisc > 0 && offerDisc === 0 && couponDisc === 0 && passDisc === 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#059669' }}>
+                                                    <span>Total Discount</span>
+                                                    <span>-₹{totalDisc.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {bookingFee > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#4B5563' }}>
+                                                    <span>Booking Fee (6% incl. 18% GST)</span>
+                                                    <span>₹{bookingFee.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {totalGST > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9CA3AF', paddingLeft: '8px' }}>
+                                                    <span>
+                                                        {igst > 0 ? `GST (IGST 18%): ₹${igst.toFixed(2)}` : `GST (CGST 9%: ₹${cgst.toFixed(2)} + SGST 9%: ₹${sgst.toFixed(2)})`}
+                                                    </span>
+                                                    <span>Fee excl. GST: ₹{basePlatformFee.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {donation > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#4B5563' }}>
+                                                    <span>Charity Donation</span>
+                                                    <span>₹{donation.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 800, color: '#111827', borderTop: '1px solid #E5E7EB', paddingTop: '8px', marginTop: '4px' }}>
+                                                <span>Total Paid</span>
+                                                <span>₹{grandTotal.toFixed(2)}</span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Booking ID & QR */}
+                            <div style={{ borderTop: '1px dashed #D1D5DB', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Booking Reference</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                                        {booking.booking_id || booking.bookingId || booking.id?.slice(-8).toUpperCase()}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
+                                        Present this QR at the venue gate for entry
+                                    </div>
+                                </div>
+                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || ''} size={84} />
                             </div>
                         </div>
                     </div>

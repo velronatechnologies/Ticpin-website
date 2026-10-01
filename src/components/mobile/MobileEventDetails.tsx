@@ -630,9 +630,13 @@ Rules:
     const handleBook = () => {
         if (closedBooking) {
             if (bookingStatus.notOpenedYet) {
-                toast.error('Tickets for this event have not opened yet!');
+                toast.error('Ticket sales for this event have not opened yet.');
+            } else if (event.is_canceled) {
+                toast.error('This event has been cancelled.');
+            } else if (event.is_sales_paused) {
+                toast.error('Ticket sales are currently paused for this event.');
             } else {
-                toast.error('Booking for this event is closed!');
+                toast.error('Bookings for this event are closed.');
             }
             return;
         }

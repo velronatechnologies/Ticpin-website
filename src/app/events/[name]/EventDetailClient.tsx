@@ -295,11 +295,17 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
     const handleBook = async () => {
         if (closedBooking) {
             if (bookingStatus.notOpenedYet) {
-                toast.error('Tickets for this event have not opened yet!');
+                toast.error('Ticket sales for this event have not opened yet.');
             } else if (bookingStatus.isClosed) {
-                toast.error('Booking for this event is closed!');
+                if (event.is_canceled) {
+                    toast.error('This event has been cancelled.');
+                } else if (event.is_sales_paused) {
+                    toast.error('Ticket sales are currently paused for this event.');
+                } else {
+                    toast.error('Bookings for this event are closed.');
+                }
             } else {
-                toast.error('Please wait while we check availability...');
+                toast.error('Please wait while we check ticket availability...');
             }
             return;
         }
@@ -344,7 +350,7 @@ export default function EventDetailClient({ event, id, offers = [] }: EventDetai
             }
 
             if (categories.length > 0 && !hasInfinite && totalAvailable <= 0) {
-                toast.error('All tickets for this event are currently sold out or locked by others!');
+                toast.error('These tickets are currently sold out. Please select another tier or category.');
                 return;
             }
         } catch (err) {

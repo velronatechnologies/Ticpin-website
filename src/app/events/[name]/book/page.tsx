@@ -175,7 +175,7 @@ export default function TicketSelectionPage() {
 
   const handleZoneClick = (zoneKey: string) => {
     if (isZoneSoldOut(zoneKey)) {
-      toast.error("No tickets available");
+      toast.error("These tickets are currently sold out. Please select another tier or category.");
       return;
     }
 

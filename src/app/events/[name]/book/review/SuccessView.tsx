@@ -172,10 +172,15 @@ export default function SuccessView({
                     </div>
                 </div>
 
-                {/* Email Confirmation Text */}
-                <p className="text-[15px] font-medium text-[#686868] text-center w-full px-4" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                    Booking confirmation has been sent to your email
-                </p>
+                {/* Email Confirmation & Reminder Text */}
+                <div className="text-center w-full px-4 space-y-1">
+                    <p className="text-[15px] font-medium text-[#686868]" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                        Booking confirmation has been sent to your email
+                    </p>
+                    <p className="text-[13px] font-normal text-zinc-500" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                        Event reminder will be sent to your email before gates open.
+                    </p>
+                </div>
 
                 {/* 2. Your Details Section */}
                 <div className="w-full space-y-2 shrink-0">
@@ -190,7 +195,7 @@ export default function SuccessView({
                             </svg>
                         </div>
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-[15px] font-medium text-black  truncate" style={{ fontFamily: 'var(--font-anek-latin)' }}>
+                            <span className="text-[15px] font-medium text-black truncate" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                                 {billing.name || session?.name || 'User'}
                             </span>
                             <span className="text-[14px] font-medium text-[#686868] truncate" style={{ fontFamily: 'var(--font-anek-latin)' }}>
@@ -200,22 +205,34 @@ export default function SuccessView({
                     </div>
                 </div>
 
-                {/* Booking Date & Action Button */}
-                <div className="w-full flex flex-col gap-3  shrink-0">
+                {/* Booking Date & Action Buttons */}
+                <div className="w-full flex flex-col gap-2.5 shrink-0 pt-1">
                     <p className="text-[13px] font-medium text-[#686868] px-1" style={{ fontFamily: 'var(--font-anek-latin)' }}>
                         Booking date: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
 
-                    <button
-                        onClick={() => {
-                            sessionStorage.removeItem('ticpin_booking_step');
-                            router.push('/');
-                        }}
-                        className="w-full h-[44px] bg-black text-white rounded-[7px] font-medium text-[24px] hover:bg-zinc-900 active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
-                        style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
-                    >
-                        BACK TO HOME
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full">
+                        <button
+                            onClick={() => {
+                                sessionStorage.removeItem('ticpin_booking_step');
+                                router.push(`/bookings/events/${bookingId}`);
+                            }}
+                            className="flex-1 h-[44px] bg-[#5331EA] text-white rounded-[7px] font-medium text-[20px] hover:bg-[#4323D4] active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
+                            style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
+                        >
+                            VIEW TICKETS
+                        </button>
+                        <button
+                            onClick={() => {
+                                sessionStorage.removeItem('ticpin_booking_step');
+                                router.push('/');
+                            }}
+                            className="flex-1 h-[44px] bg-black text-white rounded-[7px] font-medium text-[20px] hover:bg-zinc-900 active:scale-[0.99] transition-all flex items-center justify-center tracking-normal cursor-pointer"
+                            style={{ fontFamily: "var(--font-anek-tamil-condensed), 'Anek Tamil Condensed', sans-serif" }}
+                        >
+                            BACK TO HOME
+                        </button>
+                    </div>
                 </div>
             </div>
 

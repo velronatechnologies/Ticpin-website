@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useReservationStore } from "@/store/useReservationStore";
-import { bookingApi, OfferItem, PaymentOrderResponse } from "@/lib/api/booking";
+import { bookingApi, OfferItem, PaymentOrderResponse, getFriendlyErrorMessage } from "@/lib/api/booking";
 import { profileApi } from "@/lib/api/profile";
 import Link from "next/link";
 import { useUserSession, clearUserSession } from "@/lib/auth/user";
@@ -1076,7 +1076,7 @@ export default function ReviewBookingPage() {
         toast.success("Ticket removed!");
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to update reservation.");
+      toast.error(getFriendlyErrorMessage(err, "Failed to update reservation."));
     } finally {
       setTicketUpdateInProgress(false);
     }
@@ -1138,8 +1138,10 @@ export default function ReviewBookingPage() {
       }
     } catch (err: any) {
       toast.error(
-        err.message ||
+        getFriendlyErrorMessage(
+          err,
           "Failed to update reservation. Selected tickets may not be available.",
+        ),
       );
     } finally {
       setTicketUpdateInProgress(false);
@@ -1194,7 +1196,7 @@ export default function ReviewBookingPage() {
       );
       setExpandedSection("none");
     } catch (err: unknown) {
-      setCouponError(err instanceof Error ? err.message : "Invalid coupon");
+      setCouponError(getFriendlyErrorMessage(err, "This promo code is invalid or has expired."));
       setCouponDiscount(0);
       setAppliedCoupon("");
     } finally {
@@ -1389,15 +1391,16 @@ export default function ReviewBookingPage() {
       });
     } catch (err: unknown) {
       setShowInProgressLoader(false);
-      let message =
+      let rawMsg =
         err instanceof Error
           ? err.message
           : "Booking failed. Please contact support with your payment ID.";
-      if (message.includes("offer_invalid") || message.includes("offer")) {
-        message = "The selected offer is no longer valid. Please review your order.";
+      if (rawMsg.includes("offer_invalid") || rawMsg.includes("offer")) {
+        rawMsg = "The selected offer is no longer valid. Please review your order.";
         setAppliedOffer(null);
         setOfferDiscount(0);
       }
+      const message = getFriendlyErrorMessage(rawMsg, "Booking could not be confirmed. If any amount was deducted, it will be automatically refunded.");
       setBookingError(message);
       toast.error(message);
       if (!isBookingCompletedRef.current) {
@@ -1547,44 +1550,50 @@ export default function ReviewBookingPage() {
     }
 
     try {
-      // Lock reservation and create payment order in parallel
-      const [lockRes, orderRes] = await Promise.all([
-        reservationStore.reservationId
-          ? fetch("/backend/api/bookings/events/start-payment", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                reservation_id: reservationStore.reservationId,
-              }),
-            })
-          : Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as any),
-        bookingApi.createPaymentOrder({
-          amount: grandTotal,
-          customer_phone: billing.phone,
-          customer_email: email || `user_${billing.phone}@ticpin.in`,
-          customer_id: session?.id || `phone_${billing.phone}`,
-          return_url: `${window.location.origin}${window.location.pathname}`,
-          type: cart.type || "event",
-        }),
-      ]);
-
-      if (reservationStore.reservationId && !lockRes.ok) {
-        const errorData = await lockRes.json();
-        // If start-payment fails it means the reservation already expired — reset paying state
-        isPayingRef.current = false;
-        inflightOrderIdRef.current = null;
-        throw new Error(
-          errorData.error ||
-            "Your ticket reservation lock has expired. Please select tickets again.",
-        );
-      }
-
+      // Step 1: Ensure ticket reservation lock transitions to PENDING_PAYMENT before creating payment order
       if (reservationStore.reservationId) {
+        const lockRes = await fetch("/backend/api/bookings/events/start-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reservation_id: reservationStore.reservationId,
+          }),
+        });
+
+        if (!lockRes.ok) {
+          const errorData = await lockRes.json();
+          isPayingRef.current = false;
+          inflightOrderIdRef.current = null;
+          throw new Error(
+            errorData.error ||
+              "Your ticket reservation lock has expired. Please select tickets again.",
+          );
+        }
+
         const lockData = await lockRes.json();
         if (lockData.payment_expires_at) {
           reservationStore.setExpiresAt(lockData.payment_expires_at);
         }
       }
+
+      // Step 2: Create payment order with pricing context in notes
+      const orderRes = await bookingApi.createPaymentOrder({
+        amount: grandTotal,
+        customer_phone: billing.phone,
+        customer_email: email || `user_${billing.phone}@ticpin.in`,
+        customer_id: session?.id || `phone_${billing.phone}`,
+        return_url: `${window.location.origin}${window.location.pathname}`,
+        type: cart.type || "event",
+        notes: {
+          event_id: cart.eventId || "",
+          reservation_id: reservationStore.reservationId || "",
+          coupon_code: couponCode || "",
+          offer_id: selectedOffer?.id || "",
+          use_ticpass: isTicpassApplied ? "true" : "false",
+          donation_amount: String(donationAmount || 0),
+          billing_state: billing.state || "",
+        },
+      });
 
       // Step 2: Pre-create PENDING booking record in DB before launching payment gateway
       // This ensures server-to-server webhooks and 10-second auto-reconciliation can confirm the booking even if the user's browser closes!
@@ -1790,11 +1799,9 @@ export default function ReviewBookingPage() {
     } catch (err: unknown) {
       setBookingLoading(false);
       isPayingRef.current = false;
-      setBookingError(
-        err instanceof Error
-          ? err.message
-          : "Payment initiation failed. Please try again.",
-      );
+      const friendlyMsg = getFriendlyErrorMessage(err, "Payment setup failed. Please try again.");
+      setBookingError(friendlyMsg);
+      toast.error(friendlyMsg);
     }
   };
 

@@ -3,6 +3,7 @@
  * Intercepts 401 responses and logs out the user automatically
  */
 import { clearUserSession } from '../auth/user';
+import { getFriendlyErrorMessage } from './errorMapper';
 
 export async function fetchWithAuth<T>(
   url: string,
@@ -14,14 +15,6 @@ export async function fetchWithAuth<T>(
     ...options,
   });
 
-  // Handle 401 Unauthorized (Expired Token) - Auto logout
-  if (res.status === 401) {
-    console.warn('[FetchWithAuth] 401 Unauthorized - Token expired, auto-logging out user');
-    console.warn('[FetchWithAuth] URL:', url);
-    clearUserSession(true);
-    return Promise.reject(new Error('Session expired. Please login again.'));
-  }
-
   let data: any = {};
   try {
     data = await res.json();
@@ -29,11 +22,21 @@ export async function fetchWithAuth<T>(
     data = {};
   }
 
-  if (!res.ok) {
-    if (res.status >= 500) {
-      throw new Error(data.error ?? 'Service is temporarily unavailable. Please try again in a few moments.');
+  // Handle 401 Unauthorized (Expired Token) - Auto logout except for login/otp endpoints
+  if (res.status === 401) {
+    const isAuthEndpoint = url.includes('/verify-otp') || url.includes('/send-otp') || url.includes('/login');
+    if (!isAuthEndpoint) {
+      console.warn('[FetchWithAuth] 401 Unauthorized - Token expired, auto-logging out user');
+      console.warn('[FetchWithAuth] URL:', url);
+      clearUserSession(true);
+      return Promise.reject(new Error('Session expired. Please login again.'));
     }
-    throw new Error(data.error ?? `Request failed with status ${res.status}`);
+    throw new Error(getFriendlyErrorMessage(data.error, 'Authentication failed. Please try again.'));
+  }
+
+  if (!res.ok) {
+    const friendly = getFriendlyErrorMessage(data.error || data.message || `Request failed with status ${res.status}`);
+    throw new Error(friendly);
   }
   return data as T;
 }
