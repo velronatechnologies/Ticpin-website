@@ -596,8 +596,10 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                                     <span className="text-[11px] font-semibold text-[#686868] truncate max-w-[80px]">
                                         {event.city || 'Bangalore'}
                                     </span>
-                                    <span className="text-[12px] font-bold text-black shrink-0">
-                                        {event.price_starts_from ? `₹${event.price_starts_from}` : 'Free'}
+                                    <span className={`text-[12px] font-bold shrink-0 ${event.price_starts_from === 0 ? 'text-red-600' : 'text-black'}`}>
+                                        {event.price_starts_from && event.price_starts_from > 0
+                                            ? `₹${event.price_starts_from}`
+                                            : (event.price_starts_from === 0 ? 'SOLD OUT' : 'Free')}
                                     </span>
                                 </div>
                             </div>

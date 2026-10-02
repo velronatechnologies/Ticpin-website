@@ -83,7 +83,11 @@ export default function EventCard({
             </p>
           </div>
           <p className="text-[13px] text-[#aeaeae] font-[family-name:var(--font-anek-latin)]">
-            <span className="text-[13px] text-[#686868] font-[family-name:var(--font-anek-latin)] ">{ticketPrice} onwards</span>
+            {ticketPrice === 'SOLD OUT' ? (
+              <span className="text-[13px] font-bold text-red-600 font-[family-name:var(--font-anek-latin)] uppercase">SOLD OUT</span>
+            ) : (
+              <span className="text-[13px] text-[#686868] font-[family-name:var(--font-anek-latin)] ">{ticketPrice} onwards</span>
+            )}
           </p>
         </div>
       </div>

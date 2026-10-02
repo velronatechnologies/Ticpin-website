@@ -159,9 +159,15 @@ export default function MobileEventCard({
                 <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 tracking-wider truncate">
                     {venue_name || location || city || 'Location TBA'}
                 </p>
-                <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider">
-                    {price_starts_from ? `Starts at ₹${price_starts_from}` : 'Price TBA'}
-                </p>
+                {price_starts_from && price_starts_from > 0 ? (
+                    <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider">
+                        Starts at ₹{price_starts_from}
+                    </p>
+                ) : (
+                    <p className="text-[11px] font-bold text-red-600 mt-0.5 uppercase tracking-wider">
+                        {price_starts_from === 0 ? 'SOLD OUT' : 'Price TBA'}
+                    </p>
+                )}
 
                 {/* Fire badge — red bg when liked */}
                 <button

@@ -699,9 +699,15 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                 {scrollEvents[0].venue_name || scrollEvents[0].city || scrollEvents[0].location || "{EVENT LOCATION}"}
                                             </p>
-                                            <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                                {scrollEvents[0].price_starts_from ? `Starts at ₹ ${scrollEvents[0].price_starts_from}` : "{EVENT STARTING PRICE}"}
-                                            </p>
+                                            {scrollEvents[0].price_starts_from && scrollEvents[0].price_starts_from > 0 ? (
+                                                <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    Starts at ₹ {scrollEvents[0].price_starts_from}
+                                                </p>
+                                            ) : (
+                                                <p className="text-[11px] font-bold text-red-600 mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    {scrollEvents[0].price_starts_from === 0 ? 'SOLD OUT' : 'Price TBA'}
+                                                </p>
+                                            )}
 
                                             {/* Fire/Hot Icon */}
                                             <div
@@ -834,9 +840,15 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                     <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                         {event.venue_name || event.city || event.location || "{EVENT LOCATION}"}
                                                     </p>
-                                                    <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
-                                                        {event.price_starts_from ? `Starts at ₹ ${event.price_starts_from}` : "{EVENT STARTING PRICE}"}
-                                                    </p>
+                                                    {event.price_starts_from && event.price_starts_from > 0 ? (
+                                                        <p className="text-[11px] font-regular text-[#8E8E8E] mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                            Starts at ₹ {event.price_starts_from}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-[11px] font-bold text-red-600 mt-0.5 uppercase tracking-wider" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                            {event.price_starts_from === 0 ? 'SOLD OUT' : 'Price TBA'}
+                                                        </p>
+                                                    )}
 
                                                     {/* Fire/Hot Icon */}
                                                     <div

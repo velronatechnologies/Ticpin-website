@@ -51,7 +51,9 @@ const EventsGrid = React.memo(function EventsGrid({ events }: EventsGridProps) {
                     time={event.time ?? ''}
                     ticketPrice={(() => {
                         const minP = getMinPrice(event);
-                        return minP > 0 ? `₹${minP}` : '—';
+                        if (minP > 0) return `₹${minP}`;
+                        if (event.price_starts_from === 0) return 'SOLD OUT';
+                        return '—';
                     })()}
                     image={event.portrait_image_url || event.landscape_image_url || '/events/events-1/ticpinbanner.jpg'}
                 />

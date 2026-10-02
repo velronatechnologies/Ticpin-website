@@ -138,12 +138,66 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     };
 
     const nowMs = useCurrentTime();
+    const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            try {
+                const avail = await bookingApi.getEventAvailability(event.id);
+                if (avail && avail.booked) {
+                    setBookedMap(avail.booked);
+                }
+            } catch (err) {
+                console.error('Failed to fetch availability:', err);
+            }
+        };
+        if (event?.id) {
+            fetchAvailability();
+        }
+    }, [event?.id]);
+
+    const isSoldOut = useMemo(() => {
+        let categories = event.ticket_categories || [];
+        if (event.is_layout_based && event.layout_json) {
+            try {
+                const layout = JSON.parse(event.layout_json);
+                if (layout && Array.isArray(layout.elements)) {
+                    const classSections = layout.elements.filter(
+                        (el: any) => el.type === "section" && el.sectionType === "class"
+                    );
+                    if (classSections.length > 0) {
+                        categories = classSections.map((el: any) => ({
+                            name: el.name || "Unnamed Section",
+                            price: el.price !== undefined ? Number(el.price) : 0,
+                            capacity: el.capacity !== undefined ? Number(el.capacity) : 100,
+                            available: el.available !== undefined ? Number(el.available) : undefined,
+                        }));
+                    }
+                }
+            } catch { }
+        }
+        if (categories.length === 0) return false;
+        for (const cat of categories) {
+            const limit = cat.available !== undefined ? cat.available : (cat.capacity ?? 0);
+            if (limit <= 0 && (!cat.capacity || cat.capacity <= 0) && cat.available === undefined) {
+                return true;
+            }
+            if (limit >= 999999) {
+                return false;
+            }
+            const booked = bookedMap[cat.name] ?? 0;
+            if (Math.max(0, limit - booked) > 0) {
+                return false;
+            }
+        }
+        return true;
+    }, [event, bookedMap]);
 
     const bookingStatus = useMemo(() => {
-        if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
+        if (!event) return { isClosed: false, notOpenedYet: false, isSoldOut: false, text: 'Book tickets' };
 
         if (isEventBookingClosed(event, nowMs)) {
-            return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
+            return { isClosed: true, notOpenedYet: false, isSoldOut: false, text: 'Tickets closed' };
         }
 
         if (isEventBookingNotOpenedYet(event, nowMs)) {
@@ -161,13 +215,17 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
                 hour12: true
             });
             const formatted = `${datePart} at ${timePart}`;
-            return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
+            return { isClosed: false, notOpenedYet: true, isSoldOut: false, text: `Opens on ${formatted}` };
         }
 
-        return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
-    }, [event, nowMs]);
+        if (isSoldOut) {
+            return { isClosed: true, notOpenedYet: false, isSoldOut: true, text: 'SOLD OUT' };
+        }
 
-    const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
+        return { isClosed: false, notOpenedYet: false, isSoldOut: false, text: 'Book tickets' };
+    }, [event, nowMs, isSoldOut]);
+
+    const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet || bookingStatus.isSoldOut;
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [showFullDesc, setShowFullDesc] = useState(false);
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -635,7 +693,13 @@ Rules:
 
     const handleBook = () => {
         if (closedBooking) {
-            toast.error('Booking for this event is closed!');
+            if (isSoldOut) {
+                toast.error('These tickets are currently sold out. Please select another event or category.');
+            } else if (bookingStatus.notOpenedYet) {
+                toast.error('Ticket sales for this event have not opened yet.');
+            } else {
+                toast.error('Booking for this event is closed!');
+            }
             return;
         }
         if (!session) {
@@ -664,24 +728,6 @@ Rules:
         if (!event.date) return 'Date TBA';
         return formatEventDateUTCWithDay(event.date, true);
     }, [event.date]);
-
-    const [bookedMap, setBookedMap] = useState<Record<string, number>>({});
-
-    useEffect(() => {
-        const fetchAvailability = async () => {
-            try {
-                const avail = await bookingApi.getEventAvailability(event.id);
-                if (avail && avail.booked) {
-                    setBookedMap(avail.booked);
-                }
-            } catch (err) {
-                console.error('Failed to fetch availability:', err);
-            }
-        };
-        if (event?.id) {
-            fetchAvailability();
-        }
-    }, [event?.id]);
 
     const minPrice = useMemo(() => getMinPrice(event, bookedMap), [event, bookedMap]);
     const displayTime = formatTime(event.time) || 'Time TBA';
@@ -1119,14 +1165,20 @@ Rules:
             {!isTimelineOpen && !isThingsToKnowOpen && !isFaqOpen && !isTermsOpen && !isAiChatOpen && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] h-[83px] bg-[#F5F5F5] rounded-[40px] flex items-center justify-between px-8 z-[100]">
                     <div className="flex items-center gap-1.5">
-                        <span className="text-[18px] font-semibold text-black uppercase">{displayPrice}</span>
-                        <span className="text-[12px] font-medium text-[#686868]">onwards</span>
+                        {isSoldOut ? (
+                            <span className="text-[18px] font-bold text-red-600 uppercase">SOLD OUT</span>
+                        ) : (
+                            <>
+                                <span className="text-[18px] font-semibold text-black uppercase">{displayPrice}</span>
+                                <span className="text-[12px] font-medium text-[#686868]">onwards</span>
+                            </>
+                        )}
                     </div>
                     <button
                         onClick={handleBook}
                         disabled={closedBooking}
                         className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${closedBooking
-                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
+                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[14px] font-bold leading-tight text-center min-w-[138px] max-w-[180px]'
                             : 'bg-black text-white text-[18px] w-[138px]'
                             }`}
                     >

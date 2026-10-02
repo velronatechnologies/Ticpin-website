@@ -14,8 +14,10 @@ export function getMinPrice(
   bookedMap?: Record<string, number>
 ) {
   let prices: number[] = [];
+  let hasValidTiers = false;
 
   if (event.ticket_categories && event.ticket_categories.length > 0) {
+    hasValidTiers = true;
     event.ticket_categories.forEach(cat => {
       if (cat.price !== undefined && cat.price > 0) {
         const limit = cat.available !== undefined ? cat.available : cat.capacity;
@@ -38,6 +40,7 @@ export function getMinPrice(
           if (el.type === 'section' && el.price !== undefined) {
             const p = Number(el.price);
             if (!isNaN(p) && p > 0) {
+              hasValidTiers = true;
               const limit = el.available !== undefined ? Number(el.available) : (el.capacity !== undefined ? Number(el.capacity) : undefined);
               if (bookedMap && el.name && limit !== undefined) {
                 const booked = bookedMap[el.name] ?? 0;
@@ -53,6 +56,11 @@ export function getMinPrice(
     } catch (e) {
       // ignore
     }
+  }
+
+  // If bookedMap is provided and categories/sections were checked but none are available, all are sold out
+  if (bookedMap && hasValidTiers && prices.length === 0) {
+    return 0;
   }
 
   if (bookedMap && prices.length > 0) {

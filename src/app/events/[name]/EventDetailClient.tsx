@@ -290,7 +290,9 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
             if (bookingStatus.notOpenedYet) {
                 toast.error('Ticket sales for this event have not opened yet.');
             } else if (bookingStatus.isClosed) {
-                if (event.is_canceled) {
+                if (isSoldOut) {
+                    toast.error('These tickets are currently sold out. Please select another event or category.');
+                } else if (event.is_canceled) {
                     toast.error('This event has been cancelled.');
                 } else if (event.is_sales_paused) {
                     toast.error('Ticket sales are currently paused for this event.');
@@ -629,8 +631,14 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
                                     <div className="w-full h-[1.5px] bg-[#686868]/60" />
                                     <div className="flex items-center justify-between gap-4">
                                         <div style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                            <span className="text-xs font-medium text-[#686868] pl-[18px] tracking-wide uppercase">Starts from</span>
-                                            <span className="text-2xl font-medium text-black block pl-[18px]">₹{minPrice > 0 ? minPrice.toLocaleString('en-IN') : 'TBA'}</span>
+                                            {isSoldOut ? (
+                                                <span className="text-2xl font-bold text-red-600 block pl-[18px] uppercase tracking-wide">SOLD OUT</span>
+                                            ) : (
+                                                <>
+                                                    <span className="text-xs font-medium text-[#686868] pl-[18px] tracking-wide uppercase">Starts from</span>
+                                                    <span className="text-2xl font-medium text-black block pl-[18px]">₹{minPrice > 0 ? minPrice.toLocaleString('en-IN') : 'TBA'}</span>
+                                                </>
+                                            )}
                                         </div>
                                         <button
                                             onClick={handleBook}
