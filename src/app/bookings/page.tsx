@@ -209,7 +209,7 @@ function BookingsContent() {
                                         
                                         {/* Date & Time combined in a single line */}
                                         <p className="text-[15px] font-medium text-[#686868] leading-tight">
-                                            {new Date(booking.date || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} | {booking.time || booking.time_slot || booking.slot || ''}
+                                            {new Date(booking.date || Date.now()).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' })} | {booking.time || booking.time_slot || booking.slot || ''}
                                         </p>
 
                                         {/* Court Name or Ticket Details */}

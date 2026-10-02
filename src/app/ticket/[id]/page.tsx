@@ -118,7 +118,7 @@ export default function PublicTicketPage() {
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Date</p>
-                                <p className="text-lg font-bold text-zinc-900">{new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                <p className="text-lg font-bold text-zinc-900">{new Date(booking.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
                             </div>
                         </div>
                         <div className="bg-white border-2 border-zinc-100 rounded-2xl p-5 shadow-sm flex items-start gap-4">

@@ -347,7 +347,7 @@ export default function ReviewBookingPage() {
       }
 
       let savedCart = sessionStorage.getItem("ticpin_cart");
-      
+
       // If cart exists in sessionStorage AND Zustand has a reservation, verify with backend
       // to ensure reservation is still valid (handles refresh, duplicate tabs, stale state)
       if (savedCart && reservationStore.reservationId && reservationStore.hasActiveReservation()) {
@@ -359,7 +359,7 @@ export default function ReviewBookingPage() {
           setIsValidating(false);
           return;
         }
-        
+
         // Always verify reservation with backend
         try {
           const verifyRes = await bookingApi.verifyReservation(parsedCart.eventId, reservationStore.reservationId);
@@ -382,7 +382,7 @@ export default function ReviewBookingPage() {
           setIsValidating(false);
           return;
         }
-        
+
         setCart(parsedCart);
         if (parsedCart.type === "event" && parsedCart.eventId) {
           setEventData((prev: any) => ({ ...prev, id: parsedCart.eventId, name: parsedCart.eventName }));
@@ -668,28 +668,28 @@ export default function ReviewBookingPage() {
             router.replace(`/events/${name}/book`);
             return;
           }
-            setCart(p.cart);
-            if (p.cart.type === "event" && p.cart.eventId) {
-              setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
-            }
-            showSuccessImmediately(p.orderID);
-            setTimeout(() => {
-              void completeBookingWithData(
-                p.orderID,
-                "cashfree",
-                p.cart,
-                p.email,
-                p.sessionId,
-                p.orderAmount,
-                p.bookingFee,
-                p.grandTotal,
-                p.appliedCoupon || "",
-                p.offerId,
-                p.cart.use_pass,
-                p.donationAmount,
-                p.orderID,
-              );
-            }, 200);
+          setCart(p.cart);
+          if (p.cart.type === "event" && p.cart.eventId) {
+            setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
+          }
+          showSuccessImmediately(p.orderID);
+          setTimeout(() => {
+            void completeBookingWithData(
+              p.orderID,
+              "cashfree",
+              p.cart,
+              p.email,
+              p.sessionId,
+              p.orderAmount,
+              p.bookingFee,
+              p.grandTotal,
+              p.appliedCoupon || "",
+              p.offerId,
+              p.cart.use_pass,
+              p.donationAmount,
+              p.orderID,
+            );
+          }, 200);
         }
       }
     }
@@ -1453,7 +1453,7 @@ export default function ReviewBookingPage() {
     // Guard: if Razorpay modal is already open, just bring it back into focus.
     // This prevents creating a second payment order when the user clicks Pay Now again.
     if (razorpayRef.current) {
-      try { razorpayRef.current.open(); } catch (_) {}
+      try { razorpayRef.current.open(); } catch (_) { }
       return;
     }
 
@@ -1501,20 +1501,20 @@ export default function ReviewBookingPage() {
         cache: "no-store",
       });
       const latestEvent = await latestEventRes.json();
-      
-      if (!latestEvent || latestEvent.error || 
-          (latestEvent.status && latestEvent.status.toLowerCase() !== "approved") ||
-          latestEvent.is_sales_paused || 
-          latestEvent.is_canceled ||
-          isEventBookingClosed(latestEvent, nowMs) ||
-          isEventBookingNotOpenedYet(latestEvent, nowMs)) {
-        
+
+      if (!latestEvent || latestEvent.error ||
+        (latestEvent.status && latestEvent.status.toLowerCase() !== "approved") ||
+        latestEvent.is_sales_paused ||
+        latestEvent.is_canceled ||
+        isEventBookingClosed(latestEvent, nowMs) ||
+        isEventBookingNotOpenedYet(latestEvent, nowMs)) {
+
         const errorMsg = latestEvent?.is_sales_paused ? "Sales are paused for this event" :
-                         latestEvent?.is_canceled ? "This event has been cancelled" :
-                         isEventBookingClosed(latestEvent, nowMs) ? "Booking for this event is closed" :
-                         isEventBookingNotOpenedYet(latestEvent, nowMs) ? "Tickets for this event have not opened yet" :
-                         "This event is not available for booking";
-        
+          latestEvent?.is_canceled ? "This event has been cancelled" :
+            isEventBookingClosed(latestEvent, nowMs) ? "Booking for this event is closed" :
+              isEventBookingNotOpenedYet(latestEvent, nowMs) ? "Tickets for this event have not opened yet" :
+                "This event is not available for booking";
+
         toast.error(errorMsg);
         clearEventBookingStorage();
         reservationStore.clearReservation();
@@ -1566,7 +1566,7 @@ export default function ReviewBookingPage() {
           inflightOrderIdRef.current = null;
           throw new Error(
             errorData.error ||
-              "Your ticket reservation lock has expired. Please select tickets again.",
+            "Your ticket reservation lock has expired. Please select tickets again.",
           );
         }
 
@@ -1697,8 +1697,8 @@ export default function ReviewBookingPage() {
             inflightOrderIdRef.current = null;
             showSuccessImmediately(
               response.razorpay_order_id ||
-                response.razorpay_payment_id ||
-                orderRes.order_id,
+              response.razorpay_payment_id ||
+              orderRes.order_id,
             );
             void completeBookingWithData(
               response.razorpay_payment_id,
@@ -1750,7 +1750,7 @@ export default function ReviewBookingPage() {
                     status: "cancelled",
                     reservation_id: reservationStore.reservationId || undefined,
                   });
-                } catch (_) {}
+                } catch (_) { }
               }
 
               // Safely revert reservation back to standard PENDING state
@@ -1837,11 +1837,11 @@ export default function ReviewBookingPage() {
   if (showInProgressLoader) {
     const eventDateStr = eventData?.date
       ? new Date(eventData.date).toLocaleDateString("en-IN", {
-          timeZone: "UTC",
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        })
+        timeZone: "UTC",
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
       : "";
     const eventTimeStr = eventData?.time ? ` | ${formatTime12hr(eventData.time)} onwards` : "";
     const dateTimeStr = `${eventDateStr}${eventTimeStr}`;
@@ -1862,7 +1862,7 @@ export default function ReviewBookingPage() {
         <div className="flex flex-col items-center gap-4 max-w-[480px] w-full text-center animate-in fade-in duration-300">
           {/* Spinner */}
           <div className="w-8 h-8 border-[3px] border-[#5331EA] border-t-transparent rounded-full animate-spin" />
-          
+
           <h2 className="text-[18px] font-bold text-black" style={{ fontFamily: 'var(--font-anek-latin)' }}>
             Booking in progress
           </h2>
@@ -2079,7 +2079,7 @@ export default function ReviewBookingPage() {
           <div className="flex gap-[15px] items-center">
             <div className="w-[80px] h-[63px] bg-[#110D2C] rounded-[10px] overflow-hidden shrink-0 relative flex items-center justify-center shadow-sm border border-[#E1E1E1]">
               {eventData?.landscape_image_url ||
-              eventData?.portrait_image_url ? (
+                eventData?.portrait_image_url ? (
                 <Image
                   src={
                     eventData.landscape_image_url ||
@@ -2126,11 +2126,11 @@ export default function ReviewBookingPage() {
               >
                 {cart?.date
                   ? new Date(cart.date).toLocaleDateString("en-IN", {
-                      timeZone: "UTC",
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })
+                    timeZone: "UTC",
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })
                   : "Sat, 23 May"}
               </span>
               <span
@@ -2650,7 +2650,7 @@ export default function ReviewBookingPage() {
 
       {/* ====== DESKTOP VIEW (hidden md:block) ====== */}
       <div className="hidden md:flex flex-col min-h-screen w-full overflow-x-hidden">
-            <style>{`
+        <style>{`
                 @font-face {
                     font-family: 'Anek Tamil Condensed';
                     src: url('/fonts/AnekTamil_Condensed-Medium.ttf') format('truetype');

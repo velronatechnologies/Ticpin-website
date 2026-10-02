@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ChevronDown, ArrowLeft, X } from 'lucide-react';
 import { useIdentityStore } from '@/store/useIdentityStore';
 import { toast } from '@/components/ui/Toast';
-import { getFriendlyErrorMessage } from '@/lib/api/errorMapper';
 import LoginView from '@/components/modals/auth/LoginView';
 
 export default function MobileLogin({ onClose }: { onClose?: () => void }) {
@@ -86,10 +85,9 @@ export default function MobileLogin({ onClose }: { onClose?: () => void }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: number }),
             });
-            let d: any = {};
-            try { d = await res.json(); } catch {}
+            const d = await res.json();
             if (!res.ok) {
-                setError(getFriendlyErrorMessage(d.error, 'Unable to send OTP. Please try again.'));
+                setError(d.error || 'Failed to send OTP');
                 setLoading(false);
                 return;
             }
@@ -100,6 +98,7 @@ export default function MobileLogin({ onClose }: { onClose?: () => void }) {
             if (isAlreadySent) {
                 const originalSentAt = Date.now() - (120 - remaining) * 1000;
                 localStorage.setItem(`user_otp_sent_at_${number}`, originalSentAt.toString());
+                // toast.success('OTP session resumed');
             } else {
                 localStorage.setItem(`user_otp_sent_at_${number}`, Date.now().toString());
                 toast.success('OTP sent successfully');
@@ -112,14 +111,13 @@ export default function MobileLogin({ onClose }: { onClose?: () => void }) {
             setTimeLeft(remaining);
         } catch (err: any) {
             console.error('Send OTP Error:', err);
-            setError(getFriendlyErrorMessage(err, 'Unable to send OTP. Please try again.'));
+            setError('Failed to send OTP. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const handleOtpChange = (index: number, value: string) => {
-        setError('');
         const cleanValue = value.replace(/\D/g, '');
         if (cleanValue.length > 1) {
             const digits = cleanValue.slice(0, 6);
@@ -152,7 +150,6 @@ export default function MobileLogin({ onClose }: { onClose?: () => void }) {
 
     const handleOtpPaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
-        setError('');
         const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
         if (!data) return;
         setOtp(prev => {
@@ -173,7 +170,7 @@ export default function MobileLogin({ onClose }: { onClose?: () => void }) {
 
         const otpCode = otp.join('');
         if (otpCode.length !== 6) {
-            setError('Please enter the full 6-digit OTP code');
+            setError('Please enter a 6-digit OTP');
             setLoading(false);
             return;
         }
@@ -187,22 +184,22 @@ export default function MobileLogin({ onClose }: { onClose?: () => void }) {
                 body: JSON.stringify({ token }),
             });
 
-            let data: any = {};
-            try { data = await res.json(); } catch {}
+            const data = await res.json();
             if (!res.ok) {
-                setError(getFriendlyErrorMessage(data.error, 'Invalid OTP code. Please try again.'));
+                setError(data.error || 'Verification failed');
                 setLoading(false);
                 return;
             }
 
             const userData = data.user || data;
             loginUser({ id: userData.id || userData._id || number, phone: number, name: userData.name || '' });
+            // toast.success('Logged in successfully');
             
             // Redirect back
             redirectAfterLogin(redirectUrl);
         } catch (err: any) {
             console.error('Verification Error:', err);
-            setError(getFriendlyErrorMessage(err, 'Verification failed. Please check your code and try again.'));
+            setError('Verification failed');
         } finally {
             setLoading(false);
         }

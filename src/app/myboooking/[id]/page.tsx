@@ -109,7 +109,7 @@ function BookingDetailsContent() {
         const parsed = new Date(raw);
         if (isNaN(parsed.getTime())) return raw;
         return parsed.toLocaleDateString("en-IN", {
-            timeZone: "UTC",
+            timeZone: "Asia/Kolkata",
             weekday: "short",
             day: "numeric",
             month: "short",
@@ -123,7 +123,7 @@ function BookingDetailsContent() {
         const parsed = new Date(raw);
         if (isNaN(parsed.getTime())) return raw;
         return parsed.toLocaleDateString("en-IN", {
-            timeZone: "UTC",
+            timeZone: "Asia/Kolkata",
             day: "numeric",
             month: "short",
             year: "numeric",

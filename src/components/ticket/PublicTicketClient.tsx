@@ -75,7 +75,7 @@ export default function PublicTicketClient({ booking, origin }: PublicTicketClie
                             <div>
                                 <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Date</p>
                                 <p className="text-lg font-bold text-zinc-900 uppercase">
-                                    {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                    {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
                                 </p>
                             </div>
                         </div>

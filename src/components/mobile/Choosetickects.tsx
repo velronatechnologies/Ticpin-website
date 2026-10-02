@@ -1,18 +1,11 @@
 'use client';
 
-/**
- * @deprecated This component is retained for legacy reference only.
- * The active, canonical ticket selection implementation is located at:
- * src/app/events/[name]/book/tickets/[category]/page.tsx
- */
-
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, Info, Percent, Loader2 } from 'lucide-react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import { useUserSession } from '@/lib/auth/user';
 import { useReservationStore } from '@/store/useReservationStore';
 import { bookingApi } from '@/lib/api/booking';
-import { getFriendlyErrorMessage } from '@/lib/api/errorMapper';
 import AuthModal from '@/components/modals/AuthModal';
 import { toast } from '@/components/ui/Toast';
 import { TicketSkeleton } from '@/components/ui/Skeleton';
@@ -360,7 +353,7 @@ export default function MobileChooseTickets({ eventName, onBack }: MobileChooseT
             }
         } catch (err: any) {
             console.error('Reservation creation error:', err);
-            toast.error(getFriendlyErrorMessage(err, 'Failed to reserve tickets. Please try again.'));
+            toast.error(err?.message || 'Failed to reserve tickets. Please try again.');
         } finally {
             setIsReserving(false);
         }

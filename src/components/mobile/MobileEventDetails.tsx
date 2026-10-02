@@ -77,6 +77,7 @@ interface MobileEventDetailsProps {
         ticket_open_date?: string;
         ticket_close_date?: string;
         event_end_date?: string;
+        timezone?: string;
         is_sales_paused?: boolean;
         is_canceled?: boolean;
         card_video_url?: string;
@@ -139,26 +140,31 @@ export default function MobileEventDetails({ event, offers }: MobileEventDetails
     const nowMs = useCurrentTime();
 
     const bookingStatus = useMemo(() => {
-        if (!event) return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+        if (!event) return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
 
         if (isEventBookingClosed(event, nowMs)) {
-            return { isClosed: true, notOpenedYet: false, text: 'TICKETS CLOSED' };
+            return { isClosed: true, notOpenedYet: false, text: 'Tickets closed' };
         }
 
         if (isEventBookingNotOpenedYet(event, nowMs)) {
             const openDate = new Date(event.ticket_open_date!);
-            const formatted = openDate.toLocaleDateString('en-IN', {
+            const tz = event.timezone || 'Asia/Kolkata';
+            const datePart = openDate.toLocaleDateString('en-IN', {
+                timeZone: tz,
                 day: 'numeric',
                 month: 'short'
-            }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
+            });
+            const timePart = openDate.toLocaleTimeString('en-IN', {
+                timeZone: tz,
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: true
             });
-            return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}` };
+            const formatted = `${datePart} at ${timePart}`;
+            return { isClosed: false, notOpenedYet: true, text: `Opens on ${formatted}` };
         }
 
-        return { isClosed: false, notOpenedYet: false, text: 'BOOK TICKETS' };
+        return { isClosed: false, notOpenedYet: false, text: 'Book tickets' };
     }, [event, nowMs]);
 
     const closedBooking = bookingStatus.isClosed || bookingStatus.notOpenedYet;
@@ -629,15 +635,7 @@ Rules:
 
     const handleBook = () => {
         if (closedBooking) {
-            if (bookingStatus.notOpenedYet) {
-                toast.error('Ticket sales for this event have not opened yet.');
-            } else if (event.is_canceled) {
-                toast.error('This event has been cancelled.');
-            } else if (event.is_sales_paused) {
-                toast.error('Ticket sales are currently paused for this event.');
-            } else {
-                toast.error('Bookings for this event are closed.');
-            }
+            toast.error('Booking for this event is closed!');
             return;
         }
         if (!session) {
@@ -771,8 +769,13 @@ Rules:
 
     const processedDesc = useMemo(() => {
         if (!event.description) return { html: '', plain: '', isLong: false };
-        const sanitized = DOMPurify.sanitize(event.description);
-        const plainText = sanitized.replace(/<[^>]+>/g, '');
+        let sanitized = DOMPurify.sanitize(event.description);
+        // Strip card border styling and wrapper boxes if pasted into rich text
+        sanitized = sanitized
+            .replace(/<section[^>]*class="[^"]*border[^"]*"[^>]*>/gi, '<section>')
+            .replace(/style="[^"]*border[^"]*"/gi, '')
+            .replace(/style="[^"]*box-shadow[^"]*"/gi, '');
+        const plainText = sanitized.replace(/<[^>]+>/g, '').trim();
         return {
             html: sanitized,
             plain: plainText,
@@ -1122,9 +1125,9 @@ Rules:
                     <button
                         onClick={handleBook}
                         disabled={closedBooking}
-                        className={`w-[138px] h-[51px] rounded-[40px] font-medium text-[18px] active:scale-95 transition-all flex items-center justify-center ${closedBooking
-                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[12px] leading-tight text-center px-2'
-                            : 'bg-black text-white'
+                        className={`h-[51px] rounded-[40px] font-medium active:scale-95 transition-all flex items-center justify-center px-4 ${closedBooking
+                            ? 'bg-[#CCCCCC] text-[#666666] cursor-not-allowed text-[11px] leading-tight text-center min-w-[138px] max-w-[180px]'
+                            : 'bg-black text-white text-[18px] w-[138px]'
                             }`}
                     >
                         {bookingStatus.text}

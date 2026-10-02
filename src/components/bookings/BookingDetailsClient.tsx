@@ -254,7 +254,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                             <div className="space-y-1">
                                 <p className="text-[17px] font-medium text-[#686868] leading-none">Date & Time</p>
                                 <p className="text-[20px] font-medium text-black uppercase">
-                                    {bookingDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}
+                                    {bookingDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' })} | {booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}
                                 </p>
                             </div>
 
@@ -365,7 +365,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                     </div>
                     <div className="px-1 space-y-1">
                         <p className="text-[17px] font-medium text-[#686868]">Booking ID: {booking.booking_id || booking.bookingId || booking.id?.slice(-8).toUpperCase()}</p>
-                        <p className="text-[17px] font-medium text-[#686868]">Booking date: {new Date(booking.createdAt || booking.created_at || booking.date).toLocaleDateString('en-IN')}</p>
+                        <p className="text-[17px] font-medium text-[#686868]">Booking date: {new Date(booking.createdAt || booking.created_at || booking.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
                         {!isCancelled && !isExpired && (
                             <p className="text-[14px] font-medium text-emerald-600 pt-1">
                                 Event reminder will be sent to your email before gates open.
@@ -394,15 +394,15 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
 
             {/* Hidden Ticket for PDF generation */}
             <div className="opacity-0 pointer-events-none absolute -left-[9999px] top-0">
-                <div ref={ticketRef} style={{ width: '595px', minHeight: '842px', background: '#f5f5f5', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
-                    <div style={{ width: '100%', maxWidth: '520px', background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #D9D9D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                        <div style={{ background: '#E7C200', padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: 'black', fontWeight: 900, fontSize: '20px', letterSpacing: '1.5px' }}>TICPIN</span>
-                            <span style={{ color: 'black', fontWeight: 700, fontSize: '13px', background: '#FFFFFF', padding: '4px 10px', borderRadius: '20px', textTransform: 'uppercase' }}>
+                <div ref={ticketRef} style={{ width: '595px', height: '842px', background: '#f5f5f5', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
+                    <div style={{ width: '100%', maxWidth: '500px', background: '#EBEBEB', borderRadius: '15px', overflow: 'hidden', border: '1px solid #D9D9D9' }}>
+                        <div style={{ background: '#E7C200', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'black', fontWeight: 900, fontSize: '18px', letterSpacing: '1px' }}>TICPIN</span>
+                            <span style={{ color: 'black', fontWeight: 600, fontSize: '14px', textTransform: 'uppercase' }}>
                                 {isRefunded ? 'REFUNDED' : isCancelled ? 'CANCELLED' : 'CONFIRMED'}
                             </span>
                         </div>
-                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div>
                                     <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: 0, textTransform: 'uppercase' }}>
@@ -419,7 +419,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                                 <div>
                                     <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Date & Time</div>
                                     <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginTop: '2px' }}>
-                                        {bookingDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        {bookingDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' })}
                                     </div>
                                     <div style={{ fontSize: '13px', color: '#374151' }}>
                                         {booking.time || booking.timeSlot || booking.time_slot || booking.slot || 'TBD'}
@@ -450,7 +450,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                             )}
 
                             {/* Itemized Pricing & Tax Breakdown */}
-                            <div style={{ borderTop: '1px dashed #D1D5DB', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ borderTop: '1px dashed #D9D9D9', paddingTop: '15px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Payment Breakdown</div>
                                 
                                 {(() => {
@@ -530,7 +530,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                             </div>
 
                             {/* Booking ID & QR */}
-                            <div style={{ borderTop: '1px dashed #D1D5DB', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ borderTop: '1px dashed #D9D9D9', padding: '15px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Booking Reference</div>
                                     <div style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
@@ -540,7 +540,7 @@ export default function BookingDetailsClient({ initialBooking }: BookingDetailsC
                                         Present this QR at the venue gate for entry
                                     </div>
                                 </div>
-                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || ''} size={84} />
+                                <QRCodeCanvas value={booking.qr_payload || booking.booking_id || ''} size={80} />
                             </div>
                         </div>
                     </div>

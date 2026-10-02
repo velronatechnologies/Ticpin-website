@@ -243,6 +243,7 @@ export default function BookingDetailsPage() {
     const parsed = new Date(raw);
     if (isNaN(parsed.getTime())) return raw;
     return parsed.toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
       weekday: "short",
       day: "numeric",
       month: "short",
@@ -255,6 +256,7 @@ export default function BookingDetailsPage() {
     const parsed = new Date(raw);
     if (isNaN(parsed.getTime())) return raw;
     return parsed.toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
       day: "numeric",
       month: "short",
       year: "numeric",

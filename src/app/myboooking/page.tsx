@@ -160,7 +160,7 @@ function MyBookingsContent() {
 
                             const title = booking.event_name || booking.venue_name || 'Booking';
                             const rawDate = booking.booked_at || booking.created_at || booking.date;
-                            const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                            const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }) : '';
                             const timeStr = booking.time || booking.time_slot || booking.slot || '';
                             const formattedDateTime = dateStr && timeStr ? `${dateStr} | ${timeStr}` : (dateStr || timeStr || 'Date | Time');
 

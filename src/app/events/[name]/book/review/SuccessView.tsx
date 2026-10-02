@@ -136,7 +136,7 @@ export default function SuccessView({
                         <div className="flex flex-col gap-0.5 py-0.5">
                             <span className="text-[13px] font-medium text-[#686868]  tracking-normal" style={{ fontFamily: 'var(--font-anek-latin)' }}>Date & Time</span>
                             <span className="text-[15px] font-medium text-black " style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }) : new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} | {formatTime12hr(cart?.timeSlot || cart?.slot || '')}
+                                {cart?.date ? new Date(cart.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' }) : new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' })} | {formatTime12hr(cart?.timeSlot || cart?.slot || '')}
                             </span>
                         </div>
 
@@ -206,9 +206,9 @@ export default function SuccessView({
                 </div>
 
                 {/* Booking Date & Action Buttons */}
-                <div className="w-full flex flex-col gap-2.5 shrink-0 pt-1">
+                <div className="w-full flex flex-col gap-3 shrink-0">
                     <p className="text-[13px] font-medium text-[#686868] px-1" style={{ fontFamily: 'var(--font-anek-latin)' }}>
-                        Booking date: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        Booking date: {new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
 
                     <button

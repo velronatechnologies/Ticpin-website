@@ -224,7 +224,7 @@ export default function EventBookingDetailPage() {
                       Date & Time
                     </p>
                     <p className="text-[14px] md:text-[20px] font-medium text-black" style={{ fontFamily: 'Anek Latin', lineHeight: '16px md:lineHeight:22px' }}>
-                      {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'} | {booking.time || booking.time_slot || '-'}
+                      {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' }) : '-'} | {booking.time || booking.time_slot || '-'}
                     </p>
                   </div>
 
@@ -298,7 +298,7 @@ export default function EventBookingDetailPage() {
                 Booking ID: {booking.booking_id || booking.id}
               </p>
               <p className="text-[17px] font-medium text-[#686868]" style={{ fontFamily: 'Anek Latin', lineHeight: '19px' }}>
-                Booking date: {booking.booked_at ? new Date(booking.booked_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                Booking date: {booking.booked_at ? new Date(booking.booked_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
               </p>
             </div>
           </div>

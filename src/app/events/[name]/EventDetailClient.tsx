@@ -248,14 +248,19 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
 
         if (isEventBookingNotOpenedYet(event, nowMs)) {
             const openDate = new Date(event.ticket_open_date!);
-            const formatted = openDate.toLocaleDateString('en-IN', {
+            const tz = event.timezone || 'Asia/Kolkata';
+            const datePart = openDate.toLocaleDateString('en-IN', {
+                timeZone: tz,
                 day: 'numeric',
                 month: 'short'
-            }) + ' at ' + openDate.toLocaleTimeString('en-IN', {
+            });
+            const timePart = openDate.toLocaleTimeString('en-IN', {
+                timeZone: tz,
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: true
             });
+            const formatted = `${datePart} at ${timePart}`;
             return { isClosed: false, notOpenedYet: true, text: `OPENS ON ${formatted.toUpperCase()}`, isLoading: false };
         }
 
@@ -362,8 +367,13 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
 
     const processedDesc = useMemo(() => {
         if (!event?.description) return { plain: '', isLong: false, html: '' };
-        const sanitized = DOMPurify.sanitize(event.description);
-        const plainText = sanitized.replace(/<[^>]+>/g, '');
+        let sanitized = DOMPurify.sanitize(event.description);
+        // Strip card border styling and wrapper boxes if pasted into rich text
+        sanitized = sanitized
+            .replace(/<section[^>]*class="[^"]*border[^"]*"[^>]*>/gi, '<section>')
+            .replace(/style="[^"]*border[^"]*"/gi, '')
+            .replace(/style="[^"]*box-shadow[^"]*"/gi, '');
+        const plainText = sanitized.replace(/<[^>]+>/g, '').trim();
         return {
             html: sanitized,
             isLong: plainText.length > 400
@@ -437,14 +447,14 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div className="flex items-center gap-[18px]">
                                     <div className="w-[60px] h-[60px] bg-[#FAF6F6] rounded-[15px] flex items-center justify-center shrink-0">
                                         <Calendar className="w-[28px] h-[28px] text-[#8E8E93] shrink-0" />
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Date</p>
-                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{formattedDate}</p>
+                                        <p className="text-[20px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>{formattedDate}</p>
                                     </div>
                                 </div>
 
@@ -454,7 +464,7 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Time</p>
-                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{formatTime12hr(event.time) || 'TBA'}</p>
+                                        <p className="text-[20px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>{formatTime12hr(event.time) || 'TBA'}</p>
                                     </div>
                                 </div>
 
@@ -464,7 +474,7 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Duration</p>
-                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.duration || 'TBA'}</p>
+                                        <p className="text-[20px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>{event.duration || 'TBA'}</p>
                                     </div>
                                 </div>
 
@@ -474,7 +484,7 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <p className="text-[15px] text-[#8E8E93] font-medium mb-0.5" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>Tickets Needed For</p>
-                                        <p className="text-[17px] md:text-[18px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)' }}>{event.tickets_needed_for || 'All ages'}</p>
+                                        <p className="text-[20px] font-medium text-black leading-snug" style={{ fontFamily: 'var(--font-anek-latin)', lineHeight: '1.2' }}>{event.tickets_needed_for || 'All ages'}</p>
                                     </div>
                                 </div>
                             </div>
