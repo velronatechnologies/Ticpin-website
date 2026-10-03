@@ -6,8 +6,7 @@ import { Suspense } from 'react';
 import MobileEventDetailsClient from './MobileEventDetailsClient';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 15;
 
 interface Artist {
     name: string;
@@ -82,7 +81,7 @@ const getEventData = cache(async (name: string): Promise<EventData | null> => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
-            cache: 'no-store',
+            next: { revalidate: 15 },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -116,7 +115,7 @@ const getEventOffers = cache(async (id: string) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${id}/offers`, {
-            next: { revalidate: 10 },
+            next: { revalidate: 15 },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -134,7 +133,7 @@ const getMobileEventData = cache(async (id: string) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, {
-            cache: 'no-store',
+            next: { revalidate: 15 },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -151,7 +150,7 @@ const getEventAvailability = cache(async (id: string): Promise<Record<string, nu
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${id}/availability`, {
-            cache: 'no-store',
+            next: { revalidate: 5 },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -199,6 +198,14 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
         }
     }
 
-    return <EventDetailClient event={event} id={event.id} offers={offers} initialBookedMap={initialBookedMap} />;
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full border-4 border-black border-t-transparent animate-spin" />
+            </div>
+        }>
+            <EventDetailClient event={event} id={event.id} offers={offers} initialBookedMap={initialBookedMap} />
+        </Suspense>
+    );
 }
 

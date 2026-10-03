@@ -75,7 +75,7 @@ export default function EventCard({
             <div className="text-[13px] font-medium text-[#7B2FF7] font-[family-name:var(--font-anek-latin)]" >
               {date}{displayTime ? ` | ${displayTime}` : ''}
             </div>
-            <h3 className="font-semibold text-black leading-[1.2] font-[family-name:var(--font-anek-latin)] line-clamp-2 text-[16px]" style={{ color: 'black' }}>
+            <h3 className="font-semibold text-black leading-[1.25] font-[family-name:var(--font-anek-latin)] break-words line-clamp-3 text-[14px]" style={{ color: 'black' }}>
               {name}
             </h3>
             <p className="text-[13px] text-[#686868] font-[family-name:var(--font-anek-latin)] truncate">

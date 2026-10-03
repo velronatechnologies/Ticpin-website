@@ -10,6 +10,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
 import React, { Suspense } from "react";
+import NextTopLoader from 'nextjs-toploader';
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -102,6 +103,7 @@ fbq('track', 'PageView');`,
         </noscript>
       </head>
       <body className={`${anekLatin.variable} ${inter.variable} ${anekTamil.variable} ${anekTamilCondensed.variable} font-sans antialiased text-black overflow-x-hidden w-full`}>
+        <NextTopLoader color="#5331EA" showSpinner={false} height={3} />
         <ToastProvider>
           <Providers>
             <ErrorBoundary>

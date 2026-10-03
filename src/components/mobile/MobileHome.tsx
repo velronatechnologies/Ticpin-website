@@ -693,7 +693,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                             <p className="text-[11px] font-medium text-[#5331EA] mb-0.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                 {formatEventDate(scrollEvents[0].date, scrollEvents[0].time).toUpperCase()}
                                             </p>
-                                            <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2 pr-11" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                            <h3 className="text-[13px] font-bold text-black leading-[1.25] break-words normal-case pr-11" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                 {scrollEvents[0].name || "{EVENT NAME}"}
                                             </h3>
                                             <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
@@ -834,7 +834,7 @@ export default function MobileHome({ events = [], dinings = [], plays = [] }: Mo
                                                     <p className="text-[11px] font-medium text-[#5331EA] mb-0.5 uppercase tracking-wide" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                         {formatEventDate(event.date, event.time).toUpperCase()}
                                                     </p>
-                                                    <h3 className="text-[17px] font-medium text-black uppercase leading-[1.15] tracking-tight line-clamp-2 pr-11" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
+                                                    <h3 className="text-[13px] font-bold text-black leading-[1.25] break-words normal-case pr-11" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>
                                                         {event.name || "{EVENT NAME}"}
                                                     </h3>
                                                     <p className="text-[11px] font-regular text-[#8E8E8E] mt-1 uppercase tracking-wider truncate" style={{ fontFamily: 'var(--font-anek-latin), sans-serif' }}>

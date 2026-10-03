@@ -577,7 +577,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
                             </div>
                             <div className="p-3 flex-1 flex flex-col justify-between">
                                 <div>
-                                    <h3 className="text-[16px] font-bold text-black uppercase leading-[1.1] line-clamp-2">{event.name}</h3>
+                                    <h3 className="text-[13px] font-bold text-black leading-[1.25] break-words normal-case">{event.name}</h3>
                                     <p className="text-[12px] font-semibold text-[#5331EA] mt-1">
                                         {event.date ? (() => {
                                             try {
