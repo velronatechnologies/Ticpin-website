@@ -47,13 +47,13 @@ interface RealDining {
     status?: string;
 }
 
-export default function DiningVenueDetailClient({ venue, id, offers }: { venue: RealDining, id: string, offers: OfferRecord[] }) {
+export default function DiningVenueDetailClient({ venue, id, offers, isMobileServer }: { venue: RealDining, id: string, offers: OfferRecord[], isMobileServer?: boolean }) {
     if (venue?.status && venue.status !== 'approved') {
         notFound();
     }
     const router = useRouter();
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobile(isMobileServer);
 
     // Reset state + scroll to top when navigating to a new venue (handles back/forward)
     useEffect(() => {

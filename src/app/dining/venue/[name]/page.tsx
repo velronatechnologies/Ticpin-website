@@ -5,8 +5,7 @@ import { headers } from 'next/headers';
 import MobileDiningDetails from '@/components/mobile/MobileDiningDetails';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 15;
 
 interface OfferRecord {
     id: string;
@@ -112,13 +111,6 @@ export default async function DiningVenueDetailPage({ params }: { params: Promis
         notFound();
     }
 
-    if (isMobile) {
-        const mobileData = await getMobileVenueData(venue.id);
-        if (mobileData) {
-            return <MobileDiningDetails venue={mobileData.venue} offers={mobileData.offers || []} />;
-        }
-    }
-
     const offers = await getVenueOffers(decodedName);
-    return <DiningVenueDetailClient venue={venue} id={venue.id} offers={offers} />;
+    return <DiningVenueDetailClient venue={venue} id={venue.id} offers={offers} isMobileServer={isMobile} />;
 }

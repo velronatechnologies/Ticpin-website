@@ -181,30 +181,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ na
         getEventAvailability(event.id),
     ]);
 
-    if (isMobile) {
-        const mobileData = await getMobileEventData(event.id);
-        if (mobileData && mobileData.event && mobileData.event.status && mobileData.event.status.toLowerCase() === 'approved') {
-            return (
-                <Suspense fallback={
-                    <div className="min-h-screen bg-[#EAEAEA] flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full border-4 border-[#866BFF] border-t-transparent animate-spin" />
-                    </div>
-                }>
-                    <MobileEventDetailsClient event={mobileData.event} offers={mobileData.offers?.length ? mobileData.offers : offers} />
-                </Suspense>
-            );
-        } else {
-            notFound();
-        }
-    }
-
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="w-10 h-10 rounded-full border-4 border-black border-t-transparent animate-spin" />
             </div>
         }>
-            <EventDetailClient event={event} id={event.id} offers={offers} initialBookedMap={initialBookedMap} />
+            <EventDetailClient event={event} id={event.id} offers={offers} initialBookedMap={initialBookedMap} isMobileServer={isMobile} />
         </Suspense>
     );
 }

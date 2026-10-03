@@ -140,9 +140,10 @@ interface EventDetailClientProps {
     id: string;
     offers?: OfferRecord[];
     initialBookedMap?: Record<string, number>;
+    isMobileServer?: boolean;
 }
 
-export default function EventDetailClient({ event, id, offers = [], initialBookedMap = {} }: EventDetailClientProps) {
+export default function EventDetailClient({ event, id, offers = [], initialBookedMap = {}, isMobileServer }: EventDetailClientProps) {
     if (!event || !event.status || event.status.toLowerCase() !== 'approved') {
         notFound();
     }
@@ -154,7 +155,7 @@ export default function EventDetailClient({ event, id, offers = [], initialBooke
     const organizerSession = getOrganizerSession();
     const [bookedMap, setBookedMap] = useState<Record<string, number>>(initialBookedMap);
     const [availabilityLoaded, setAvailabilityLoaded] = useState(true);
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobile(isMobileServer);
     const nowMs = useCurrentTime();
     const [showAllAmenities, setShowAllAmenities] = useState(false);
     const [showFaqModal, setShowFaqModal] = useState(false);
