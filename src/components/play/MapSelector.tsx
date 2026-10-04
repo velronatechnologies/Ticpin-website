@@ -15,7 +15,7 @@ declare global {
     }
 }
 
-const GOOGLE_MAPS_API_KEY = "google-map-key";
+const GOOGLE_MAPS_API_KEY = "AIzaSyD4xMC_c7qEaveMhsNfdqRHmiRDbQYbKl0";
 
 export default function MapSelector({ onSelect, initialAddress, className = "" }: MapSelectorProps) {
     const mapRef = useRef<HTMLDivElement>(null);

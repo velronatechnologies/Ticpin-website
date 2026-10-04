@@ -45,7 +45,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     const nextRouter = useRouter();
     const router = routerProp || nextRouter;
     const { activeRole: storeActiveRole, switchRole } = useIdentityStore();
-    const activeRole = 'user';
+    const activeRole: 'user' | 'organizer' = forceRole || (storeActiveRole as 'user' | 'organizer') || (session && !userSession ? 'organizer' : 'user');
     const [isMounted, setIsMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [pass, setPass] = useState<TicpinPass | null>(null);
@@ -139,11 +139,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
             return;
         }
 
-        if (router) {
-            router.push('/logout');
-        } else {
-            nextRouter.push('/logout');
-        }
+        router.push('/logout');
         onClose();
     };
 
@@ -152,7 +148,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
         onClose();
     };
 
-    const isAdmin = false;
+    const isAdmin = session?.role === 'admin' || session?.isAdmin === true;
 
     return (
         <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden font-[family-name:var(--font-anek-latin)]">

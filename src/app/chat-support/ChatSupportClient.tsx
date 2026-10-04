@@ -166,7 +166,7 @@ export default function ChatSupportClient() {
             const res = await fetch(`/backend/api/chat/sessions?admin=true&category=${category}`, { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
-                setAdminSessions(data);
+                setAdminSessions(Array.isArray(data) ? data : (data.sessions || []));
             }
         } catch (error) {
             console.error('Failed to fetch sessions:', error);

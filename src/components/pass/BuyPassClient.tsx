@@ -229,13 +229,13 @@ export default function BuyPassClient({ user, organizer, initialProfile, initial
                 name: "Ticpin Pass",
                 description: "3 Months Ticpin Pass Subscription",
                 image: "https://res.cloudinary.com/dk4oxsddy/image/upload/v1741701358/pass-logo-gold.png",
-                orderId: order.orderId,
+                orderId: order.order_id || order.orderId,
                 handler: async function (response: any) {
                     setLoading(true);
                     try {
                         const verificationData = {
                             razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_order_id: order.orderId,
+                            razorpay_order_id: order.order_id || order.orderId,
                             razorpay_signature: response.razorpay_signature,
                             user_id: user.id,
                             email: formData.email,

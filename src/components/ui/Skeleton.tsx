@@ -1,20 +1,27 @@
-import React from 'react';
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
-interface SkeletonProps {
-    className?: string;
+export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
     variant?: 'rectangular' | 'circular' | 'text';
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({ className = '', variant = 'rectangular' }) => {
-    const baseStyles = 'animate-pulse bg-gray-200';
+export const Skeleton: React.FC<SkeletonProps> = ({
+    className = '',
+    variant = 'rectangular',
+    ...props
+}) => {
     const variantStyles = {
         rectangular: 'rounded-md',
         circular: 'rounded-full',
-        text: 'rounded h-4 w-full'
+        text: 'rounded h-4 w-full',
     };
 
     return (
-        <div className={`${baseStyles} ${variantStyles[variant]} ${className}`} />
+        <div
+            data-slot="skeleton"
+            className={cn('animate-pulse bg-gray-200', variantStyles[variant], className)}
+            {...props}
+        />
     );
 };
 

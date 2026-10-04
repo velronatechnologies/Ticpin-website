@@ -90,6 +90,9 @@ interface EventData {
     is_canceled?: boolean;
     is_layout_based?: boolean;
     layout_json?: string;
+    slug?: string;
+    short_url?: string;
+    short_code?: string;
 }
 
 import { getMinPrice, formatEventDateUTCWithDay, slugify } from '@/lib/utils';

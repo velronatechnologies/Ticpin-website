@@ -82,6 +82,9 @@ interface MobileEventDetailsProps {
         is_canceled?: boolean;
         card_video_url?: string;
         status?: string;
+        slug?: string;
+        short_url?: string;
+        short_code?: string;
     };
     offers: OfferRecord[];
 }
@@ -662,8 +665,30 @@ Rules:
         }
     };
 
+    const getShortShareUrl = async (): Promise<string> => {
+        if (event.short_url) {
+            return event.short_url;
+        }
+        try {
+            const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'https://consolebackendserver.ticpin.in').replace(/\/$/, '');
+            const target = event.slug || event.id;
+            if (target) {
+                const res = await fetch(`${apiBase}/api/short-links/events/${encodeURIComponent(target)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.short_url) {
+                        return data.short_url;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch short link:', e);
+        }
+        return window.location.href;
+    };
+
     const handleShare = async () => {
-        const shareUrl = window.location.href;
+        const shareUrl = await getShortShareUrl();
         if (navigator.share) {
             try {
                 await navigator.share({

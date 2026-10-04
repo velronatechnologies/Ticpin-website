@@ -5,7 +5,7 @@ import withBundleAnalyzer from "@next/bundle-analyzer";
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.5", "192.168.1.*", "192.168.0.*", "localhost:3000", "127.0.0.1:3000"],
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   turbopack: {

@@ -6,7 +6,8 @@ import { Suspense } from 'react';
 import MobileEventDetailsClient from './MobileEventDetailsClient';
 import { SERVER_BACKEND_API_BASE } from '@/lib/server-backend';
 
-export const revalidate = 15;
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 interface Artist {
     name: string;
@@ -72,6 +73,9 @@ interface EventData {
     is_canceled?: boolean;
     is_layout_based?: boolean;
     layout_json?: string;
+    slug?: string;
+    short_url?: string;
+    short_code?: string;
 }
 
 import { cache } from 'react';
@@ -81,7 +85,7 @@ const getEventData = cache(async (name: string): Promise<EventData | null> => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${encodeURIComponent(name)}`, {
-            next: { revalidate: 15 },
+            cache: 'no-store',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -115,7 +119,7 @@ const getEventOffers = cache(async (id: string) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${id}/offers`, {
-            next: { revalidate: 15 },
+            cache: 'no-store',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -133,7 +137,7 @@ const getMobileEventData = cache(async (id: string) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/mobile/event/${id}`, {
-            next: { revalidate: 15 },
+            cache: 'no-store',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -150,7 +154,7 @@ const getEventAvailability = cache(async (id: string): Promise<Record<string, nu
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
         const res = await fetch(`${SERVER_BACKEND_API_BASE}/events/${id}/availability`, {
-            next: { revalidate: 5 },
+            cache: 'no-store',
             signal: controller.signal
         });
         clearTimeout(timeoutId);

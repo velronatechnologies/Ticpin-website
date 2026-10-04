@@ -59,7 +59,8 @@ export const useEventStore = create<EventState>((set) => ({
                 return;
             }
             const data = await response.json();
-            const list = (Array.isArray(data) ? data : []).filter((e: RealEvent) => !e.status || e.status.toLowerCase() === 'approved');
+            const rawList = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.events) ? data.events : []));
+            const list = rawList.filter((e: RealEvent) => !e.status || e.status.toLowerCase() === 'approved');
             set({ events: list, loading: false });
         } catch {
             // Network error (backend down) — silently show empty list

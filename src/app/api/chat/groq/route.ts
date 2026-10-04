@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
@@ -15,9 +14,25 @@ RESPONSE FORMAT RULES:
 3. PRECISE DATA: Always answer using the exact event details provided in the system context (ticket prices, venue name, address, date, time, age limit, facilities, rules).
 4. TONE: Friendly, helpful, concise, and professional.
 5. NO MARKDOWN BOLD: Avoid heavy formatting syntax; keep text clean and readable.
+6. 12-HOUR TIME FORMAT: Always display times strictly in 12-hour format with AM/PM (e.g., "06:00 PM", "11:30 AM"). Never use 24-hour format like "18:00".
 
 If a user asks about ticket prices, venue, timings, or rules, quote the exact details from the Approved Events database.
 If a user asks about anything unrelated to Ticpin or events, politely direct them back to Ticpin services.`;
+
+function formatTimeTo12Hr(timeStr?: string): string {
+    if (!timeStr || timeStr === 'TBA') return 'TBA';
+    const trimmed = timeStr.trim();
+    if (/am|pm/i.test(trimmed)) return trimmed;
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) return trimmed;
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    const formattedHours = hours < 10 ? `0${hours}` : `${hours}`;
+    return `${formattedHours}:${minutes} ${ampm}`;
+}
 
 function generateSmartFallbackAnswer(userMessage: string, eventsData: any[], conversationHistory: any[] = []): string {
     const q = userMessage.toLowerCase();
@@ -57,7 +72,7 @@ function generateSmartFallbackAnswer(userMessage: string, eventsData: any[], con
 
         if (q.includes('time') || q.includes('gate') || q.includes('open') || q.includes('when') || q.includes('date') || q.includes('schedule') || q.includes('duration')) {
             const dateStr = event.date ? new Date(event.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'TBA';
-            const timeStr = event.time || 'TBA';
+            const timeStr = formatTimeTo12Hr(event.time);
             const duration = event.duration ? `Duration: ${event.duration}` : '';
             const gates = event.guide?.gates_open_before_value ? `Gates open ${event.guide.gates_open_before_value} ${event.guide.gates_open_before_unit || 'minutes'} before event time.` : 'Gates open 1 hour before start time.';
             return `🕒 Timing & Date for ${name}:\n\n📅 Date: ${dateStr}\n⏰ Event Time: ${timeStr}\n🚪 Gate Opening: ${gates}\n${duration}`;
@@ -84,15 +99,6 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { message, conversationHistory = [], sessionId, userData, isEventQuery } = body;
-
-        // Session check to prevent unauthorized external spam
-        const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get('__Host-ticpin_user_session');
-        const organizerCookie = cookieStore.get('__Host-ticpin_session');
-        
-        if (!sessionCookie && !organizerCookie && !isEventQuery) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
 
         // Fetch current approved events from Go backend
         const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:9000';
@@ -138,7 +144,7 @@ export async function POST(request: NextRequest) {
             venue_name: e.venue_name,
             venue_address: e.venue_address,
             date: e.date,
-            time: e.time,
+            time: formatTimeTo12Hr(e.time),
             duration: e.duration,
             price_starts_from: e.price_starts_from,
             ticket_categories: (e.ticket_categories || []).map((tc: any) => ({
@@ -167,12 +173,8 @@ export async function POST(request: NextRequest) {
             { role: "user", content: message }
         ];
 
-        // Call Groq API with valid model names and keys
-        const groqApiKeys = [
-            GROQ_API_KEY,
-            "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",
-            "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"
-        ].filter(Boolean) as string[];
+        // Call Groq API using secure server environment variable only
+        const groqApiKeys = [GROQ_API_KEY].filter(Boolean) as string[];
 
         const validModels = [
             "llama-3.3-70b-versatile",
@@ -271,7 +273,7 @@ export async function POST(request: NextRequest) {
                             formData.append('userEmail', userData.email || 'guest@ticpin.in');
                             formData.append('userType', userData.type || 'user');
                             formData.append('message', fullAiResponse);
-                            formData.append('sender', 'admin');
+                            formData.append('sender', 'assistant');
 
                             await fetch(`${baseUrl}/api/chat/sessions/${sessionId}/messages`, {
                                 method: 'POST',

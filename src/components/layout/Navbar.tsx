@@ -119,6 +119,11 @@ export default function Navbar() {
         router.push('/');
     };
 
+    const handleOrganizerLogout = () => {
+        setIsProfileMenuOpen(false);
+        router.push('/logout');
+    };
+
     const handleProfileClick = () => {
         if (session || userSession) {
             setIsProfileDrawerOpen(!isProfileDrawerOpen);
@@ -238,7 +243,7 @@ export default function Navbar() {
                             isMenuOpen={isProfileMenuOpen}
                             onToggleMenu={handleProfileClick}
                             onUserLogout={handleUserLogout}
-                            
+                            onOrganizerLogout={handleOrganizerLogout}
                             onOpenProfile={() => { }} // No longer used - direct navigation instead
                         />
                     </div>
@@ -251,7 +256,7 @@ export default function Navbar() {
                 userSession={userSession}
                 session={session}
                 onUserLogout={handleUserLogout}
-                
+                onOrganizerLogout={handleOrganizerLogout}
                 router={router}
             />
 

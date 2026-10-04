@@ -136,6 +136,7 @@ export const passApi = {
       const res = await fetch("/backend/api/payment/verify-pass", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(verificationData),
       });
       const text = await res.text();
