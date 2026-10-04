@@ -689,11 +689,14 @@ Rules:
 
     const handleShare = async () => {
         const shareUrl = await getShortShareUrl();
+        const location = (event.city || event.venue_name || '').trim();
+        const displayTitle = location ? `${event.name} | ${location}` : event.name;
+        const shareText = `Check out ${displayTitle} on Ticpin!`;
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: event.name,
-                    text: `Check out ${event.name} on Ticpin!`,
+                    title: displayTitle,
+                    text: shareText,
                     url: shareUrl
                 });
             } catch (err: any) {
