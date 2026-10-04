@@ -103,13 +103,30 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
     const { name } = await params;
     const event = await getEventData(name);
     if (!event) return { title: 'Not Found | Ticpin' };
+
+    const location = (event.city || event.venue_name || '').trim();
+    const title = location ? `${event.name} | ${location}` : event.name;
+    const description = location
+        ? `Buy Tickets for ${event.name} | ${location} on Ticpin`
+        : `Buy Tickets for ${event.name} on Ticpin`;
+
+    const images = event.landscape_image_url
+        ? [{ url: event.landscape_image_url }]
+        : (event.portrait_image_url ? [{ url: event.portrait_image_url }] : []);
+
     return {
-        title: `Book Tickets for ${event.name} | Ticpin`,
-        description: event.description ?? `Book tickets for ${event.name} on Ticpin.`,
+        title: `Book Tickets for ${title} | Ticpin`,
+        description,
         openGraph: {
-            title: event.name,
-            description: event.description ?? `Book tickets for ${event.name}`,
-            images: event.landscape_image_url ? [{ url: event.landscape_image_url }] : [],
+            title,
+            description,
+            images,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: images.map(i => i.url),
         },
     };
 }

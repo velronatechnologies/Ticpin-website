@@ -222,9 +222,16 @@ export default function MobileEvents({ events }: MobileEventsProps) {
         return () => clearInterval(interval);
     }, []);
 
-    // Extract dynamic artists from current events list sorted by order_number
+    // Extract dynamic artists from current events list in selected city sorted by order_number
     const dynamicArtists = useMemo(() => {
-        const all = events.flatMap(e => e.artists || []).filter(a => !!a.name);
+        const cleanCity = city ? city.split(',')[0].trim().toLowerCase() : '';
+        const relevantEvents = cleanCity
+            ? events.filter(e => {
+                const eventCity = (e.city || '').toLowerCase();
+                return eventCity.includes(cleanCity) || cleanCity.includes(eventCity);
+            })
+            : events;
+        const all = relevantEvents.flatMap(e => e.artists || []).filter(a => !!a.name);
         const seen = new Set<string>();
         const unique: { name: string; image: string; order_number: number }[] = [];
         for (const a of all) {
@@ -240,7 +247,7 @@ export default function MobileEvents({ events }: MobileEventsProps) {
         }
         unique.sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
         return unique;
-    }, [events]);
+    }, [events, city]);
 
     const categories = [
         { name: 'Music', icon: '/events/Events 1.svg', bg: 'linear-gradient(360deg, #A1BFFF -49.4%, #FFFFFF 50%)' },
@@ -259,18 +266,13 @@ export default function MobileEvents({ events }: MobileEventsProps) {
     const filteredAndSearchedEvents = useMemo(() => {
         let result = events.filter(e => !e.status || e.status.toLowerCase() === 'approved');
 
-        // Location Partitioning based on active selected city (matching city first, then others)
+        // Strict filter by selected city
         if (city) {
             const cleanCity = city.split(',')[0].trim().toLowerCase();
-            const matching = result.filter(e => {
+            result = result.filter(e => {
                 const eventCity = (e.city || '').toLowerCase();
                 return eventCity.includes(cleanCity) || cleanCity.includes(eventCity);
             });
-            const nonMatching = result.filter(e => {
-                const eventCity = (e.city || '').toLowerCase();
-                return !(eventCity.includes(cleanCity) || cleanCity.includes(eventCity));
-            });
-            result = [...matching, ...nonMatching];
         }
 
         // Search Query Filter

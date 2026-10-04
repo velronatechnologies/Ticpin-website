@@ -448,12 +448,19 @@ export default function PlayReviewPage() {
             if (savedStep === 'billing') setStep('billing');
         }
 
-        /* const urlParams = new URLSearchParams(window.location.search); */
         const urlParams = new URLSearchParams(window.location.search);
         const cfOrderId = urlParams.get('order_id');
+        const rzpPaymentId = urlParams.get('payment_id') || urlParams.get('razorpay_payment_id');
+        const rzpOrderId = urlParams.get('order_id') || urlParams.get('razorpay_order_id');
+        const returnOrderId = rzpOrderId || cfOrderId;
         const pendingPlayStr = sessionStorage.getItem('ticpin_pending_play');
-        // Accept TICPIN_ prefixed IDs (new format) or any order_id if we have a pending payment stored
-        if (cfOrderId && pendingPlayStr && (cfOrderId.startsWith('TICPIN_') || cfOrderId.includes('_'))) {
+        const paymentError = urlParams.get('payment_error');
+
+        if (paymentError) {
+            setBookingError(paymentError);
+            sessionStorage.removeItem('ticpin_pending_play');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (returnOrderId && pendingPlayStr) {
             try {
                 const p = JSON.parse(pendingPlayStr);
                 if (p.cart) {
@@ -461,10 +468,36 @@ export default function PlayReviewPage() {
                     setStep('billing');
                     setBookingLoading(true);
                     if (typeof p.grandTotal === 'number') setLockedGrandTotal(p.grandTotal);
+                    const effectiveGateway = urlParams.get('gateway') || (rzpPaymentId ? 'razorpay' : 'cashfree');
+                    const effectivePaymentId = rzpPaymentId || p.orderID;
+                    window.history.replaceState({}, document.title, window.location.pathname);
                     setTimeout(() => {
-                        completeBooking(p.orderID, p.orderID, 'cashfree', p.cart, p.email, p.sessionId,
+                        completeBooking(effectivePaymentId, p.orderID, effectiveGateway, p.cart, p.email, p.sessionId,
                             p.orderAmount, p.bookingFee, p.appliedCoupon || '', p.offerId);
                     }, 200);
+                }
+            } catch { /* ignore */ }
+        } else if (pendingPlayStr) {
+            try {
+                const p = JSON.parse(pendingPlayStr);
+                if (p?.orderID) {
+                    fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(p.orderID)}`)
+                        .then(r => r.json())
+                        .then(statusRes => {
+                            if (statusRes?.status === 'PAID') {
+                                if (p.cart) {
+                                    setCart(p.cart);
+                                    setStep('billing');
+                                    setBookingLoading(true);
+                                    if (typeof p.grandTotal === 'number') setLockedGrandTotal(p.grandTotal);
+                                    setTimeout(() => {
+                                        completeBooking(statusRes.payment_id || p.orderID, p.orderID, 'razorpay', p.cart, p.email, p.sessionId,
+                                            p.orderAmount, p.bookingFee, p.appliedCoupon || '', p.offerId);
+                                    }, 200);
+                                }
+                            }
+                        })
+                        .catch(() => {});
                 }
             } catch { /* ignore */ }
         }
@@ -886,8 +919,63 @@ export default function PlayReviewPage() {
                 setBookingError('Failed to load payment gateway. Please refresh the page and try again.');
                 return;
             }
+            const isMobile = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const callbackUrl = `${window.location.origin}/api/payment/razorpay-callback?redirect_to=${encodeURIComponent(window.location.pathname)}`;
+
+            let pollTimer: any = null;
+            let isStopped = false;
+
+            const cleanupPolling = () => {
+                isStopped = true;
+                if (pollTimer) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+                if (typeof window !== 'undefined') {
+                    window.removeEventListener('focus', handleAppFocus);
+                    document.removeEventListener('visibilitychange', handleAppFocus);
+                }
+            };
+
+            const pollStatus = async () => {
+                if (isStopped) return;
+                try {
+                    const chk = await fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(orderRes.order_id)}`);
+                    if (chk.ok) {
+                        const chkData = await chk.json();
+                        if (chkData?.status === 'PAID') {
+                            cleanupPolling();
+                            setBookingId(chkData.payment_id || orderRes.order_id);
+                            setStep('success');
+                            ['ticpin_cart', 'ticpin_billing_email', 'ticpin_billing_data',
+                                'ticpin_play_step', 'ticpin_pending_play'].forEach(k => sessionStorage.removeItem(k));
+                            void completeBooking(
+                                chkData.payment_id || orderRes.order_id, orderRes.order_id, 'razorpay',
+                                cart, email, session?.id,
+                                orderAmount, bookingFee,
+                                appliedCoupon, appliedOffer?.id,
+                            ).catch(err => {
+                                console.error('Background completion failed:', err);
+                            });
+                        }
+                    }
+                } catch (_) {}
+            };
+
+            const handleAppFocus = () => {
+                if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+                    void pollStatus();
+                }
+            };
+
+            if (typeof window !== 'undefined') {
+                window.addEventListener('focus', handleAppFocus);
+                document.addEventListener('visibilitychange', handleAppFocus);
+                pollTimer = setInterval(pollStatus, 2500);
+            }
+
             const rzpAmountPaise = Math.round(grandTotal * 100) < 100 && grandTotal > 0 ? 100 : Math.round(grandTotal * 100);
-            const options = {
+            const options: any = {
                 key: orderRes.razorpay_key,
                 amount: rzpAmountPaise,
                 currency: 'INR',
@@ -903,6 +991,7 @@ export default function PlayReviewPage() {
                 prefill: { name: billing.name, email, contact: billing.phone },
                 theme: { color: '#000000' },
                 handler: (response: { razorpay_payment_id: string }) => {
+                    cleanupPolling();
                     // Optimistic Success UI transition
                     setBookingId(response.razorpay_payment_id || orderRes.order_id);
                     setStep('success');
@@ -920,7 +1009,31 @@ export default function PlayReviewPage() {
                     });
                 },
                 modal: {
-                    ondismiss: () => {
+                    ondismiss: async () => {
+                        try {
+                            const chk = await fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(orderRes.order_id)}`);
+                            if (chk.ok) {
+                                const chkData = await chk.json();
+                                if (chkData?.status === 'PAID') {
+                                    cleanupPolling();
+                                    setBookingId(chkData.payment_id || orderRes.order_id);
+                                    setStep('success');
+                                    ['ticpin_cart', 'ticpin_billing_email', 'ticpin_billing_data',
+                                        'ticpin_play_step', 'ticpin_pending_play'].forEach(k => sessionStorage.removeItem(k));
+                                    void completeBooking(
+                                        chkData.payment_id || orderRes.order_id, orderRes.order_id, 'razorpay',
+                                        cart, email, session?.id,
+                                        orderAmount, bookingFee,
+                                        appliedCoupon, appliedOffer?.id,
+                                    ).catch(err => {
+                                        console.error('Background completion failed:', err);
+                                    });
+                                    return;
+                                }
+                            }
+                        } catch (_) {}
+
+                        cleanupPolling();
                         sessionStorage.removeItem('ticpin_pending_play');
                         setBookingLoading(false);
                         setIsProcessing(false);
@@ -928,6 +1041,7 @@ export default function PlayReviewPage() {
                     },
                     onerror: (response: any) => {
                         console.error('Razorpay error:', response);
+                        cleanupPolling();
                         sessionStorage.removeItem('ticpin_pending_play');
                         setBookingLoading(false);
                         setIsProcessing(false);
@@ -935,6 +1049,12 @@ export default function PlayReviewPage() {
                     },
                 },
             };
+
+            if (isMobile) {
+                options.callback_url = callbackUrl;
+                options.redirect = true;
+            }
+
             new (window as any).Razorpay(options).open();
         } catch (err: unknown) {
             console.error('Payment initialization error:', err);

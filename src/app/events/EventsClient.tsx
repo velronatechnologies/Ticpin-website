@@ -75,9 +75,17 @@ export default function EventsClient({ initialEvents, isMobileServer }: { initia
         }
     }, [categoryFromUrl, setActiveFilter]);
 
-    // Memoized artists extraction - collect all unique artists across events sorted by order_number
+    // Memoized artists extraction - collect all unique artists across events in selected location
     const allArtists = useMemo(() => {
-        const all = events.flatMap(e => e.artists || []).filter(a => !!a.name);
+        const cityFilter = mounted && selectedLocation ? selectedLocation.split(',')[0].trim().toLowerCase() : '';
+        const relevantEvents = cityFilter
+            ? events.filter(e => {
+                const eventCity = e.city?.toLowerCase() || '';
+                return eventCity.includes(cityFilter) || cityFilter.includes(eventCity);
+            })
+            : events;
+
+        const all = relevantEvents.flatMap(e => e.artists || []).filter(a => !!a.name);
         const seen = new Set<string>();
         const unique: { name: string; image: string; order_number: number }[] = [];
         for (const a of all) {
@@ -93,7 +101,7 @@ export default function EventsClient({ initialEvents, isMobileServer }: { initia
         }
         unique.sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
         return unique;
-    }, [events]);
+    }, [events, selectedLocation, mounted]);
 
     // Memoized category filters
     const categoryFilters = useMemo(() => {
@@ -113,17 +121,12 @@ export default function EventsClient({ initialEvents, isMobileServer }: { initia
             ? approvedEvents
             : approvedEvents.filter(e => e.category === activeFilter);
 
-        // Partition by selected city (selected city events first, then others)
+        // Strict filter by selected city
         if (cityFilter) {
-            const matching = result.filter(e => {
+            result = result.filter(e => {
                 const eventCity = e.city?.toLowerCase() || '';
                 return eventCity.includes(cityFilter) || cityFilter.includes(eventCity);
             });
-            const nonMatching = result.filter(e => {
-                const eventCity = e.city?.toLowerCase() || '';
-                return !(eventCity.includes(cityFilter) || cityFilter.includes(eventCity));
-            });
-            result = [...matching, ...nonMatching];
         }
 
         result = result.filter(e => {

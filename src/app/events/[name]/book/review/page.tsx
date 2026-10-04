@@ -648,16 +648,20 @@ export default function ReviewBookingPage() {
       }
     }
 
-    // ── Cashfree redirect return ───────────────────────────────────
+    // ── Payment redirect return (Cashfree or Razorpay mobile redirect) ───────
     const urlParams = new URLSearchParams(window.location.search);
     const cfOrderId = urlParams.get("order_id");
+    const rzpPaymentId = urlParams.get("payment_id") || urlParams.get("razorpay_payment_id");
+    const rzpOrderId = urlParams.get("order_id") || urlParams.get("razorpay_order_id");
+    const paymentError = urlParams.get("payment_error");
+    const returnOrderId = rzpOrderId || cfOrderId;
     const pendingPaymentStr = sessionStorage.getItem("ticpin_pending_payment");
-    // Accept TICPIN_ prefixed IDs (new format) or any order_id if we have a pending payment stored
-    if (
-      cfOrderId &&
-      pendingPaymentStr &&
-      (cfOrderId.startsWith("TICPIN_") || cfOrderId.includes("_"))
-    ) {
+
+    if (paymentError) {
+      setBookingError(paymentError);
+      sessionStorage.removeItem("ticpin_pending_payment");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (returnOrderId && pendingPaymentStr) {
       const pending = pendingPaymentStr;
       if (pending) {
         const p = safeJsonParse<any>(pending);
@@ -672,11 +676,14 @@ export default function ReviewBookingPage() {
           if (p.cart.type === "event" && p.cart.eventId) {
             setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
           }
+          const effectiveGateway = urlParams.get("gateway") || (rzpPaymentId ? "razorpay" : (p.gateway || "cashfree"));
+          const effectivePaymentId = rzpPaymentId || p.orderID;
           showSuccessImmediately(p.orderID);
+          window.history.replaceState({}, document.title, window.location.pathname);
           setTimeout(() => {
             void completeBookingWithData(
-              p.orderID,
-              "cashfree",
+              effectivePaymentId,
+              effectiveGateway,
               p.cart,
               p.email,
               p.sessionId,
@@ -691,6 +698,42 @@ export default function ReviewBookingPage() {
             );
           }, 200);
         }
+      }
+    } else if (pendingPaymentStr) {
+      // Mobile UPI return without URL params (e.g. app switch back to Chrome)
+      const p = safeJsonParse<any>(pendingPaymentStr);
+      if (p?.orderID) {
+        fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(p.orderID)}`)
+          .then((r) => r.json())
+          .then((statusRes) => {
+            if (statusRes?.status === "PAID") {
+              if (p.cart) {
+                setCart(p.cart);
+                if (p.cart.type === "event" && p.cart.eventId) {
+                  setEventData((prev: any) => ({ ...prev, id: p.cart.eventId, name: p.cart.eventName }));
+                }
+                showSuccessImmediately(p.orderID);
+                setTimeout(() => {
+                  void completeBookingWithData(
+                    statusRes.payment_id || p.orderID,
+                    p.gateway || "razorpay",
+                    p.cart,
+                    p.email,
+                    p.sessionId,
+                    p.orderAmount,
+                    p.bookingFee,
+                    p.grandTotal,
+                    p.appliedCoupon || "",
+                    p.offerId,
+                    p.cart.use_pass,
+                    p.donationAmount,
+                    p.orderID,
+                  );
+                }, 200);
+              }
+            }
+          })
+          .catch(() => {});
       }
     }
 
@@ -1664,13 +1707,84 @@ export default function ReviewBookingPage() {
         });
         // Page will redirect — do NOT set loading false here
       } else {
-        // Razorpay — inline modal, no redirect needed
+        // Razorpay — inline modal with mobile UPI redirect & active reconciliation
         await loadScript("https://checkout.razorpay.com/v1/checkout.js");
         const rzpAmountPaise =
           Math.round(grandTotal * 100) < 100 && grandTotal > 0
             ? 100
             : Math.round(grandTotal * 100);
-        const options = {
+
+        const isMobile =
+          typeof window !== "undefined" &&
+          /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const callbackUrl = `${window.location.origin}/api/payment/razorpay-callback?redirect_to=${encodeURIComponent(window.location.pathname)}`;
+
+        let pollTimer: any = null;
+        let isStopped = false;
+
+        const cleanupPolling = () => {
+          isStopped = true;
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+          if (typeof window !== "undefined") {
+            window.removeEventListener("focus", handleAppFocus);
+            document.removeEventListener("visibilitychange", handleAppFocus);
+          }
+        };
+
+        const pollStatus = async () => {
+          if (isStopped || isBookingCompletedRef.current) return;
+          try {
+            const chk = await fetch(
+              `/backend/api/payment/check-order-status?order_id=${encodeURIComponent(orderRes.order_id)}`,
+            );
+            if (chk.ok) {
+              const chkData = await chk.json();
+              if (chkData?.status === "PAID") {
+                cleanupPolling();
+                if (razorpayRef.current) {
+                  try {
+                    razorpayRef.current.close();
+                  } catch (_) {}
+                  razorpayRef.current = null;
+                }
+                inflightOrderIdRef.current = null;
+                showSuccessImmediately(chkData.payment_id || orderRes.order_id);
+                void completeBookingWithData(
+                  chkData.payment_id || orderRes.order_id,
+                  "razorpay",
+                  cart,
+                  email,
+                  session?.id,
+                  orderAmount,
+                  bookingFee,
+                  grandTotal,
+                  appliedCoupon,
+                  appliedOffer?.id,
+                  isPassApplied,
+                  isDonationAdded ? donationAmount : 0,
+                  orderRes.order_id,
+                );
+              }
+            }
+          } catch (_) {}
+        };
+
+        const handleAppFocus = () => {
+          if (typeof document !== "undefined" && document.visibilityState === "visible") {
+            void pollStatus();
+          }
+        };
+
+        if (typeof window !== "undefined") {
+          window.addEventListener("focus", handleAppFocus);
+          document.addEventListener("visibilitychange", handleAppFocus);
+          pollTimer = setInterval(pollStatus, 2500);
+        }
+
+        const options: any = {
           key: orderRes.razorpay_key,
           amount: rzpAmountPaise,
           currency: "INR",
@@ -1693,6 +1807,7 @@ export default function ReviewBookingPage() {
             razorpay_payment_id: string;
             razorpay_order_id: string;
           }) => {
+            cleanupPolling();
             razorpayRef.current = null;
             inflightOrderIdRef.current = null;
             showSuccessImmediately(
@@ -1718,6 +1833,39 @@ export default function ReviewBookingPage() {
           },
           modal: {
             ondismiss: async () => {
+              // Safety check: before treating as cancelled, verify if UPI payment actually succeeded!
+              try {
+                const chk = await fetch(
+                  `/backend/api/payment/check-order-status?order_id=${encodeURIComponent(orderRes.order_id)}`,
+                );
+                if (chk.ok) {
+                  const chkData = await chk.json();
+                  if (chkData?.status === "PAID") {
+                    cleanupPolling();
+                    razorpayRef.current = null;
+                    inflightOrderIdRef.current = null;
+                    showSuccessImmediately(chkData.payment_id || orderRes.order_id);
+                    void completeBookingWithData(
+                      chkData.payment_id || orderRes.order_id,
+                      "razorpay",
+                      cart,
+                      email,
+                      session?.id,
+                      orderAmount,
+                      bookingFee,
+                      grandTotal,
+                      appliedCoupon,
+                      appliedOffer?.id,
+                      isPassApplied,
+                      isDonationAdded ? donationAmount : 0,
+                      orderRes.order_id,
+                    );
+                    return;
+                  }
+                }
+              } catch (_) {}
+
+              cleanupPolling();
               razorpayRef.current = null;
               inflightOrderIdRef.current = null;
               sessionStorage.removeItem("ticpin_pending_payment");
@@ -1791,6 +1939,12 @@ export default function ReviewBookingPage() {
             },
           },
         };
+
+        if (isMobile) {
+          options.callback_url = callbackUrl;
+          options.redirect = true;
+        }
+
         const rzp = new (window as any).Razorpay(options);
         razorpayRef.current = rzp;
         inflightOrderIdRef.current = orderRes.order_id;

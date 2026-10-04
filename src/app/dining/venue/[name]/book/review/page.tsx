@@ -171,6 +171,37 @@ export default function DiningReviewPage() {
                 passApi.getActivePass(session.id).then(setPass);
             });
         }
+
+        // Handle mobile UPI redirect return
+        const urlParams = new URLSearchParams(window.location.search);
+        const rzpPaymentId = urlParams.get('payment_id') || urlParams.get('razorpay_payment_id');
+        const retOrderId = urlParams.get('order_id') || urlParams.get('razorpay_order_id');
+        const pendingDiningStr = sessionStorage.getItem('dining_pending_payment');
+
+        if (retOrderId && pendingDiningStr) {
+            try {
+                const p = JSON.parse(pendingDiningStr);
+                const effectivePaymentId = rzpPaymentId || p.orderID;
+                window.history.replaceState({}, document.title, window.location.pathname);
+                sessionStorage.removeItem('dining_pending_payment');
+                void completeDiningBooking(effectivePaymentId, 'razorpay', p.orderID);
+            } catch (_) {}
+        } else if (pendingDiningStr) {
+            try {
+                const p = JSON.parse(pendingDiningStr);
+                if (p?.orderID) {
+                    fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(p.orderID)}`)
+                        .then(r => r.json())
+                        .then(statusRes => {
+                            if (statusRes?.status === 'PAID') {
+                                sessionStorage.removeItem('dining_pending_payment');
+                                void completeDiningBooking(statusRes.payment_id || p.orderID, 'razorpay', p.orderID);
+                            }
+                        })
+                        .catch(() => {});
+                }
+            } catch (_) {}
+        }
     }, [venueName, router, session?.id]);
 
     // Load user profile and history for billing info
@@ -330,8 +361,68 @@ export default function DiningReviewPage() {
                 type: 'dining',
             });
 
+            // Store pending dining payment
+            sessionStorage.setItem('dining_pending_payment', JSON.stringify({
+                orderID: res.order_id,
+                cart,
+                billing,
+                orderAmount,
+                bookingFee,
+                grandTotal,
+                isPassApplied,
+            }));
+
+            const isMobileBrowser = typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const callbackUrl = `${window.location.origin}/api/payment/razorpay-callback?redirect_to=${encodeURIComponent(window.location.pathname)}`;
+
+            let pollTimer: any = null;
+            let isStopped = false;
+
+            const cleanupPolling = () => {
+                isStopped = true;
+                if (pollTimer) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+                if (typeof window !== 'undefined') {
+                    window.removeEventListener('focus', handleAppFocus);
+                    document.removeEventListener('visibilitychange', handleAppFocus);
+                }
+            };
+
+            const pollStatus = async () => {
+                if (isStopped) return;
+                try {
+                    const chk = await fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(res.order_id)}`);
+                    if (chk.ok) {
+                        const chkData = await chk.json();
+                        if (chkData?.status === 'PAID') {
+                            cleanupPolling();
+                            sessionStorage.removeItem('dining_pending_payment');
+                            await completeDiningBooking(
+                                chkData.payment_id || res.order_id,
+                                'razorpay',
+                                res.order_id
+                            );
+                        }
+                    }
+                } catch (_) {}
+            };
+
+            const handleAppFocus = () => {
+                if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+                    void pollStatus();
+                }
+            };
+
+            if (typeof window !== 'undefined') {
+                window.addEventListener('focus', handleAppFocus);
+                document.addEventListener('visibilitychange', handleAppFocus);
+                pollTimer = setInterval(pollStatus, 2500);
+            }
+
             const rzpAmountPaise = Math.round(grandTotal * 100) < 100 && grandTotal > 0 ? 100 : Math.round(grandTotal * 100);
-            const options = {
+            const options: any = {
                 key: res.razorpay_key,
                 amount: rzpAmountPaise,
                 currency: 'INR',
@@ -345,6 +436,8 @@ export default function DiningReviewPage() {
                     wallet: true
                 },
                 handler: async (response: any) => {
+                    cleanupPolling();
+                    sessionStorage.removeItem('dining_pending_payment');
                     await completeDiningBooking(
                         response.razorpay_payment_id,
                         'razorpay',
@@ -358,11 +451,35 @@ export default function DiningReviewPage() {
                 },
                 theme: { color: '#000000' },
                 modal: {
-                    ondismiss: () => {
+                    ondismiss: async () => {
+                        try {
+                            const chk = await fetch(`/backend/api/payment/check-order-status?order_id=${encodeURIComponent(res.order_id)}`);
+                            if (chk.ok) {
+                                const chkData = await chk.json();
+                                if (chkData?.status === 'PAID') {
+                                    cleanupPolling();
+                                    sessionStorage.removeItem('dining_pending_payment');
+                                    await completeDiningBooking(
+                                        chkData.payment_id || res.order_id,
+                                        'razorpay',
+                                        res.order_id
+                                    );
+                                    return;
+                                }
+                            }
+                        } catch (_) {}
+
+                        cleanupPolling();
+                        sessionStorage.removeItem('dining_pending_payment');
                         setBookingLoading(false);
                     }
                 }
             };
+
+            if (isMobileBrowser) {
+                options.callback_url = callbackUrl;
+                options.redirect = true;
+            }
 
             const rzp = new (window as any).Razorpay(options);
             rzp.open();
