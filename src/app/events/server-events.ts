@@ -42,7 +42,7 @@ export const fetchEvents = cache(async (query = ''): Promise<EventListItem[]> =>
     try {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/events${suffix}`, {
-            next: { revalidate: 30 },
+            next: { revalidate: 3 },
             signal: AbortSignal.timeout(6000)
         });
 

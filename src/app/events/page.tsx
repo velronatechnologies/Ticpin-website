@@ -1,4 +1,4 @@
-export const revalidate = 30;
+export const revalidate = 3;
 
 import { Metadata } from 'next';
 import { headers } from 'next/headers';

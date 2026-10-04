@@ -56,7 +56,7 @@ export const fetchPlayVenues = cache(async (query = ''): Promise<PlayVenue[]> =>
     try {
         const suffix = query ? `?${query}` : '';
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/play${suffix}`, {
-            next: { revalidate: 10 },
+            next: { revalidate: 3 },
             signal: AbortSignal.timeout(10000)
         });
 
@@ -78,7 +78,7 @@ export async function fetchApprovedPlayVenues(query = ''): Promise<PlayVenue[]> 
 export const fetchPlayVenue = cache(async (name: string): Promise<PlayVenue | null> => {
     try {
         const response = await fetch(`${SERVER_BACKEND_API_BASE}/play/${encodeURIComponent(name)}`, {
-            next: { revalidate: 10 },
+            next: { revalidate: 3 },
             signal: AbortSignal.timeout(10000)
         });
 
